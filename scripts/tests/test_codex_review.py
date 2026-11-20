@@ -27,8 +27,10 @@ HARNESS_TIMEOUT_SECONDS = 20  # 구현이 시간 제한 없이 멈춰도 테스�
 STUB_SLEEP_SECONDS = 60
 PROCESS_EXIT_WAIT_SECONDS = 3
 SYSTEM_PATH = "/usr/bin:/bin"
+STDIN_TEST_WAIT_SECONDS = 15
+STDIN_TEST_SCRIPT_TIMEOUT = 60  # 스크립트 시간 제한이 아니라 stdin 차단으로 통과해야 함
 
-# stub 인터페이스: STUB_MODE=write(기본) | hang. 인자의 --output-last-message/-o 파일에 기록한다.
+# stub 인터페이스: STUB_MODE=write(기본) | hang | read_stdin(표준 입력을 EOF까지 읽은 뒤 결과를 씀). 인자의 --output-last-message/-o 파일에 기록한다.
 # hang 모드는 결과 파일을 일부 쓴 뒤 자식 sleep을 만들고 대기한다. PID는 STUB_PID_DIR에 남긴다.
 STUB_SOURCE = f"""#!/bin/bash
 out=""
@@ -46,6 +48,9 @@ if [[ "${{STUB_MODE:-write}}" == "hang" ]]; then
   echo $$ > "$STUB_PID_DIR/stub.pid"
   wait
   exit 0
+fi
+if [[ "${{STUB_MODE:-write}}" == "read_stdin" ]]; then
+  cat > /dev/null
 fi
 [[ -n "$out" ]] && echo "{STUB_CONTENT}" > "$out"
 exit 0
@@ -247,6 +252,35 @@ class TimeoutTest(CodexReviewTestCase):
         self.assertFalse(timed_out, "시간 제한이 없어 스크립트가 끝나지 않음")
         self.assertEqual(code, TIMEOUT_EXIT_CODE, output)
         self.assertEqual(self.feedback_names(), [])
+
+
+class StdinTest(CodexReviewTestCase):
+    def test_표준_입력이_열려_있어도_codex가_입력을_기다리지_않고_정상_종료한다(self):
+        env = {
+            "PATH": f"{self.stub_dir}:{SYSTEM_PATH}",
+            "HOME": str(self.tmp),
+            "STUB_PID_DIR": str(self.pid_dir),
+            "STUB_MODE": "read_stdin",
+            "CODEX_REVIEW_TIMEOUT": str(STDIN_TEST_SCRIPT_TIMEOUT),
+        }
+        log = self.tmp / "stdin-test.log"
+        with open(log, "w") as log_file:
+            process = subprocess.Popen(
+                ["bash", "scripts/codex-review.sh", TASK_ID], cwd=self.clone, env=env,
+                stdin=subprocess.PIPE, stdout=log_file, stderr=subprocess.STDOUT,
+                text=True, start_new_session=True,
+            )
+            # stdin 파이프는 닫지 않는다 (호출한 쪽의 stdin이 열려 있는 상황). communicate()는 stdin을 닫으므로 wait()을 쓴다.
+            self.addCleanup(process.stdin.close)
+            try:
+                process.wait(timeout=STDIN_TEST_WAIT_SECONDS)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+                self.fail(f"{STDIN_TEST_WAIT_SECONDS}초 안에 끝나지 않음: codex가 표준 입력 종료를 기다리는 것으로 보임")
+        self.assertEqual(process.returncode, 0, log.read_text())
+        result = self.clone / "docs" / "reviews" / TASK_ID / "r1.codex.md"
+        self.assertIn(STUB_CONTENT, result.read_text())
 
 
 class RegressionTest(CodexReviewTestCase):
