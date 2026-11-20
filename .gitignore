@@ -36,3 +36,7 @@ pnpm-debug.log*
 
 # 참고 디자인 스크린샷 (Figma 템플릿, 로컬 전용 · 공개하지 않음)
 docs/ui_design/references/
+
+# Claude Code 로컬 전용 (개인 설정, 오케스트레이터가 기록하는 현재 역할)
+.claude/settings.local.json
+.claude/.current-role

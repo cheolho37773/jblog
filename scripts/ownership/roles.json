@@ -1,0 +1,105 @@
+{
+  "$comment": "파일 소유권 규칙 (docs/plan/05_collaboration_architecture.md §5.2). 역할 단위 검사(Claude Code 훅)와 PR 단위 검사(CI ownership-check, M0)가 함께 쓴다. 목적은 에이전트의 실수 방지다.",
+  "protected": {
+    "$comment": "어떤 역할도 수정할 수 없는 파일. Codex 검수 결과는 Codex만 생성한다.",
+    "patterns": [
+      "docs/reviews/**/*.codex.md",
+      "docs/plan/feedback/**"
+    ]
+  },
+  "shared": {
+    "$comment": "참여 역할과 무관하게 모든 역할이 쓸 수 있는 경로 (작업 지시서의 인계 노트).",
+    "patterns": [
+      "docs/work/*/tasks/**"
+    ]
+  },
+  "roles": {
+    "orchestrator": {
+      "allow": ["**"],
+      "deny": []
+    },
+    "backend-dev": {
+      "allow": [
+        "apps/api/**",
+        "pnpm-lock.yaml"
+      ],
+      "deny": [
+        "apps/api/**/*.spec.ts",
+        "apps/api/test/**",
+        "apps/api/jest.config.*",
+        "apps/api/Dockerfile"
+      ],
+      "allow_after_deny": [
+        "apps/api/test/support/**"
+      ]
+    },
+    "frontend-dev": {
+      "allow": [
+        "apps/web/**",
+        "packages/markdown/**",
+        "pnpm-lock.yaml"
+      ],
+      "deny": [
+        "apps/web/**/*.spec.ts",
+        "apps/web/**/*.spec.tsx",
+        "apps/web/test/**",
+        "packages/markdown/**/*.spec.ts",
+        "apps/web/vitest.config.*",
+        "apps/web/Dockerfile"
+      ],
+      "allow_after_deny": [
+        "apps/web/test/support/**"
+      ]
+    },
+    "test-engineer": {
+      "allow": [
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "apps/*/test/**",
+        "e2e/**"
+      ],
+      "deny": [
+        "apps/*/test/support/**",
+        "apps/*/test/setup*.ts"
+      ]
+    },
+    "devops-engineer": {
+      "allow": [
+        "infra/**",
+        ".github/**",
+        ".githooks/**",
+        ".husky/**",
+        "scripts/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "turbo.json",
+        ".nvmrc",
+        ".gitignore",
+        ".prettierrc*",
+        ".prettierignore",
+        "eslint.config.*",
+        "commitlint.config.*",
+        "tsconfig*.json",
+        "packages/eslint-config/**",
+        "packages/tsconfig/**",
+        "apps/*/jest.config.*",
+        "apps/*/vitest.config.*",
+        "playwright.config.*",
+        "apps/*/test/setup*.ts",
+        "apps/*/Dockerfile",
+        "apps/*/.env.example"
+      ],
+      "deny": []
+    },
+    "docs-writer": {
+      "$comment": "기획 문서는 '변경 이력' 섹션만 수정한다. 섹션 단위 검사는 훅으로 할 수 없으므로 지시와 Codex 검수로 확인한다.",
+      "allow": [
+        "docs/work/**",
+        "docs/plan/*.md",
+        "infra/README.md"
+      ],
+      "deny": []
+    }
+  }
+}

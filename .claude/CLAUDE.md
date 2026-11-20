@@ -1,39 +1,49 @@
-# Fullstack Web App Harness
+# jblog — Claude Code 작업 규칙
 
-풀스택 웹앱의 요구사항→설계→프론트엔드→백엔드→테스트→배포를 에이전트 팀이 협업하여 개발하는 하네스.
+개인 포트폴리오 겸 기술 블로그. Next.js(apps/web) + NestJS·Prisma·PostgreSQL(apps/api) 모노레포.
+Claude Code 오케스트레이터 + 서브에이전트가 구현하고, Codex가 독립 검수한다.
 
-## 구조
+## 단일 기준 문서
 
+문서에 없는 결정은 내리지 않는다. 기획과 다르게 가야 하면 멈추고 개발자에게 제안한다 (G2).
+
+| 문서 | 내용 |
+|---|---|
+| `docs/plan/00_overview.md` | 결정사항(D1~), 스택, 아키텍처, 환경·**민감 정보 규칙(§6-b)**, 마일스톤 |
+| `docs/plan/01_backend_plan.md` | API, 데이터 모델, 상태·버전·캐시·인증·동시성 규칙 |
+| `docs/plan/02_frontend_plan.md` | 라우팅·캐시, 디자인 토큰, 에디터, 관리자 |
+| `docs/plan/03_ai_authoring_mcp_plan.md` | AI 자동 작성 MCP (M7) |
+| `docs/plan/04_access_control_and_content_protection.md` | 접근 통제, 복사 방지 |
+| `docs/plan/05_collaboration_architecture.md` | **협업 절차** (역할, 소유권, Git, 검수, 승인 관문) |
+| `docs/ui_design/ui_design_spec.md` | 디자인 토큰·컴포넌트·페이지 |
+| `docs/work/00_master_checklist.md` | 전체 진행 체크리스트 |
+
+## 역할
+
+| 역할 | 정의 |
+|---|---|
+| 오케스트레이터 (메인 세션) | 계획·지시서·계약 확정·위임·통합·보고. 절차는 스킬 `jblog-dev` |
+| `backend-dev` · `frontend-dev` · `test-engineer` · `devops-engineer` · `docs-writer` | `.claude/agents/` |
+| Codex | 독립 검수 (읽기 전용). 지침은 루트 `AGENTS.md`, 실행은 스킬 `codex-review` |
+
+## 반드시 지키는 규칙
+
+1. **브랜치**: 작업 1개 = `dev`에서 만든 브랜치 1개 → Draft PR → CI → Codex 검수 → Ready → 개발자 승인(G4, PR 번호 + head SHA) → `dev`에 squash merge. `dev` → `main` Merge는 하지 않는다
+2. **승인 관문**: G1 마일스톤 계획 · G2 기획 변경 · G3 Claude·Codex 충돌 · G4 Merge. Merge는 개발자의 명시적 승인 없이 실행하지 않는다
+3. **에러 수정 3회 상한**: 자체 검사·CI·Codex 지적 수정 각각 3회까지. 넘으면 시도 내역과 함께 개발자 승인 요청
+4. **민감 정보**: 비밀값·접속 정보는 코드에 하드코딩하지 않고 `.env`로만 주입. `.env` 파일은 읽지도 커밋하지도 않는다
+5. **가독성**: 협업 문서 §10-a 규칙 (이름, 작은 함수, early return, "왜"를 설명하는 주석, 매직 값 금지)
+6. **파일 소유권**: `scripts/ownership/roles.json`. 서브에이전트를 실행하기 전에 worktree의 `.claude/.current-role`에 역할을 기록한다 (훅이 범위 밖 Write/Edit를 차단)
+7. **검수 결과 보호**: `docs/reviews/**/*.codex.md`, `docs/plan/feedback/**`는 수정하지 않는다
+8. **보고**: 완료 / 실패 / 보류를 섞지 않는다. 결정이 필요한 것만 요약한다
+9. **체크리스트**: 작업이 `dev`에 Merge되면 `docs/work/00_master_checklist.md`를 갱신한다
+
+## 자주 쓰는 명령
+
+```bash
+nvm use                                   # Node 24 (.nvmrc)
+git config core.hooksPath .githooks       # 커밋 전 비밀정보 검사 (최초 1회)
+scripts/codex-review.sh <작업ID>          # Codex 로컬 검수
+gh issue develop <번호> --base dev --name <브랜치>
+gh pr merge <PR> --squash --match-head-commit <승인 SHA>
 ```
-.claude/
-├── agents/
-│   ├── architect.md             — 시스템 설계 (요구사항 분석, 아키텍처, DB 모델링, API 설계)
-│   ├── frontend-dev.md          — 프론트엔드 개발 (React/Next.js, UI 컴포넌트, 상태관리)
-│   ├── backend-dev.md           — 백엔드 개발 (API 구현, DB, 인증, 비즈니스 로직)
-│   ├── qa-engineer.md           — QA 엔지니어 (테스트 전략, 단위/통합/E2E 테스트)
-│   └── devops-engineer.md       — DevOps 엔지니어 (CI/CD, 인프라, 배포, 모니터링)
-├── skills/
-│   ├── fullstack-webapp/
-│   │   └── skill.md             — 오케스트레이터 (팀 조율, 워크플로우, 에러핸들링)
-│   ├── component-patterns/
-│   │   └── skill.md             — 프론트엔드 확장 (React 패턴, 상태관리, 폴더 구조)
-│   └── api-security-checklist/
-│       └── skill.md             — 백엔드 확장 (OWASP Top 10, 인증/인가, 보안 헤더)
-└── CLAUDE.md                    — 이 파일
-```
-
-## 사용법
-
-`/fullstack-webapp` 스킬을 트리거하거나, "웹앱 만들어줘" 같은 자연어로 요청한다.
-
-## 산출물
-
-모든 산출물은 프로젝트 루트에 직접 생성된다:
-- `_workspace/00_input.md` — 사용자 입력 정리
-- `_workspace/01_architecture.md` — 아키텍처 설계 문서
-- `_workspace/02_api_spec.md` — API 명세
-- `_workspace/03_db_schema.md` — DB 스키마
-- `_workspace/04_test_plan.md` — 테스트 계획
-- `_workspace/05_deploy_guide.md` — 배포 가이드
-- `_workspace/06_review_report.md` — 리뷰 보고서
-- `src/` — 소스 코드 (프론트엔드 + 백엔드)
