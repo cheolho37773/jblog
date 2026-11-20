@@ -36,7 +36,7 @@ Claude Code 오케스트레이터 + 서브에이전트가 구현하고, Codex가
 6. **파일 소유권**: `scripts/ownership/roles.json`. 서브에이전트를 실행하기 전에 worktree의 `.claude/.current-role`에 역할을 기록한다 (훅이 범위 밖 Write/Edit를 차단)
 7. **검수 결과 보호**: `docs/reviews/**/*.codex.md`, `docs/plan/feedback/**`는 수정하지 않는다
 8. **보고**: 완료 / 실패 / 보류를 섞지 않는다. 결정이 필요한 것만 요약한다
-9. **체크리스트**: 작업이 `dev`에 Merge되면 `docs/work/00_master_checklist.md`를 갱신한다
+9. **체크리스트**: `docs/work/00_master_checklist.md`의 해당 항목을 **작업 PR 안에서**(기록 단계) 체크한다. `dev` 직접 push는 막혀 있다
 
 ## 자주 쓰는 명령
 

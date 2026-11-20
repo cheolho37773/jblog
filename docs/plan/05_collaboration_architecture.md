@@ -310,7 +310,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 
 | 장치 | 막는 범위 | 한계 |
 |---|---|---|
-| Claude Code PreToolUse 훅 (`scripts/hooks/check-ownership.sh`) | 에이전트의 `Write`/`Edit` 도구 호출 중 범위 밖 경로 | Bash로 실행한 스크립트·포매터·코드 생성기가 바꾸는 파일은 막지 못한다 |
+| Claude Code PreToolUse 훅 (`scripts/hooks/check-ownership.py`, 규칙 `scripts/ownership/roles.json`) | 에이전트의 `Write`/`Edit` 도구 호출 중 범위 밖 경로 | Bash로 실행한 스크립트·포매터·코드 생성기가 바꾸는 파일은 막지 못한다 |
 | 자체 검사의 변경 파일 대조 (§4.2 5단계) | 작업 브랜치에서 실제로 바뀐 모든 파일 (`git diff --name-only <merge-base>`) | 커밋 전 검사라 에이전트가 건너뛰면 무력 |
 | **CI 필수 검사 `ownership-check`** | PR 전체 변경을 **참여 역할들의 쓰기 범위 합집합**과 대조 (아래), `package.json` 없는 `pnpm-lock.yaml` 변경, 계약 PR이 아닌데 `api-types` 변경 검출. **실패하면 Merge 불가** | 지시서 경로 표기가 틀리면 오탐 → 지시서 수정 |
 
@@ -579,7 +579,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | 정보 | 위치 | 작성 |
 |---|---|---|
 | 요구사항·설계 (단일 기준) | `docs/plan/*`, `docs/ui_design/*` | 개발자 승인(G2) |
-| **전체 진행 체크리스트** | `docs/work/00_master_checklist.md` (작업이 `dev`에 Merge되면 체크) | 오케스트레이터 (개발자도 체크 가능) |
+| **전체 진행 체크리스트** | `docs/work/00_master_checklist.md` (작업 PR의 기록 단계에서 자기 항목 체크 → Merge되면 반영) | 오케스트레이터 · docs-writer |
 | 마일스톤 계획 | `docs/work/<M>/plan.md` | 오케스트레이터 |
 | 작업 지시서 + 인계 노트 | `docs/work/<M>/tasks/<ID>.md` | 오케스트레이터(지시) / 담당 에이전트(인계) |
 | 기획 변경 제안 | `docs/work/<M>/proposals/<번호>.md` | 오케스트레이터 → G2 |

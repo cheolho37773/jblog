@@ -5,11 +5,11 @@
 
 ## 사용법
 
-- **체크 시점**: 작업 PR이 `dev`에 Merge되고(G4) 이슈가 닫힌 뒤에 체크한다. 진행 중에는 체크하지 않는다.
-- **표기**: 체크할 때 줄 끝에 이슈·PR 번호와 날짜를 남긴다. 예: `- [x] BE-03 ... — #12 / PR #15 (2026-12-02)`
+- **체크 방법**: `dev`는 직접 push가 막혀 있으므로, **작업 PR 안에서 자기 항목을 체크**한다 (기록 단계, 검수 전 커밋). PR이 Merge되면 체크도 함께 반영되고, Merge되지 않으면 반영되지 않는다. 즉 `dev`의 체크리스트에 체크된 항목 = Merge된 작업이다.
+- **표기**: 체크할 때 줄 끝에 이슈 번호와 날짜를 남긴다 (PR 번호는 이슈에 연결됨). 예: `- [x] BE-03 ... — #12 (2026-12-02)`
 - **보류·제외**: 하지 않기로 했거나 미룬 항목은 체크하지 않고 줄 끝에 `⏸ 보류: <이유>`를 적는다.
 - **작업 분할**: 한 항목을 여러 작업으로 나누면(예: BE-05 → BE-05-1, BE-05-2) 하위 항목을 추가해 각각 체크한다 (협업 §4.0-a).
-- **갱신 담당**: 오케스트레이터가 Merge 직후 갱신한다. 개발자도 직접 체크할 수 있다.
+- **갱신 담당**: 오케스트레이터(또는 docs-writer)가 작업 PR의 기록 단계에서 갱신한다. 진행 현황표(⬜/🔄/✅)는 마일스톤의 첫 작업 PR에서 🔄, 마지막 작업(마일스톤 report) PR에서 ✅로 바꾼다.
 
 ## 진행 현황
 
@@ -58,19 +58,20 @@
 - [x] PR 템플릿 (`.github/pull_request_template.md`, 협업 §5.5) — 2026-11-21
 
 **에이전트·검수 설정** (협업 §11)
-- [ ] `.claude/agents/` 개편: architect 삭제, backend-dev·frontend-dev·devops-engineer 수정, qa-engineer → test-engineer, docs-writer 신규
-- [ ] 에이전트 frontmatter `tools`·`model` 지정 (구현·테스트·DevOps sonnet, docs haiku)
-- [ ] `.claude/skills/` 개편: fullstack-webapp → jblog-dev, component-patterns·api-security-checklist 수정, codex-review 신규
-- [ ] `.claude/CLAUDE.md` 재작성, `_workspace/` 체계 폐기
-- [ ] `.claude/settings.json`: 소유권 훅(PreToolUse), 허용 명령
-- [ ] 소유권 훅 스크립트 `scripts/hooks/check-ownership.sh`
-- [ ] 루트 `AGENTS.md` (Codex 검수 지침: 관점, 출력 형식, 민감 정보 "높음", 코드 수정 금지)
-- [ ] `scripts/codex-review.sh` (dev merge-base 기준, base·head SHA 기록)
+- [x] `.claude/agents/` 개편: architect 삭제, backend-dev·frontend-dev·devops-engineer 수정, qa-engineer → test-engineer, docs-writer 신규 — 2026-11-21
+- [x] 에이전트 frontmatter `tools`·`model` 지정 (구현·테스트·DevOps sonnet, docs haiku) — 2026-11-21
+- [x] `.claude/skills/` 개편: fullstack-webapp → jblog-dev, component-patterns·api-security-checklist 수정, codex-review 신규 — 2026-11-21
+- [x] `.claude/CLAUDE.md` 재작성, `_workspace/` 체계 폐기 — 2026-11-21
+- [x] `.claude/settings.json`: 소유권 훅(PreToolUse), 허용 명령, `.env` 읽기 차단 — 2026-11-21
+- [x] 소유권 훅 `scripts/hooks/check-ownership.py` + 규칙 `scripts/ownership/roles.json` (테스트 21건 통과) — 2026-11-21
+- [x] 루트 `AGENTS.md` (Codex 검수 지침: 관점, 출력 형식, 민감 정보 "높음", 코드 수정 금지) — 2026-11-21
+- [x] `scripts/codex-review.sh` (dev merge-base 기준, base·head SHA 기록) — 2026-11-21
 - [ ] GitHub Codex PR 리뷰 연결
-- [ ] pre-commit 훅: 비밀정보 패턴 검사, `.env` 커밋 차단
+- [x] pre-commit 훅: 비밀정보 패턴 검사, `.env` 커밋 차단 (`.githooks/pre-commit`, 테스트 9건 통과. 각 PC에서 `git config core.hooksPath .githooks` 1회) — 2026-11-21
 
 **마무리**
-- [ ] 브랜치 보호 켜기: `dev`(PR 필수, CI·`ownership-check` 필수, 직접·force push 금지), `main`(직접·force push 금지)
+- [x] 브랜치 보호 켜기 (Ruleset): `dev`·`main` PR 필수(squash만), 직접·force push·삭제 금지 — 2026-11-21
+- [ ] Codex 로컬 검수 실제 1회 실행 확인 (M0 첫 작업에서)
 - [x] GitHub 계정 2FA 확인 (관리자 로그인 보안의 전제, 접근 통제 §1.2) — 2026-11-21
 
 ---
@@ -85,7 +86,9 @@
 - [ ] Husky + lint-staged + commitlint (Conventional Commits)
 - [ ] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md`
 - [ ] 테스트 프레임워크 공통 설정: Jest(api), Vitest(web), Playwright, `pnpm test:*` 명령
-- [ ] GitHub Actions CI: lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check` · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화
+- [ ] GitHub Actions CI: lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화
+- [ ] `dev` Ruleset에 CI 잡과 `ownership-check`를 **필수 상태 검사**로 추가 (CI가 생긴 뒤)
+- [ ] Husky 도입 시 pre-commit이 `scripts/hooks/check-secrets.sh`를 호출하도록 이전
 
 **백엔드 기반**
 - [ ] BE-01 Nest 프로젝트, config(스키마 검증)/logging(pino redact)/helmet/ValidationPipe/Swagger(운영 비활성)/에러 필터

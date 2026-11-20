@@ -36,7 +36,7 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
 4. **위임**: 서브에이전트를 실행하기 전에 worktree에 역할을 기록한다 (`echo <역할> > .claude/.current-role`, 소유권 훅이 읽음). 난도 높음이면 모델을 Opus로 지정
    - 테스트 선작성(test-engineer) → 의도대로 실패 확인 → 구현(담당 에이전트) → 독립 검증(test-engineer)
 5. **자체 검사 확인**: 지시서의 실행 명령, `git diff --name-only $(git merge-base origin/dev HEAD)`가 참여 역할 범위 합집합 안인지, 민감 정보 없음
-6. **기록**: docs-writer(또는 단일 실행이면 인계 노트) — **검수 전에** 커밋
+6. **기록**: docs-writer(또는 단일 실행이면 인계 노트) + `docs/work/00_master_checklist.md`에서 이 작업 항목 체크(이슈 번호·날짜) — **검수 전에** 커밋. `dev`는 직접 push가 막혀 있으므로 체크리스트는 작업 PR 안에서 갱신한다
 7. **Draft PR**: `gh pr create --base dev --draft` (PR 템플릿, 마지막 줄 `Closes #<이슈>`) → CI
 8. **CI 통과 후 Codex 로컬 검수**: `scripts/codex-review.sh <ID>` → `docs/reviews/<ID>/r<N>.codex.md`. 지적마다 `r<N>.response.md`에 수정함 / 후속 처리(Issue) / 반박 기록. 높음은 반드시 수정, 반박은 G3
 9. **Ready 전환**: `gh pr ready <PR>` → GitHub Codex PR 리뷰 대응
@@ -46,7 +46,7 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
     gh pr merge <PR> --squash --match-head-commit <승인 SHA>
     git worktree remove ../jblog-worktrees/<브랜치>
     ```
-12. **체크리스트** `docs/work/00_master_checklist.md`에서 항목 체크 (이슈·PR 번호, 날짜)
+12. **확인**: Merge 후 `dev`의 체크리스트에 항목이 체크돼 있는지 확인 (6단계에서 PR에 포함됨)
 
 ## 3. 검수 후 커밋이 추가되면 (협업 §6.5)
 
