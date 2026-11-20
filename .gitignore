@@ -33,3 +33,6 @@ pnpm-debug.log*
 .idea/
 .vscode/
 *.swp
+
+# 참고 디자인 스크린샷 (Figma 템플릿, 로컬 전용 · 공개하지 않음)
+docs/ui_design/references/

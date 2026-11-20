@@ -14,6 +14,8 @@
 
 참고 스크린샷 (Figma MCP로 추출, `./references/`):
 
+> 이 스크린샷들은 **로컬 전용**이다. 공개 저장소에 올리지 않으므로 `.gitignore`로 제외되어 있다. 저장소를 새로 받은 환경에서는 아래 이미지가 보이지 않으며, 필요하면 §0 표의 Figma 노드에서 `get_screenshot`으로 다시 추출해 같은 경로에 저장한다.
+
 | 블로그 Home (Light) | 블로그 Home (Dark) | 포트폴리오 Home |
 |---|---|---|
 | ![](./references/blog-home-light.png) | ![](./references/blog-home-dark.png) | ![](./references/portfolio-home.png) |
