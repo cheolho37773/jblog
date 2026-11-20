@@ -1,0 +1,35 @@
+# 민감 정보: .env 파일은 커밋하지 않는다 (docs/plan/00_overview.md §6-b)
+.env
+.env.*
+!.env.example
+
+# 의존성 · 빌드 결과물
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# 테스트 결과물
+playwright-report/
+test-results/
+blob-report/
+
+# 로컬 업로드 파일
+uploads/
+apps/api/uploads/
+
+# 로그
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS · IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
