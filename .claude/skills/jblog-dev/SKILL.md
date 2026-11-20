@@ -10,7 +10,8 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
 ## 0. 항상 지키는 것
 
 - 기획 문서(`docs/plan/*`, `docs/ui_design/*`)가 단일 기준이다. 문서에 없는 결정은 내리지 않는다 → G2
-- 개발자 승인 관문: **G1** 마일스톤 계획, **G2** 기획 변경, **G3** Claude·Codex 의견 충돌, **G4** Merge(PR 번호 + head SHA)
+- 개발자 승인 관문: **G1** 마일스톤 계획, **G2** 기획 변경, **G3** Claude·Codex 의견 충돌, **G4** Merge
+- **PR 생성과 Merge는 개발자가 GitHub에서 직접 한다.** 오케스트레이터는 `gh pr create`·`gh pr merge`를 실행하지 않는다 (협업 C17)
 - 모든 작업 PR은 `dev` 대상. `dev` → `main` Merge는 하지 않는다
 - 에러 수정은 루프마다 **3회까지**, 넘으면 개발자 승인 요청 (§8 형식)
 - 민감 정보 하드코딩 금지, `.env`로만 (개요 §6-b)
@@ -37,16 +38,14 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
    - 테스트 선작성(test-engineer) → 의도대로 실패 확인 → 구현(담당 에이전트) → 독립 검증(test-engineer)
 5. **자체 검사 확인**: 지시서의 실행 명령, `git diff --name-only $(git merge-base origin/dev HEAD)`가 참여 역할 범위 합집합 안인지, 민감 정보 없음
 6. **기록**: docs-writer(또는 단일 실행이면 인계 노트) + `docs/work/00_master_checklist.md`에서 이 작업 항목 체크(이슈 번호·날짜) — **검수 전에** 커밋. `dev`는 직접 push가 막혀 있으므로 체크리스트는 작업 PR 안에서 갱신한다
-7. **Draft PR**: `gh pr create --base dev --draft` (PR 템플릿, 마지막 줄 `Closes #<이슈>`) → CI
-8. **CI 통과 후 Codex 로컬 검수**: `scripts/codex-review.sh <ID>` → `docs/reviews/<ID>/r<N>.codex.md`. 지적마다 `r<N>.response.md`에 수정함 / 후속 처리(Issue) / 반박 기록. 높음은 반드시 수정, 반박은 G3
-9. **Ready 전환**: `gh pr ready <PR>` → GitHub Codex PR 리뷰 대응
-10. **G4 요청**: PR 번호, head SHA, 완료 기준 체크, 필수 검증 상태, 검수 판정, 에러 수정 횟수, 후속 처리 목록을 보고
-11. **Merge** (개발자가 "PR #N @ <SHA> 승인"이라고 지시한 경우에만):
-    ```bash
-    gh pr merge <PR> --squash --match-head-commit <승인 SHA>
-    git worktree remove ../jblog-worktrees/<브랜치>
-    ```
-12. **확인**: Merge 후 `dev`의 체크리스트에 항목이 체크돼 있는지 확인 (6단계에서 PR에 포함됨)
+7. **push**: `git push -u origin <브랜치>` → push 이벤트로 CI 실행
+8. **CI 통과 후 Codex 로컬 검수**: `scripts/codex-review.sh <ID>` → `docs/reviews/<ID>/r<N>.codex.md`. 지적마다 `r<N>.response.md`에 수정함 / 후속 처리(Issue) / 반박 기록. 높음은 반드시 수정, 반박은 G3. 검수 결과·대응 기록 커밋도 push
+9. **PR 요청 (개발자에게 보고)**: 아래를 한 번에 전달한다
+   - **PR 생성 링크**: `https://github.com/cheolho37773/jblog/compare/dev...<브랜치>?quick_pull=1&title=<URL 인코딩 제목>&body=<URL 인코딩 본문>` — 본문은 `.github/pull_request_template.md`를 채운 내용, 마지막 줄 `Closes #<이슈>`. 인코딩은 `python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.stdin.read()))"`
+   - **head SHA** (개발자가 Merge 전에 PR 최신 커밋과 대조)
+   - 완료 기준 체크, 필수 검증 상태(완료·실패·보류), 검수 판정, 에러 수정 횟수, 후속 처리 목록
+10. **개발자 작업**: PR 생성 → PR CI·GitHub Codex PR 리뷰 → Merge (= G4). PR 리뷰 지적을 전달받으면 브랜치에서 수정 → 재검사(§3) → 새 head SHA로 다시 보고
+11. **정리** (Merge 확인 후): `git fetch origin`, `git worktree remove ../jblog-worktrees/<브랜치>`, `git branch -D <브랜치>`. `dev`의 체크리스트에 항목이 체크돼 있는지 확인 (6단계에서 포함됨)
 
 ## 3. 검수 후 커밋이 추가되면 (협업 §6.5)
 
@@ -55,7 +54,7 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
 | `docs/reviews/<ID>/**`만 | 재검수 없음 |
 | 코드·테스트·설정·문서 | CI + 재검수 `r<N+1>` (직전 검수 이후 변경 중심) |
 | rebase만 | CI. `dev`에 들어온 변경 중 이 작업의 관련 범위(계약·import 모듈·가드·공용 유틸)가 있으면 영향 범위 재검수 |
-| G4 승인 이후 무엇이든 | G4 재승인 |
+| PR 요청 이후 무엇이든 | 새 head SHA와 재검사 결과를 개발자에게 다시 보고 |
 
 ## 4. 에러 수정 3회 초과 보고 형식
 

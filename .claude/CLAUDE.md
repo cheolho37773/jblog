@@ -28,8 +28,8 @@ Claude Code 오케스트레이터 + 서브에이전트가 구현하고, Codex가
 
 ## 반드시 지키는 규칙
 
-1. **브랜치**: 작업 1개 = `dev`에서 만든 브랜치 1개 → Draft PR → CI → Codex 검수 → Ready → 개발자 승인(G4, PR 번호 + head SHA) → `dev`에 squash merge. `dev` → `main` Merge는 하지 않는다
-2. **승인 관문**: G1 마일스톤 계획 · G2 기획 변경 · G3 Claude·Codex 충돌 · G4 Merge. Merge는 개발자의 명시적 승인 없이 실행하지 않는다
+1. **브랜치**: 작업 1개 = `dev`에서 만든 브랜치 1개 → 자체 검사 → **push** → CI → Codex 로컬 검수 → **PR 생성 링크 + head SHA 보고**. `dev` → `main` Merge는 하지 않는다
+2. **PR·Merge는 개발자가 GitHub에서 직접 한다.** `gh pr create`, `gh pr merge`를 실행하지 않는다. 개발자의 Merge가 G4 승인이다. 승인 관문: G1 마일스톤 계획 · G2 기획 변경 · G3 Claude·Codex 충돌 · G4 Merge
 3. **에러 수정 3회 상한**: 자체 검사·CI·Codex 지적 수정 각각 3회까지. 넘으면 시도 내역과 함께 개발자 승인 요청
 4. **민감 정보**: 비밀값·접속 정보는 코드에 하드코딩하지 않고 `.env`로만 주입. `.env` 파일은 읽지도 커밋하지도 않는다
 5. **가독성**: 협업 문서 §10-a 규칙 (이름, 작은 함수, early return, "왜"를 설명하는 주석, 매직 값 금지)
@@ -45,5 +45,5 @@ nvm use                                   # Node 24 (.nvmrc)
 git config core.hooksPath .githooks       # 커밋 전 비밀정보 검사 (최초 1회)
 scripts/codex-review.sh <작업ID>          # Codex 로컬 검수
 gh issue develop <번호> --base dev --name <브랜치>
-gh pr merge <PR> --squash --match-head-commit <승인 SHA>
+git push -u origin <브랜치>               # PR은 개발자가 GitHub에서 생성·Merge
 ```
