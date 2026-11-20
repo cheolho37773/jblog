@@ -38,7 +38,7 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
    - 테스트 선작성(test-engineer) → 의도대로 실패 확인 → 구현(담당 에이전트) → 독립 검증(test-engineer)
 5. **자체 검사 확인**: 지시서의 실행 명령, `git diff --name-only $(git merge-base origin/dev HEAD)`가 참여 역할 범위 합집합 안인지, 민감 정보 없음
 6. **기록**: docs-writer(또는 단일 실행이면 인계 노트) + `docs/work/00_master_checklist.md`에서 이 작업 항목 체크(이슈 번호·날짜) — **검수 전에** 커밋. `dev`는 직접 push가 막혀 있으므로 체크리스트는 작업 PR 안에서 갱신한다
-7. **Codex 최종 검수 (push 전)**: `scripts/codex-review.sh <ID>` → `docs/reviews/<ID>/r<N>.codex.md`. 지적마다 `r<N>.response.md`에 수정함 / 후속 처리(Issue) / 반박 기록. 높음은 반드시 수정 후 재검수, 반박은 G3. **최종 판정이 통과이고 높음 0건일 때까지 push하지 않는다**
+7. **Codex 최종 검수 (push 전)**: `scripts/codex-review.sh <ID>` → `docs/reviews/<ID>/r<N>.codex.md`. 지적마다 `r<N>.response.md`에 수정함 / 후속 처리(Issue) / 반박 기록. 높음은 반드시 수정 후 재검수, 반박은 G3. **push 허용 조건(협업 §6.4-a)을 만족할 때까지 push하지 않는다**: 최근 검수가 push할 head SHA 대상, 높음 0건, 중간은 모두 재검수로 해소·후속 Issue·G3 수용 반박 중 하나
 8. **push**: Codex 최종 통과 후 `git push -u origin <브랜치>` (검수 결과·대응 기록 커밋 포함) → push 이벤트로 CI 실행. CI 실패 → 수정 → **재검수** → 다시 push (3회 상한)
 9. **PR 요청 (개발자에게 보고)**: 아래를 한 번에 전달한다
    - **PR 생성 링크**: `https://github.com/cheolho37773/jblog/compare/dev...<브랜치>?quick_pull=1&title=<URL 인코딩 제목>&body=<URL 인코딩 본문>` — 본문은 `.github/pull_request_template.md`를 채운 내용, 마지막 줄 `Closes #<이슈>`. 인코딩은 `python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.stdin.read()))"`
