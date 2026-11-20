@@ -10,7 +10,7 @@ description: "Codex 독립 검수 실행과 대응 기록 절차. CI가 통과�
 ## 실행
 
 ```bash
-scripts/codex-review.sh <작업ID>            # 작업 브랜치 검수 (CI 통과 후)
+scripts/codex-review.sh <작업ID>            # 작업 브랜치 검수 (자체 검사 통과 후, push 전)
 scripts/codex-review.sh <작업ID> --plan     # 기획 문서 변경 검수 → docs/plan/feedback/
 ```
 

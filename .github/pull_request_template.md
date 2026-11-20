@@ -13,8 +13,7 @@
 - [ ] 자체 검사 통과 (lint · typecheck · test · 변경 파일 범위)
 - [ ] 민감 정보 하드코딩 없음, 새 환경변수는 `.env.example` 반영
 - [ ] CI 통과 @ `<head SHA>` (검사 SHA는 CI 요약 참고)
-- [ ] Codex 로컬 검수: `docs/reviews/<ID>/r<N>.codex.md` 판정: <!-- 통과 / 수정 후 통과 --> @ `<SHA>`
-- [ ] Codex PR 리뷰 지적 대응 완료 @ `<SHA>`
+- [ ] Codex 최종 검수 (push 전): `docs/reviews/<ID>/r<N>.codex.md` 판정: <!-- 통과 / 수정 후 통과 --> @ `<SHA>`
 - 검수 후 추가 커밋: <!-- 없음 / 검수 기록 파일만(예외) / 코드 변경 → 재검수 r<N+1> -->
 
 ## 기획 변경 여부
