@@ -86,7 +86,7 @@
 - [ ] Husky + lint-staged + commitlint (Conventional Commits)
 - [ ] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md`
 - [ ] 테스트 프레임워크 공통 설정: Jest(api), Vitest(web), Playwright, `pnpm test:*` 명령
-- [ ] GitHub Actions CI: lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화
+- [ ] GitHub Actions CI (**작업 브랜치 push 이벤트 + `dev` 대상 pull_request 이벤트** 모두 실행): lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화
 - [ ] `dev` Ruleset에 CI 잡과 `ownership-check`를 **필수 상태 검사**로 추가 (CI가 생긴 뒤)
 - [ ] Husky 도입 시 pre-commit이 `scripts/hooks/check-secrets.sh`를 호출하도록 이전
 
@@ -101,9 +101,10 @@
 - [ ] Next.js 버전 고정 + `revalidateTag` 시그니처·즉시 만료 옵션 확인 (개요 Q5)
 
 **협업 흐름 시험** (협업 §12 P2)
-- [ ] 이슈 → `dev`에서 브랜치 → 자체 검사 → Draft PR → CI → Codex @ SHA → Ready → G4 @ SHA → `dev` Merge → 이슈 자동 종료
+- [ ] 이슈 → `dev`에서 브랜치 → 자체 검사 → push → CI → Codex @ SHA → PR 생성 링크 전달 → 개발자 PR 생성·Merge → 이슈 자동 종료
+- [ ] push 이벤트로 CI가 실행되는지
+- [ ] PR 생성 링크의 제목·본문·`Closes #n`이 채워지고 Merge 시 이슈가 닫히는지
 - [ ] 검수 후 코드 커밋 시 재검수가 요구되는지
-- [ ] 승인 SHA와 head가 다르면 Merge가 거부되는지 (`--match-head-commit`)
 - [ ] 범위 밖 파일 변경 시 CI `ownership-check`가 실패하는지
 - [ ] CI 요약에 head·base·검사 SHA가 나오는지
 
@@ -268,12 +269,11 @@
 - [ ] 자체 검사: lint · typecheck · test · 변경 파일 범위 (에러 수정 3회 이내)
 - [ ] 민감 정보 하드코딩 없음, 새 환경변수는 `.env.example` 반영
 - [ ] [조건부] Docs 기록 (검수 전에 커밋)
-- [ ] Draft PR (`Closes #이슈`)
-- [ ] CI 통과 (head·base SHA 확인)
-- [ ] Codex 로컬 검수 @ head SHA → 높음 0건, 대응 기록 작성
-- [ ] Ready 전환 → Codex PR 리뷰 대응
+- [ ] 이 체크리스트(`00_master_checklist.md`)에서 해당 항목 체크 (기록 단계에 포함)
+- [ ] 브랜치 push → CI 통과 (head SHA 확인)
+- [ ] Codex 로컬 검수 @ head SHA → 높음 0건, 대응 기록 작성·push
 - [ ] 필수 검증 항목 전부 "완료" (실패·보류 따로 보고)
-- [ ] G4 개발자 승인 (PR + SHA)
-- [ ] `dev` Merge → 이슈 자동 종료 확인 → worktree 정리
-- [ ] 이 체크리스트(`00_master_checklist.md`)에서 해당 항목 체크
+- [ ] 개발자에게 PR 생성 링크 + head SHA 전달
+- [ ] (개발자) PR 생성 → PR CI·Codex PR 리뷰 확인 → 최신 커밋 = 보고 SHA 확인 → Squash and merge
+- [ ] 이슈 자동 종료 확인 → worktree·로컬 브랜치 정리
 ```
