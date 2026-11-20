@@ -325,7 +325,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | **역할 단위** (훅, 자체 검사) | 지금 실행 중인 **이 역할**이 이 파일을 바꿔도 되는가? | §5.2 매트릭스의 해당 역할 범위. 예: backend-dev가 `*.spec.ts`를 바꾸면 차단 |
 | **PR 단위** (CI `ownership-check`) | PR 전체 변경이 **승인된 참여 역할들의 범위 합집합** 안에 있는가? | 지시서의 "실행 방식·참여 역할·쓰기 범위" (CI가 지시서 파일을 읽음) + 공통 허용 경로 |
 
-- **공통 허용 경로** (참여 역할과 무관하게 PR에 포함 가능): 이 작업의 `docs/work/<M>/tasks/<ID>.md`, **이 작업 ID의 검수 기록** — `docs/reviews/<ID>/**`와 기획 문서 검수 결과 `docs/plan/feedback/<날짜>_<ID>.md`·`<날짜>_<ID>_r<N>.md` (§6.5와 같은 기준, 새 파일 추가만 허용·기존 파일 수정 불가), `package.json`과 짝을 이룬 `pnpm-lock.yaml`. 규칙 원본은 `scripts/ownership/roles.json`의 `pr_common_allow`
+- **공통 허용 경로** (참여 역할과 무관하게 PR에 포함 가능): 이 작업의 `docs/work/<M>/tasks/<ID>.md`, **이 작업 ID의 검수 기록** — `docs/reviews/<ID>/**`와 기획 문서 검수 결과 `docs/plan/feedback/<날짜>_<ID>.md`·`<날짜>_<ID>_r<N>.md` (§6.5와 같은 기준, 새 파일 추가만 허용·기존 파일 수정 불가), `package.json`과 짝을 이룬 `pnpm-lock.yaml`. 규칙 원본은 `scripts/ownership/roles.json`의 `pr_common_allow.regex`(날짜 `YYYY-MM-DD`·작업 ID·회차 `r<N>`을 정확히 대조하는 정규식), 판정은 `scripts/ownership/pr_common_allow.py`(자체 테스트 `--self-test`)
 - **조건부 허용**: `packages/api-types/**`는 `contract/` 브랜치에서만, 테스트 설정 파일은 DevOps가 참여 역할일 때만
 - 역할별 커밋 구분은 커밋 trailer로 한다 (`Agent: backend-dev`). PR 단위 검사는 합집합만 보고, 역할을 넘은 수정은 역할 단위 검사와 Codex 검수가 잡는다
 
@@ -835,3 +835,4 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | v0.7.1 | 2026-11-21 | Codex 검수 r1(중간 2건) 반영: 구성도·실행 예시·시험·원칙의 순서를 검수 → push → CI로 통일, push 허용 조건(§6.4-a) 정의 |
 | v0.7.2 | 2026-11-21 | Codex 검수 r2 반영: 기획 검수 결과 파일을 검수 기록 예외에 포함(작업 ID 기준), rebase 재검수 생략을 push 허용 조건의 명시적 예외로(SHA·근거 기록), 구성도·체크리스트 판정 표기 통일 |
 | v0.7.3 | 2026-11-21 | Codex 검수 r3 반영: PR 단위 공통 허용 경로에 작업 ID의 기획 검수 결과 포함(§5.2, roles.json `pr_common_allow`), §6.1의 삭제된 ② 단계 설명 제거 |
+| v0.7.4 | 2026-11-21 | Codex 검수 r4 반영(개발자 승인 추가 수정): 공통 허용 경로를 작업 ID 경계를 정확히 검사하는 정규식으로 변경, 판정 스크립트·자체 테스트 추가 |
