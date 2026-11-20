@@ -82,7 +82,7 @@
 > 작업 계획: [docs/work/M0/plan.md](M0/plan.md) (작업 ID M0-01 ~ M0-09)
 
 **검수 도구**
-- [ ] M0-01 `codex-review.sh` 보완: `--plan` 회차 날짜 무관 증가, Codex 실행 시간 제한 (Issue #2)
+- [ ] M0-01 `codex-review.sh` 보완: `--plan` 회차 날짜 무관 증가, Codex 실행 시간 제한, 실제 Codex 실행 파일 사용 (Issue #2)
 
 **모노레포·도구** (DevOps)
 - [ ] pnpm workspace + Turborepo, `apps/`·`packages/`·`infra/` 구조
