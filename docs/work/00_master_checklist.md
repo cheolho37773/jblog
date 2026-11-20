@@ -79,6 +79,10 @@
 ## M0. 셋업
 
 > 이 단계의 작은 작업 하나로 협업 흐름 전체를 처음 시험한다 (협업 §12 P2).
+> 작업 계획: [docs/work/M0/plan.md](M0/plan.md) (작업 ID M0-01 ~ M0-09)
+
+**검수 도구**
+- [ ] M0-01 `codex-review.sh` 보완: `--plan` 회차 날짜 무관 증가, Codex 실행 시간 제한, 실제 Codex 실행 파일 사용 (Issue #2)
 
 **모노레포·도구** (DevOps)
 - [ ] pnpm workspace + Turborepo, `apps/`·`packages/`·`infra/` 구조
@@ -98,6 +102,7 @@
 **프론트엔드 기반**
 - [ ] FE-01 Next.js 앱, Tailwind v4, 폰트, next-themes, `lib/env.ts`, api-types 연동
 - [ ] `apps/web/.env.example`
+- [ ] M0-07 api-types 파이프라인 (Swagger → `openapi.json` → `packages/api-types`)
 - [ ] Next.js 버전 고정 + `revalidateTag` 시그니처·즉시 만료 옵션 확인 (개요 Q5)
 
 **협업 흐름 시험** (협업 §12 P2)
