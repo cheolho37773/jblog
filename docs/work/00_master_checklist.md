@@ -16,7 +16,7 @@
 | 단계 | 상태 | 완료일 |
 |---|---|---|
 | 기획 | ✅ 완료 | 2026-11-21 |
-| P1 협업 체계 준비 | ⬜ | |
+| P1 협업 체계 준비 | 🔄 진행 중 (저장소 완료) | |
 | M0 셋업 | ⬜ | |
 | M1 디자인 시스템 | ⬜ | |
 | M2 블로그 읽기 | ⬜ | |
@@ -48,14 +48,14 @@
 
 > 저장소가 아직 없으므로 이 단계만 `dev` 직접 커밋을 허용하고, 끝나면 브랜치 보호를 켠다. (협업 §5.1, §12)
 
-**저장소**
-- [ ] `git init`, `.gitignore` (`.env`, `.env.*` 무시, `!.env.example` 예외, node_modules, .next, dist, 업로드 폴더)
-- [ ] 공개 GitHub 저장소 생성, 첫 커밋으로 `main` 생성
-- [ ] `main`에서 `dev` 생성 → GitHub 기본 브랜치를 `dev`로 변경
-- [ ] 저장소 설정: squash merge만 허용, Merge 후 브랜치 자동 삭제
-- [ ] Secret scanning + Push protection 켜기
-- [ ] 이슈 라벨(`M0`~`M7`, `BE`, `FE`, `TEST`, `DEVOPS`, `DOCS`, `type:*`)과 이슈 템플릿
-- [ ] PR 템플릿 (`.github/pull_request_template.md`, 협업 §5.5)
+**저장소** — https://github.com/cheolho37773/jblog
+- [x] `git init`, `.gitignore` (`.env`, `.env.*` 무시, `!.env.example` 예외, node_modules, .next, dist, 업로드 폴더) — 2026-11-21
+- [x] 공개 GitHub 저장소 생성, 첫 커밋으로 `main` 생성 — 2026-11-21
+- [x] `main`에서 `dev` 생성 → GitHub 기본 브랜치를 `dev`로 변경 — 2026-11-21
+- [x] 저장소 설정: squash merge만 허용, Merge 후 브랜치 자동 삭제 — 2026-11-21
+- [x] Secret scanning + Push protection 켜기 — 2026-11-21
+- [x] 이슈 라벨(`M0`~`M7`, `BE`, `FE`, `TEST`, `DEVOPS`, `DOCS`, `type:*`)과 이슈 템플릿 — 2026-11-21
+- [x] PR 템플릿 (`.github/pull_request_template.md`, 협업 §5.5) — 2026-11-21
 
 **에이전트·검수 설정** (협업 §11)
 - [ ] `.claude/agents/` 개편: architect 삭제, backend-dev·frontend-dev·devops-engineer 수정, qa-engineer → test-engineer, docs-writer 신규
@@ -71,7 +71,7 @@
 
 **마무리**
 - [ ] 브랜치 보호 켜기: `dev`(PR 필수, CI·`ownership-check` 필수, 직접·force push 금지), `main`(직접·force push 금지)
-- [ ] GitHub 계정 2FA 확인 (관리자 로그인 보안의 전제, 접근 통제 §1.2)
+- [x] GitHub 계정 2FA 확인 (관리자 로그인 보안의 전제, 접근 통제 §1.2) — 2026-11-21
 
 ---
 
