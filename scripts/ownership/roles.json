@@ -13,9 +13,22 @@
       "docs/work/*/tasks/**"
     ]
   },
+  "pr_common_allow": {
+    "$comment": "PR 단위 검사(CI ownership-check)에서 참여 역할과 무관하게 허용하는 경로. 정규식이며 {ID}는 작업 ID를 re.escape한 값으로 치환한다. 판정은 scripts/ownership/pr_common_allow.py. 검수 결과 파일은 새로 추가만 허용하고 기존 파일 수정은 실패로 본다 (협업 §5.2, §6.5).",
+    "regex": [
+      "^docs/work/[^/]+/tasks/{ID}\\.md$",
+      "^docs/reviews/{ID}/[^/]+\\.md$",
+      "^docs/plan/feedback/\\d{4}-\\d{2}-\\d{2}_{ID}(_r[1-9]\\d*)?\\.md$"
+    ],
+    "paired": {
+      "pnpm-lock.yaml": "같은 PR에서 package.json이 바뀐 경우만"
+    }
+  },
   "roles": {
     "orchestrator": {
-      "allow": ["**"],
+      "allow": [
+        "**"
+      ],
       "deny": []
     },
     "backend-dev": {

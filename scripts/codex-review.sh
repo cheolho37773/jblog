@@ -34,6 +34,11 @@ TODAY="$(date +%Y-%m-%d)"
 
 if [[ "$MODE" == "--plan" ]]; then
   OUTPUT_FILE="docs/plan/feedback/${TODAY}_${TASK_ID}.md"
+  ROUND=1
+  while [[ -e "$OUTPUT_FILE" ]]; do  # 재검수는 _r2, _r3 … 로 새 파일을 만든다 (기존 결과는 수정하지 않음)
+    ROUND=$(( ROUND + 1 ))
+    OUTPUT_FILE="docs/plan/feedback/${TODAY}_${TASK_ID}_r${ROUND}.md"
+  done
   TASK_BRIEF="(기획 문서 변경 검수 — 작업 지시서 없음)"
 else
   REVIEW_DIR="docs/reviews/${TASK_ID}"

@@ -1,6 +1,6 @@
 # jblog 협업 아키텍처 기획서 (AI 에이전트 개발 체계)
 
-> 버전 v0.6 · 작성일 2026-11-21
+> 버전 v0.7 · 작성일 2026-11-21
 > 관련: [개요](./00_overview.md) · [백엔드](./01_backend_plan.md) · [프론트엔드](./02_frontend_plan.md) · [AI 자동 작성](./03_ai_authoring_mcp_plan.md) · [접근 통제](./04_access_control_and_content_protection.md) · [UI 기획서](../ui_design/ui_design_spec.md)
 > 참고 자료: 개발자가 제시한 협업 구성도, `.claude/` 에이전트 템플릿 5종 + 스킬 3종
 > 이 문서는 **기획**이다. `.claude/` 파일은 이 문서가 검토를 통과한 뒤 §11 명세대로 수정한다.
@@ -17,16 +17,16 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | **기획 문서가 단일 기준** | `docs/plan/*`, `docs/ui_design/*`가 요구사항의 원본이다. 에이전트는 문서에 없는 결정을 스스로 내리지 않는다 |
 | **사람이 최종 결정** | 계획 승인, 기획 변경, 의견 충돌, Merge는 개발자가 결정한다 (§7) |
 | **변경 격리** | 작업마다 별도 브랜치·worktree에서 진행하고, 공유 파일은 담당자를 정해 충돌을 막는다 (§5) |
-| **비싼 검사는 싼 검사 뒤에** | 자체 검사 → CI → Codex → 개발자 순서. 테스트가 깨진 코드에 검수 비용을 쓰지 않는다 |
+| **비싼 검사는 싼 검사 뒤에** | 자체 검사(로컬에서 CI와 같은 검사) → Codex 최종 검수 → push → CI → 개발자 순서. 테스트가 깨진 코드에 검수 비용을 쓰지 않고, 검수가 끝난 코드만 push한다 |
 
 ### 확정된 결정사항
 
 | # | 항목 | 결정 |
 |---|---|---|
-| C1 | Codex 연결 | **로컬 Codex CLI(읽기 전용) + GitHub PR Codex 리뷰 병행** |
+| C1 | Codex 연결 | **로컬 Codex CLI(읽기 전용)만** 쓴다. GitHub PR Codex 리뷰는 연결하지 않는다 (2026-11-21 변경) |
 | C2 | DevOps | **별도 DevOps Agent 유지** (구성도의 Backend Agent에서 인프라를 분리) |
 | C3 | 개발자 승인 관문 | **작업 분할 계획(G1)**, **기획·결정사항 변경(G2)**, **Claude·Codex 의견 충돌(G3)**, **Merge(G4)** 4곳 모두 |
-| C4 | 검수 순서 | 자체 검사 → CI → Codex → 개발자 Merge (구성도의 Codex → CI 순서를 바꿈) |
+| C4 | 검수 순서 | 자체 검사(로컬에서 CI와 같은 검사) → **Codex 최종 검수** → **push** → CI → PR 요청 → 개발자 Merge. Codex 검수가 끝나기 전에는 push하지 않는다 (2026-11-21 변경) |
 | C5 | 템플릿 반영 시점 | 이 문서 검토 통과 후 `.claude/` 수정 (M0 첫 작업) |
 | C6 | 코드 가독성 | **가독성을 최우선 품질 기준**으로 둔다. 규칙은 §10-a, Codex 검수 관점에 포함 |
 | C7 | 기본 브랜치 | **`dev`를 GitHub 기본(default) 브랜치**로 둔다. `main`은 릴리스용으로 남겨 두되 **`dev` → `main` Merge는 당분간 하지 않는다** |
@@ -65,22 +65,23 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
                   └──────────┴────┬─────┴──────────┴───────────┘
                                   ▼
                 ┌──────────────────────────────────────────┐
-                │ Git: dev에서 작업별 브랜치 + worktree        │
-                │ ① 자체 검사 + 변경 파일 범위 + Docs 기록     │◀──────────┐
+                │ Git: dev에서 작업별 브랜치 + worktree (로컬)  │
+                │ ① 자체 검사 (CI와 같은 검사) + 범위 + 기록   │◀──────────┐
                 └──────────────────┬───────────────────────┘           │
-                                   ▼                                    │ 수정 요청
+                                   ▼ 통과                               │ 수정 요청
                 ┌──────────────────────────────────────────┐           │ (최대 3회,
-                │ ② CI (GitHub Actions)                     │──실패─────┤  초과 시 개발자 승인)
+                │ ② Codex 최종 검수 @ head SHA (읽기 전용)     │──지적─────┤  초과 시 개발자 승인)
+                │   push 허용 조건(§6.4-a) 충족 시 push       │──반박─────▶ G3 개발자 판정
                 └──────────────────┬───────────────────────┘           │
                                    ▼ 통과                               │
                 ┌──────────────────────────────────────────┐           │
-                │ ③ Codex 독립 검수 @ head SHA (읽기 전용)     │──지적─────┘
-                │   로컬 CLI 검수 → PR Codex 리뷰             │──반박─────▶ G3 개발자 판정
+                │ ③ push → CI (GitHub Actions)              │──실패─────┘ (수정 후 ②부터)
                 └──────────────────┬───────────────────────┘
                                    ▼ 통과
                 ┌──────────────────────────────────────────┐
-                │ ④ Ready PR → 개발자 승인(G4: PR + SHA)       │
-                │ ⑤ 승인 SHA로 dev에 squash merge → 이슈 종료  │
+                │ ④ PR 생성 링크 + head SHA 보고               │
+                │ ⑤ 개발자: PR 생성 → SHA 확인 → Merge (G4)    │
+                │    → 이슈 자동 종료                         │
                 └──────────────────────────────────────────┘
                    (dev → main Merge는 당분간 하지 않음)
 ```
@@ -211,13 +212,13 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | 2. 브랜치 | 오케스트레이터 | 이슈에 연결된 브랜치 `feat/<ID>-<요약>`을 **`dev`에서** 생성 + worktree | |
 | 3. 테스트 선작성 **[조건부]** | Test Agent | 기획 문서의 테스트 항목·완료 기준을 **실패하는 테스트**로 작성하고 커밋. 단일 실행에서 새 완료 기준 테스트가 없으면 생략, 버그 수정은 재현 테스트만 | 테스트가 "의도대로 실패"함을 확인 |
 | 4. 구현 | 담당 에이전트 | 테스트를 통과시키는 구현 | |
-| 5. 자체 검사 | 담당 에이전트 | `pnpm lint && pnpm typecheck && pnpm test --filter <app>` 통과 + **변경 파일 범위 검사**(`git diff --name-only <merge-base>` 결과가 지시서의 쓰기 범위 안인지, §5.2) | 전부 통과 |
+| 5. 자체 검사 | 담당 에이전트 | **CI와 같은 검사를 로컬에서**: lint · typecheck · test(Testcontainers 포함) · build + **변경 파일 범위 검사**(`git diff --name-only <merge-base>`가 쓰기 범위 안인지, §5.2). M0 이후 `pnpm verify` 한 명령으로 실행 | 전부 통과 |
 | 6. 기록 **[조건부]** | Docs Agent (단일 실행이면 담당 에이전트가 인계 노트로 대신) | 변경 기록, 필요 시 기획 문서 변경 이력. **검수 전에** 커밋해서 검수 대상에 포함시킨다 | |
-| 7. push | 오케스트레이터 | 작업 브랜치를 GitHub에 push (`git push -u origin <브랜치>`). **push 이벤트로 CI가 실행**된다 | |
-| 8. CI | GitHub Actions | lint · typecheck · unit · integration(Testcontainers) · build · (해당 시) E2E · **소유권 검사·잠금 파일 검사(필수)** | 통과. 실패 → 4로 (3회 상한, §8) |
-| 9. Codex 검수 | Codex | CI가 통과한 **head SHA**를 대상으로 로컬 CLI 검수 (§6). 대응 기록 커밋은 push (검수 기록만이라 재검수 없음, §6.5) | 높음 0건. 지적 → 4로 (3회 상한) / 반박 → G3 |
+| 7. Codex 검수 | Codex | 자체 검사를 통과한 로컬 **head SHA**를 대상으로 로컬 CLI 검수 (§6). 지적 → 4로 돌아가 수정 후 재검수. 대응 기록 커밋은 검수 기록만이라 재검수 없음 (§6.5) | **push 허용 조건** (§6.4-a): 가장 최근 검수가 push할 head SHA를 대상으로 했고, 높음 0건이며, 중간 지적은 모두 "수정 후 재검수" 또는 "후속 처리 Issue" 또는 "G3에서 받아들여진 반박"으로 처리됨. 지적 수정은 3회 상한 / 반박 → G3 |
+| 8. push | 오케스트레이터 | **Codex 최종 검수가 끝난 뒤에만** 작업 브랜치를 push (`git push -u origin <브랜치>`). push 이벤트로 CI가 실행된다 | Codex 최종 통과 |
+| 9. CI | GitHub Actions | lint · typecheck · unit · integration(Testcontainers) · build · (해당 시) E2E · **소유권 검사·잠금 파일 검사(필수)** | 통과. 실패 → 4로 수정 → **Codex 재검수** → 다시 push (3회 상한, §8) |
 | 10. PR 요청 | 오케스트레이터 → 개발자 | **PR 생성 링크**(제목·본문·`Closes #<이슈>` 미리 채움, §5.6), **head SHA**, 완료 기준·필수 검증 상태·검수 판정·에러 수정 횟수·후속 처리 목록을 보고 | |
-| 11. PR · Merge | **개발자** | GitHub에서 PR 생성 → PR CI·GitHub Codex PR 리뷰 확인 → **PR의 최신 커밋이 보고받은 head SHA와 같은지 확인** → `dev`에 squash merge (= **G4**). PR 리뷰에서 수정이 필요하면 오케스트레이터에게 알리고, 수정 후 새 SHA를 다시 보고받는다 | 검수·CI가 그 SHA에 유효 (§6.5) |
+| 11. PR · Merge | **개발자** | GitHub에서 PR 생성 → PR CI 확인 → **PR의 최신 커밋이 보고받은 head SHA와 같은지 확인** → `dev`에 squash merge (= **G4**). 수정이 필요하면 오케스트레이터에게 알리고, 수정·재검수 후 새 SHA를 다시 보고받는다 | 검수·CI가 그 SHA에 유효 (§6.5) |
 | 12. 정리 | 오케스트레이터 | Merge 후 `git fetch`, worktree·로컬 브랜치 삭제. 이슈는 `Closes #n`으로 자동 종료(원격 브랜치는 자동 삭제) | |
 
 ### 4.3 테스트 선작성 규칙
@@ -270,7 +271,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 2. GitHub 원격 저장소 **공개(Public)** (C12). 첫 커밋으로 `main` 생성 후 `main`에서 **`dev` 브랜치를 만들고 GitHub 기본 브랜치를 `dev`로 변경**
 3. 브랜치 보호 (§5.4-a). 공개 저장소라 무료 요금제에서 사용 가능
 4. 저장소 설정: Merge 방식은 **squash만 허용**, "Merge 후 브랜치 자동 삭제" 켜기, **Secret scanning + Push protection 켜기** (§5.1-a)
-5. GitHub Codex 리뷰 연결 (§6.3), 이슈 라벨·템플릿 (§5.6)
+5. 이슈 라벨·템플릿 (§5.6). (GitHub Codex PR 리뷰는 연결하지 않는다, C1)
 6. `AGENTS.md`(Codex 검수 지침), `CLAUDE.md`, `.claude/` 개편 (§11)
 
 ### 5.1-a 공개 저장소 운영 규칙
@@ -324,7 +325,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | **역할 단위** (훅, 자체 검사) | 지금 실행 중인 **이 역할**이 이 파일을 바꿔도 되는가? | §5.2 매트릭스의 해당 역할 범위. 예: backend-dev가 `*.spec.ts`를 바꾸면 차단 |
 | **PR 단위** (CI `ownership-check`) | PR 전체 변경이 **승인된 참여 역할들의 범위 합집합** 안에 있는가? | 지시서의 "실행 방식·참여 역할·쓰기 범위" (CI가 지시서 파일을 읽음) + 공통 허용 경로 |
 
-- **공통 허용 경로** (참여 역할과 무관하게 PR에 포함 가능): 이 작업의 `docs/work/<M>/tasks/<ID>.md`, `docs/reviews/<ID>/**`, `package.json`과 짝을 이룬 `pnpm-lock.yaml`
+- **공통 허용 경로** (참여 역할과 무관하게 PR에 포함 가능): 이 작업의 `docs/work/<M>/tasks/<ID>.md`, **이 작업 ID의 검수 기록** — `docs/reviews/<ID>/**`와 기획 문서 검수 결과 `docs/plan/feedback/<날짜>_<ID>.md`·`<날짜>_<ID>_r<N>.md` (§6.5와 같은 기준, 새 파일 추가만 허용·기존 파일 수정 불가), `package.json`과 짝을 이룬 `pnpm-lock.yaml`. 규칙 원본은 `scripts/ownership/roles.json`의 `pr_common_allow.regex`(날짜 `YYYY-MM-DD`·작업 ID·회차 `r<N>`을 정확히 대조하는 정규식), 판정은 `scripts/ownership/pr_common_allow.py`(자체 테스트 `--self-test`)
 - **조건부 허용**: `packages/api-types/**`는 `contract/` 브랜치에서만, 테스트 설정 파일은 DevOps가 참여 역할일 때만
 - 역할별 커밋 구분은 커밋 trailer로 한다 (`Agent: backend-dev`). PR 단위 검사는 합집합만 보고, 역할을 넘은 수정은 역할 단위 검사와 Codex 검수가 잡는다
 
@@ -347,7 +348,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 
 ```
 ① 영향 분석 (오케스트레이터 + 계약 책임자): 바뀌는 계약, 영향받는 영역·테스트 목록
-② 계약 확정 (contract/ 브랜치): 스키마·DTO·OpenAPI·토큰만. 동작 구현 없음 → CI → Codex → G4 → dev Merge
+② 계약 확정 (contract/ 브랜치): 스키마·DTO·OpenAPI·토큰만. 동작 구현 없음 → 자체 검사 → Codex 최종 검수 → push·CI → 개발자 Merge
 ③ 공통 변경 (계약 책임자): 여러 영역이 공유하는 기반 코드 (예: 인증 가드, 공용 타입·유틸) → dev Merge
 ④ 영역별 구현 (병렬 허용): ②③이 Merge된 dev에서 FE·BE·Test 작업 분기
 ⑤ 통합 검증 (Test Agent): 영역을 가로지르는 E2E·계약 테스트
@@ -375,7 +376,7 @@ feat/FE-05-...  ─────────────────────�
 | 기본 브랜치 | **`dev`**. 새 작업 브랜치는 항상 최신 `dev`에서 만든다 |
 | `main` | 릴리스 시점을 위한 브랜치로 남겨 둔다. **`dev` → `main` Merge는 하지 않는다** (배포 보류, C7·C10). 재개 조건과 절차는 배포 결정 시 정한다 |
 | 작업 브랜치 | 작업(이슈) 1개 = 브랜치 1개. `contract/<ID>-<요약>`, `feat/<ID>-<요약>`, `fix/<ID>-<요약>`, `chore/<요약>`, `docs/<요약>` (`<ID>` = WBS ID) |
-| PR | **push → CI → Codex 로컬 검수 → PR 요청 → 개발자가 PR 생성·Merge** 순서다. 오케스트레이터는 PR을 만들지 않고, 검수를 마친 브랜치와 PR 생성 링크만 넘긴다 (C17) |
+| PR | **Codex 최종 검수 → push → CI → PR 요청 → 개발자가 PR 생성·Merge** 순서다. 오케스트레이터는 PR을 만들지 않고, 검수를 마친 브랜치와 PR 생성 링크만 넘긴다 (C17) |
 | worktree 위치 | 저장소 밖 `../jblog-worktrees/<브랜치>` (Claude Code 서브에이전트의 worktree 격리 기능을 쓰면 그 기본 위치) |
 | 커밋 | Conventional Commits (`feat(api): ...`, commitlint로 검사). 커밋 본문에 WBS ID |
 | 동기화 | 작업 브랜치는 `dev`에 rebase. 공유 계약이 바뀌면 오케스트레이터가 영향 받는 브랜치에 rebase 지시 |
@@ -407,7 +408,6 @@ feat/FE-05-...  ─────────────────────�
 - [ ] 자체 검사 통과 (lint · typecheck · test · 변경 파일 범위)
 - [ ] CI 통과 @ `<SHA>`
 - [ ] Codex 로컬 검수: docs/reviews/<ID>/r<N>.codex.md  판정:  @ `<SHA>`
-- [ ] Codex PR 리뷰 지적 대응 완료 @ `<SHA>`
 - 검수 후 추가 커밋: 없음 / 검수 기록 파일만(예외) / 코드 변경 → 재검수 r<N+1>
 
 ## 기획 변경 여부
@@ -430,10 +430,10 @@ Closes #<이슈 번호>
 | ① 이슈 생성 | G1 승인된 계획의 작업마다 `gh issue create` (제목 `[BE-05] Post 작업본 · 수정사항 발행`, 라벨 `M3`·`BE`·`type:feat`, 본문에 지시서 링크·완료 기준) | 오케스트레이터 |
 | ② 브랜치 생성 | `gh issue develop <이슈번호> --base dev --name feat/BE-05-post-draft` → 이슈에 브랜치가 연결된다. 이어서 `git worktree add` | 오케스트레이터 |
 | ③ 작업 | §4.2의 3~6단계 | 서브에이전트 |
-| ④ push · CI | `git push -u origin <브랜치>` → push 이벤트로 CI 실행 | 오케스트레이터 · GitHub Actions |
-| ④-a 로컬 검수 | CI 통과 후 `scripts/codex-review.sh <ID>` → 대응 기록 push | 오케스트레이터 · Codex |
+| ④ Codex 최종 검수 | 자체 검사 통과 후 `scripts/codex-review.sh <ID>` → 대응 기록 커밋 (push 전) | 오케스트레이터 · Codex |
+| ④-a push · CI | push 허용 조건(§6.4-a)을 만족한 뒤 `git push -u origin <브랜치>` → push 이벤트로 CI 실행 | 오케스트레이터 · GitHub Actions |
 | ④-b PR 요청 | **PR 생성 링크** 전달: `https://github.com/cheolho37773/jblog/compare/dev...<브랜치>?quick_pull=1&title=<인코딩된 제목>&body=<인코딩된 본문>` — 본문은 PR 템플릿을 채운 내용이고 마지막 줄이 `Closes #<이슈번호>`. head SHA도 함께 전달 | 오케스트레이터 |
-| ⑤ PR 생성 · Merge | 링크를 열어 PR 생성 → PR CI·GitHub Codex PR 리뷰 확인 → PR 최신 커밋 = 보고받은 head SHA 확인 → **Squash and merge** | **개발자** |
+| ⑤ PR 생성 · Merge | 링크를 열어 PR 생성 → PR CI 확인 → PR 최신 커밋 = 보고받은 head SHA 확인 → **Squash and merge** | **개발자** |
 | ⑥ 이슈 종료 | PR 본문의 `Closes #n` 키워드로 **Merge 시 GitHub가 자동 종료** | GitHub |
 | ⑦ 정리 | 원격 브랜치는 저장소 설정으로 자동 삭제, 로컬 worktree는 `git worktree remove` | GitHub · 오케스트레이터 |
 
@@ -447,17 +447,16 @@ Closes #<이슈 번호>
 
 ## 6. Codex 독립 검수
 
-### 6.1 두 단계 검수
+### 6.1 로컬 검수 (단일 단계)
 
 | 단계 | 시점 | 도구 | 대상 | 산출물 |
 |---|---|---|---|---|
-| **① 로컬 검수** | CI 통과 후, Ready 전환 전 / 기획 문서 변경 시 | Codex CLI 비대화형 실행, **읽기 전용 샌드박스** | **`dev`와의 merge-base 대비 head까지의 diff** (`git diff $(git merge-base origin/dev HEAD)..HEAD`) + 지시서 + 참조 기획 섹션 | `docs/reviews/<ID>/r<N>.codex.md` (첫 줄에 base·head SHA) |
-| **② PR 리뷰** | 개발자가 PR을 만든 뒤 | GitHub의 Codex 코드 리뷰 | PR diff (`dev` 대상이라 ①과 같은 범위) | PR 리뷰 코멘트 (개발자가 확인하고, 수정이 필요하면 오케스트레이터에게 전달) |
+| **로컬 검수** | 자체 검사 통과 후, **push 전** / 기획 문서 변경 시 | Codex CLI 비대화형 실행, **읽기 전용 샌드박스** | **`dev`와의 merge-base 대비 head까지의 diff** (`git diff $(git merge-base origin/dev HEAD)..HEAD`) + 지시서 + 참조 기획 섹션 | `docs/reviews/<ID>/r<N>.codex.md` (첫 줄에 base·head SHA) |
 
-- **기준 브랜치를 `dev`로 둔 이유**: PR 대상이 `dev`이고 `main`에는 Merge하지 않으므로, `main` 기준으로 비교하면 이미 Merge된 다른 작업까지 매번 다시 검수하게 된다. merge-base 기준이면 ①과 ②의 범위가 같아진다.
+- **기준 브랜치를 `dev`로 둔 이유**: PR 대상이 `dev`이고 `main`에는 Merge하지 않으므로, `main` 기준으로 비교하면 이미 Merge된 다른 작업까지 매번 다시 검수하게 된다. merge-base 기준이면 개발자가 만들 PR의 diff와 검수 범위가 같아진다.
+- **GitHub PR Codex 리뷰를 쓰지 않는 이유 (C1)**: 로컬 검수가 기획 문서와 대조하는 최종 검수이고, 검수가 끝난 코드만 push하므로 PR 단계의 두 번째 검수는 두지 않는다.
 
-- ①은 기획 준수·설계 정합성처럼 **문서와 대조해야 하는 검수**에 강하다 (1·2차 기획 피드백과 같은 방식).
-- ②는 PR 맥락에서 **라인 단위 버그**를 한 번 더 잡는 용도다.
+- 로컬 검수는 기획 준수·설계 정합성처럼 **문서와 대조해야 하는 검수**와 diff의 라인 단위 버그를 함께 본다.
 - 기획 문서만 바뀌는 변경(G2 이후 반영)은 ①만 수행하고 결과를 `docs/plan/feedback/`에 둔다.
 
 ### 6.2 로컬 검수 실행 (`scripts/codex-review.sh`)
@@ -473,10 +472,9 @@ Closes #<이슈 번호>
 - CLI 명령 옵션(비대화형 실행, 샌드박스 지정)은 도입 시점의 Codex CLI 문서로 확정한다.
 - 이 스크립트는 오케스트레이터가 실행할 수 있지만 **결과 파일은 수정하지 않는다** (§5.2 훅으로 차단).
 
-### 6.3 PR 리뷰 연결
+### 6.3 (삭제) PR 리뷰 연결
 
-- GitHub 저장소에 Codex 코드 리뷰를 연결하고, PR이 "리뷰 요청" 상태가 되면 리뷰를 받는다. 자동 리뷰 또는 PR 코멘트로 요청하는 방식 중 무엇을 쓸지는 연결 시점의 설정 화면에 따른다.
-- 리뷰 기준은 같은 `AGENTS.md`를 쓴다.
+GitHub PR Codex 리뷰는 사용하지 않는다 (C1, 2026-11-21).
 
 ### 6.4 지적 처리
 
@@ -488,7 +486,18 @@ Closes #<이슈 번호>
 
 - 지적마다 대응 상태를 **대응 기록**(`docs/reviews/<ID>/r<N>.response.md`, 오케스트레이터 작성)에 남긴다: `수정함(커밋)` / `후속 처리(Issue)` / `반박(근거)`. Codex 결과 파일(`r<N>.codex.md`)은 건드리지 않는다.
 - 반박이 있으면 오케스트레이터가 근거를 정리해 **G3**로 올린다. 개발자가 결정할 때까지 해당 PR은 Merge하지 않는다.
-- 수정 후 재검수는 ①부터 다시 한다 (회차 `r2`, `r3`).
+- 수정 후 재검수는 같은 명령으로 다시 한다 (회차 `r2`, `r3`).
+
+### 6.4-a push 허용 조건
+
+Codex의 종합 판정 문구("통과 / 수정 후 통과 / 재작업")만으로 판단하지 않고, 아래를 **모두** 만족할 때 push한다. 절차(§4.2), 완료 기준(§10), PR 템플릿, 스킬이 같은 조건을 쓴다.
+
+1. 가장 최근 검수 회차가 **push할 head SHA**를 대상으로 했다. 예외는 둘뿐이다: ① 그 뒤 추가된 커밋이 **검수 기록 파일만** 바꾼 경우(§6.5의 검수 기록 정의) ② 그 뒤 **rebase만** 했고 §6.5 "rebase 후 재검수 판단"에서 재검수 생략으로 판정해, 이전·이후 head SHA와 판단 근거를 대응 기록에 남긴 경우
+2. 그 회차의 **높음 0건**
+3. 그 회차의 **중간 지적은 모두** 다음 중 하나로 대응 기록에 남아 있다: 수정 후 재검수에서 해소됨 / 후속 처리 Issue 생성 / G3에서 개발자가 받아들인 반박
+4. 낮음은 대응 기록에 남기기만 하면 된다
+
+수정을 하면 코드가 바뀌므로 1번에 따라 재검수가 필요하다. 즉 "수정 후 통과" 판정을 받고 수정했다면 재검수를 받아야 push할 수 있고, 수정하지 않고 후속 Issue로 넘긴 경우에만 그 회차로 push할 수 있다.
 
 ### 6.5 검수·승인의 유효 범위 (SHA 기준)
 
@@ -508,15 +517,14 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 |---|---|---|
 | CI | **head SHA + base SHA 조합** (검사 SHA는 그 merge commit) | GitHub 상태 검사 + CI 요약의 SHA 3종 |
 | Codex 로컬 검수 | `r<N>.codex.md` 첫 줄의 head SHA | 검수 파일 |
-| Codex PR 리뷰 | 리뷰가 달린 커밋 | PR 리뷰 |
 | G4 승인 | 개발자가 Merge한 PR의 head SHA (= 오케스트레이터가 보고한 SHA여야 함) | GitHub Merge 기록 |
 
 **검수 이후 커밋이 추가됐을 때**
 
 | 추가된 커밋의 내용 | 다시 해야 할 것 |
 |---|---|
-| **검수 기록만** (`docs/reviews/<ID>/**`, PR 본문 수정) | 없음 (예외). CI는 자동으로 다시 돌지만 Codex 재검수는 하지 않는다. `ownership-check`가 "검수 SHA 이후 변경 파일이 `docs/reviews/<ID>/**`뿐"인지 확인한다 |
-| 코드·테스트·설정·기획 문서 변경 (수정, 리팩터링, Docs 기록 추가 포함) | CI 재실행(자동) + Codex **재검수 `r<N+1>`**. 재검수 범위는 직전 검수 SHA 이후 변경분이 중심이며, 회귀 확인을 위해 전체 diff도 함께 준다 |
+| **검수 기록만** — 이 작업 ID의 검수 결과·대응 기록: `docs/reviews/<ID>/**`, 그리고 기획 문서 검수(`--plan`)인 경우 그 결과 파일 `docs/plan/feedback/<날짜>_<ID>.md`·`<날짜>_<ID>_r<N>.md` | 없음 (예외). Codex 재검수는 하지 않는다. 다른 기획 문서나 다른 작업 ID의 피드백 파일은 예외가 아니다. `ownership-check`가 "검수 SHA 이후 변경 파일이 이 작업 ID의 검수 기록 경로뿐"인지 확인한다 |
+| 코드·테스트·설정·기획 문서 변경 (수정, 리팩터링, Docs 기록 추가, **push 후 CI 실패 수정** 포함) | Codex **재검수 `r<N+1>`** 후 push (CI 재실행). push 전에 재검수를 마친다. 재검수 범위는 직전 검수 SHA 이후 변경분이 중심이며, 회귀 확인을 위해 전체 diff도 함께 준다 |
 | `dev` 위로 rebase만 함 | CI 재실행은 항상. 재검수 여부는 아래 "rebase 후 재검수 판단" |
 | PR 요청 이후 무엇이든 | 오케스트레이터가 새 head SHA와 재검사 결과를 **다시 보고**한다. 개발자는 PR 최신 커밋이 새로 보고받은 SHA와 같을 때만 Merge한다 |
 
@@ -526,7 +534,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 |---|---|
 | 충돌을 손으로 해결함 | 필요 (전체) |
 | 작업 패치 자체는 같지만, 직전 검수 이후 `dev`에 들어온 변경 중 **이 작업의 관련 범위**가 있음 — 공유 계약(스키마·OpenAPI·토큰), 이 작업이 import하는 모듈, 인증 가드·공용 유틸 | 필요 (**영향 범위 검수**: 새로 들어온 관련 변경과 이 작업의 접점만) |
-| 위 둘 다 아님 (관련 없는 영역의 변경만 `dev`에 들어옴) | 생략. CI 통과만 확인 |
+| 위 둘 다 아님 (관련 없는 영역의 변경만 `dev`에 들어옴) | 생략. CI 통과만 확인. 대응 기록에 **이전 head SHA → 새 head SHA, 새로 들어온 `dev` 변경 파일 목록, 관련 없다고 본 근거**를 남긴다 (§6.4-a 1-②의 근거) |
 
 - "관련 범위"는 지시서의 "계약 기준"과 쓰기 범위의 import 그래프로 판단한다. 오케스트레이터가 `git diff <이전 base>..<새 base> --name-only` 결과를 이 기준과 대조해 PR에 기록한다.
 
@@ -652,7 +660,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 - [ ] 가독성 규칙(§10-a) 준수 (ESLint 통과 + Codex 가독성 지적 대응)
 - [ ] 에러 수정 3회 초과분은 개발자 승인 기록 있음
 - [ ] CI 통과
-- [ ] Codex 로컬 검수 "통과" 또는 "수정 후 통과" + 높음 0건, PR 리뷰 지적 대응 완료
+- [ ] Codex 최종 검수가 push 허용 조건(§6.4-a)을 만족 (push 전)
 - [ ] 쓰기 범위 위반 없음
 - [ ] 민감 정보 하드코딩 없음, 새 환경변수는 `.env.example`에 반영 (개요 §6-b)
 - [ ] 인계 노트·대응 기록 작성 (Docs Agent가 참여하지 않은 단일 실행은 담당 에이전트의 인계 노트로 충분)
@@ -753,7 +761,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | `.github/workflows/deploy.yml` 생성 | 삭제. **`ci.yml`만** (lint · typecheck · test · build · Docker 이미지 빌드 검증) |
 | `_workspace/05_deploy_guide.md` | `infra/README.md`(로컬 개발 환경 가이드) |
 | Sentry / Vercel Analytics | 삭제 (배포 결정 후 검토) |
-| (없음) 추가 | M0 모노레포 셋업(pnpm, Turborepo, ESLint/Prettier/Husky/commitlint, **가독성 ESLint 규칙 §10-a**), 로컬 Docker Compose(PostgreSQL), CI 워크플로(Testcontainers 포함), **GitHub 저장소 설정(`dev` 기본 브랜치, 브랜치 보호, squash 전용, 자동 브랜치 삭제), 이슈 라벨·템플릿, PR 템플릿, 소유권 훅, Codex 리뷰 연결** |
+| (없음) 추가 | M0 모노레포 셋업(pnpm, Turborepo, ESLint/Prettier/Husky/commitlint, **가독성 ESLint 규칙 §10-a**), 로컬 Docker Compose(PostgreSQL), CI 워크플로(Testcontainers 포함), **GitHub 저장소 설정(`dev` 기본 브랜치, 브랜치 보호, squash 전용, 자동 브랜치 삭제), 이슈 라벨·템플릿, PR 템플릿, 소유권 훅. CI 트리거는 작업 브랜치 push + `dev` 대상 pull_request** |
 | 테스트 환경 | Jest·Vitest·Playwright 공통 설정, `pnpm test:*` 실행 명령, Testcontainers·Playwright `webServer`가 동작하는 CI 잡 (§4.3-a) |
 | 인프라 요구사항 | 개요 [§6-a](./00_overview.md#6-a-배포-보류-범위)의 "인프라와 무관하게 유지하는 요구사항"을 문서로 관리 (구현은 배포 결정 후) |
 
@@ -785,8 +793,8 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | 단계 | 시점 | 내용 |
 |---|---|---|
 | P0 | 지금 | 이 문서 작성 → Codex 로컬 검수(수동) → 반영 → 개발자 승인 |
-| P1 | M0 첫 작업 (오케스트레이터 + 개발자) | git 저장소·**공개** GitHub 저장소, Secret scanning·Push protection, `main` → `dev` 생성 및 기본 브랜치 변경, 브랜치 보호, 이슈 라벨·템플릿, `.claude/` 개편(§11), `AGENTS.md`, 소유권 훅, PR 템플릿, `scripts/codex-review.sh`, GitHub Codex 리뷰 연결. (저장소가 아직 없으므로 이 단계만 `dev` 직접 커밋을 허용하고, 끝나면 브랜치 보호를 켠다) |
-| P2 | M0 나머지 (DevOps Agent) | 모노레포·CI 셋업(`ownership-check` 포함). **작은 작업 하나로 전체 흐름(이슈 → `dev`에서 브랜치 → 자체 검사 → push → CI → Codex @ SHA → PR 생성 링크 전달 → 개발자 PR 생성·Merge → 이슈 종료)을 처음 시험**한다. 시험 항목: push 시 CI 실행, 검수 후 코드 커밋 시 재검수 요구, PR 생성 링크의 제목·본문·`Closes #n` 동작, 범위 밖 파일 변경 시 CI 실패 |
+| P1 | M0 첫 작업 (오케스트레이터 + 개발자) | git 저장소·**공개** GitHub 저장소, Secret scanning·Push protection, `main` → `dev` 생성 및 기본 브랜치 변경, 브랜치 보호, 이슈 라벨·템플릿, `.claude/` 개편(§11), `AGENTS.md`, 소유권 훅, PR 템플릿, `scripts/codex-review.sh`. (저장소가 아직 없으므로 이 단계만 `dev` 직접 커밋을 허용하고, 끝나면 브랜치 보호를 켠다) |
+| P2 | M0 나머지 (DevOps Agent) | 모노레포·CI 셋업(`ownership-check` 포함). **작은 작업 하나로 전체 흐름(이슈 → `dev`에서 브랜치 → 자체 검사 → Codex 최종 검수 @ SHA → push → CI → PR 생성 링크 전달 → 개발자 PR 생성·Merge → 이슈 종료)을 처음 시험**한다. 시험 항목: push 시 CI 실행, 검수 후 코드 커밋 시 재검수 요구, PR 생성 링크의 제목·본문·`Closes #n` 동작, 범위 밖 파일 변경 시 CI 실패 |
 | P3 | M0 종료 시 | 시험 결과로 이 문서와 스킬 보정 (G2) |
 | P4 | M1~ | 정식 운영. 마일스톤마다 report에 "협업 체계 개선점" 항목 기록 |
 
@@ -799,7 +807,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | 에이전트가 쓰기 범위를 넘음 | PreToolUse 훅 차단 + CI 경고 + Codex 검수 |
 | 테스트를 구현에 맞춰 약화 | 테스트 파일 소유권(Test Agent), 구현 에이전트 수정 차단 |
 | 공유 계약 충돌 (스키마·OpenAPI) | 계약 우선 원칙, 계약 작업 직렬화, `api-types` 생성물화 |
-| Codex 검수 비용·시간 | CI 통과 후에만 실행, 기획 변경·PR 단위로만 |
+| Codex 검수 비용·시간 | 로컬 자체 검사(CI와 같은 검사) 통과 후에만 실행, 기획 변경·작업 단위로만 |
 | 검수·에러 수정 무한 반복 | 모든 루프 3회 상한, 초과 시 개발자 승인 (C9) |
 | 개발자 계정으로 PR을 만들어 GitHub 승인 리뷰를 쓸 수 없음 | G4를 명시적 지시로 받음 (§5.4-a). 필요 시 에이전트 전용 계정·GitHub App 도입 |
 | `dev`만 쌓이고 `main`과 멀어짐 | 배포 결정 시 `dev` → `main` 첫 Merge 절차를 별도 계획 (C7) |
@@ -823,3 +831,8 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | v0.4 | 2026-11-21 | [에이전트 팀 가이드 검토](./feedback/2026-11-21_agent_team_guide_review.md) 반영: 실행 방식 선택(C14, §4.0, 팀 방식 보류), 검증 가능한 결과 단위 작업 분할(§4.0-a), 난도 기준 모델 배정(C15, §4.0-b), 테스트 환경 책임 분리(C16, §4.3-a), 크로스커팅 단계별 진행(§5.3-a), 지시서 확장(§9), 필수 검증 상태·최종 보고 확인(§10) |
 | v0.5 | 2026-11-21 | [4차 검토 피드백](./feedback/2026-11-21_plan_review_04.md) 반영: CI 검사 SHA와 head·base SHA 구분(§6.5), rebase 후 관련 범위 기준 재검수(§6.5), 역할 단위/PR 단위 소유권 검사 분리·공통 허용 경로(§5.2), 테스트 설정 파일·생성 타입 소유권, 단일 실행의 조건부 단계 표시(§4.2, §10) |
 | v0.6 | 2026-11-21 | PR 생성·Merge를 개발자가 GitHub에서 직접 하도록 변경(C17): 오케스트레이터는 브랜치 push·검수·PR 생성 링크 전달까지, push 이벤트 CI, G4 = 개발자 Merge |
+| v0.7 | 2026-11-21 | Codex는 로컬 검수만(C1 변경, GitHub PR Codex 리뷰 미사용), 순서를 자체 검사 → Codex 최종 검수 → push → CI로 변경(C4), CI 실패 수정 시 재검수 후 재push |
+| v0.7.1 | 2026-11-21 | Codex 검수 r1(중간 2건) 반영: 구성도·실행 예시·시험·원칙의 순서를 검수 → push → CI로 통일, push 허용 조건(§6.4-a) 정의 |
+| v0.7.2 | 2026-11-21 | Codex 검수 r2 반영: 기획 검수 결과 파일을 검수 기록 예외에 포함(작업 ID 기준), rebase 재검수 생략을 push 허용 조건의 명시적 예외로(SHA·근거 기록), 구성도·체크리스트 판정 표기 통일 |
+| v0.7.3 | 2026-11-21 | Codex 검수 r3 반영: PR 단위 공통 허용 경로에 작업 ID의 기획 검수 결과 포함(§5.2, roles.json `pr_common_allow`), §6.1의 삭제된 ② 단계 설명 제거 |
+| v0.7.4 | 2026-11-21 | Codex 검수 r4 반영(개발자 승인 추가 수정): 공통 허용 경로를 작업 ID 경계를 정확히 검사하는 정규식으로 변경, 판정 스크립트·자체 테스트 추가 |
