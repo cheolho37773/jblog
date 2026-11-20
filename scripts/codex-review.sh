@@ -75,12 +75,14 @@ kill_process_group() {
 
 # Codex를 시간 제한 안에서 실행한다. macOS에는 timeout 명령이 없어 백그라운드 실행 + 감시 루프로 구현.
 # 왜: set -m으로 Codex를 별도 프로세스 그룹에 두어야 시간 초과 시 자식까지 한 번에 종료할 수 있다.
+# 왜: codex exec는 stdin이 열려 있으면 "Reading additional input from stdin..."을 출력하고 EOF를 기다리며 멈춘다.
+#     그래서 표준 입력을 /dev/null로 연결한다 (set -m에서는 백그라운드 작업이 stdin을 물려받는다).
 run_codex_with_timeout() {
   local timeout_seconds="$1"; shift
   local deadline=$(( SECONDS + timeout_seconds ))
   local codex_pid status=0
   set -m
-  "$@" > /dev/null &
+  "$@" > /dev/null < /dev/null &
   codex_pid=$!
   set +m
   while kill -0 "$codex_pid" 2>/dev/null; do
