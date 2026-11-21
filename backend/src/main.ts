@@ -1,10 +1,10 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { ConfigService } from '@nestjs/config';
+import { createApp } from './bootstrap';
+import { readProcessEnv } from './config/env.source';
 
-// 골격 단계: 기동만 확인한다. 포트·prefix·보안 설정은 환경변수 검증과 함께 추가한다.
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(0);
+  const app = await createApp(readProcessEnv());
+  await app.listen(app.get(ConfigService).getOrThrow<number>('API_PORT'));
 }
 
 void bootstrap();
