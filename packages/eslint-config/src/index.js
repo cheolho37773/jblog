@@ -16,7 +16,10 @@ const DENIED_IDENTIFIERS = ['data', 'tmp', 'temp', 'foo', 'bar', 'baz', 'obj', '
 export const PROCESS_ENV_ALLOWED_FILES = [
   'apps/api/src/config/**',
   'apps/web/lib/env.ts',
-  '**/*.config.{js,mjs,cjs,ts}',
+  // 도구 설정 파일은 루트·앱·패키지 루트 바로 아래만 허용한다. src/ 같은 하위 폴더는 제외한다.
+  '*.config.{js,mjs,cjs,ts}',
+  'apps/*/*.config.{js,mjs,cjs,ts}',
+  'packages/*/*.config.{js,mjs,cjs,ts}',
 ];
 
 const PROCESS_ENV_MESSAGE =

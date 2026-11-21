@@ -58,12 +58,31 @@ const PROCESS_ENV_ALLOWED_PATHS = [
   'apps/web/lib/env.ts',
   'jest.config.mjs',
   'packages/foo/vitest.config.ts',
+  'apps/api/jest.config.ts',
+];
+
+// 이름만 *.config.ts인 일반 소스는 예외가 아니다.
+const PROCESS_ENV_DENIED_PATHS = [
+  'apps/api/src/posts/post.config.ts',
+  'packages/eslint-config/src/internal.config.ts',
 ];
 
 for (const allowedPath of PROCESS_ENV_ALLOWED_PATHS) {
   test(`${allowedPath}에서는 process.env를 허용한다`, async () => {
     for (const fixtureName of ['process-env.ts', 'process-env-destructure.ts']) {
       assert.deepEqual(await lintFixture(fixtureName, allowedPath), []);
+    }
+  });
+}
+
+for (const deniedPath of PROCESS_ENV_DENIED_PATHS) {
+  test(`${deniedPath}에서는 process.env를 허용하지 않는다`, async () => {
+    for (const fixtureName of ['process-env.ts', 'process-env-destructure.ts']) {
+      const messages = await lintFixture(fixtureName, deniedPath);
+      assert.ok(
+        messages.some((message) => message.severity === 2),
+        fixtureName,
+      );
     }
   });
 }
