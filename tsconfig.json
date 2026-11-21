@@ -7,6 +7,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["eslint.config.mjs", "scripts/eslint/**/*.mjs"],
+  "include": ["eslint.config.mjs", "scripts/eslint/**/*.mjs", "scripts/api-types/**/*.mjs"],
   "exclude": ["scripts/eslint/fixtures"]
 }
