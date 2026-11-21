@@ -34,3 +34,28 @@ test('첫 화면에서 테마를 전환하고 새로고침 후에도 선택이 �
     'false',
   );
 });
+
+test('첫 화면과 테마 전환 중 콘솔 오류(하이드레이션 경고 포함)가 없다', async ({ page }) => {
+  const consoleErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  page.on('pageerror', (error) => consoleErrors.push(error.message));
+
+  await page.goto('/');
+  await page.getByRole('switch', { name: TOGGLE_NAME }).click();
+  await page.reload();
+  await expect(page.getByRole('switch', { name: TOGGLE_NAME })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+
+  expect(consoleErrors).toEqual([]);
+});
+
+test('첫 응답 HTML은 lang="ko"이고 서버 전용 API 주소를 담지 않는다', async ({ request }) => {
+  const html = await (await request.get('/')).text();
+
+  expect(html).toContain('lang="ko"');
+  expect(html).not.toContain('localhost:4999');
+});
