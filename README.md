@@ -19,6 +19,17 @@
 | [docs/ui_design/ui_design_spec.md](docs/ui_design/ui_design_spec.md) | UI 디자인 기획 |
 | [docs/work/00_master_checklist.md](docs/work/00_master_checklist.md) | 전체 진행 체크리스트 |
 
+## 개발 환경
+
+```bash
+nvm use                          # Node 24 (.nvmrc)
+corepack enable                  # pnpm 버전은 package.json의 packageManager로 고정
+pnpm install                     # Husky 훅 설치: 커밋 전 비밀정보 검사·lint-staged, 커밋 메시지 검사(Conventional Commits)
+pnpm lint && pnpm format:check && pnpm typecheck && pnpm test
+```
+
+비밀값은 `.env` 파일로만 주입하고 커밋하지 않습니다 ([개요 §6-b](docs/plan/00_overview.md)).
+
 ## 브랜치
 
 - `dev` — 기본 브랜치. 모든 작업 PR의 대상

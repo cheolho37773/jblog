@@ -67,7 +67,7 @@
 - [x] 루트 `AGENTS.md` (Codex 검수 지침: 관점, 출력 형식, 민감 정보 "높음", 코드 수정 금지) — 2026-11-21
 - [x] `scripts/codex-review.sh` (dev merge-base 기준, base·head SHA 기록) — 2026-11-21
 - [ ] ~~GitHub Codex PR 리뷰 연결~~ ⏸ 보류: 사용하지 않기로 결정 (협업 C1, 2026-11-21). Codex는 로컬 검수만
-- [x] pre-commit 훅: 비밀정보 패턴 검사, `.env` 커밋 차단 (`.githooks/pre-commit`, 테스트 9건 통과. 각 PC에서 `git config core.hooksPath .githooks` 1회) — 2026-11-21
+- [x] pre-commit 훅: 비밀정보 패턴 검사, `.env` 커밋 차단 (`.githooks/pre-commit`, 테스트 9건 통과) — 2026-11-21 · M0-02에서 Husky `.husky/pre-commit`으로 이전 (`pnpm install`이 설치)
 
 **마무리**
 - [x] 브랜치 보호 켜기 (Ruleset): `dev`·`main` PR 필수(squash만), 직접·force push·삭제 금지 — 2026-11-21
@@ -85,14 +85,14 @@
 - [x] M0-01 `codex-review.sh` 보완: `--plan` 회차 날짜 무관 증가, Codex 실행 시간 제한, 실제 Codex 실행 파일 사용 (Issue #2) — #2 (2026-11-21)
 
 **모노레포·도구** (DevOps)
-- [ ] pnpm workspace + Turborepo, `frontend/`·`backend/`·`infra/` 구조 (공용 코드 패키지 없음, 개요 D25)
-- [ ] ESLint(flat) + Prettier + 가독성 규칙(complexity 10, max-depth 3, max-params 3, no-explicit-any 등) + 설정 모듈 밖 `process.env` 금지 규칙
-- [ ] Husky + lint-staged + commitlint (Conventional Commits)
+- [x] pnpm workspace + Turborepo, `frontend/`·`backend/`·`infra/` 구조 (공용 코드 패키지 없음, 개요 D25) — #6 (2026-11-21) · `frontend/`·`backend/`·`infra/` 디렉터리는 M0-03~05에서 생성
+- [x] ESLint(flat) + Prettier + 가독성 규칙(complexity 10, max-depth 3, max-params 3, no-explicit-any 등) + 설정 모듈 밖 `process.env` 금지 규칙 — #6 (2026-11-21)
+- [x] Husky + lint-staged + commitlint (Conventional Commits) — #6 (2026-11-21)
 - [ ] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md`
 - [ ] 테스트 프레임워크 공통 설정: Jest(api), Vitest(web), Playwright, `pnpm test:*` 명령
 - [ ] GitHub Actions CI (**작업 브랜치 push 이벤트 + `dev` 대상 pull_request 이벤트** 모두 실행): lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화
 - [ ] `dev` Ruleset에 CI 잡과 `ownership-check`를 **필수 상태 검사**로 추가 (CI가 생긴 뒤)
-- [ ] Husky 도입 시 pre-commit이 `scripts/hooks/check-secrets.sh`를 호출하도록 이전
+- [x] Husky 도입 시 pre-commit이 `scripts/hooks/check-secrets.sh`를 호출하도록 이전 — #6 (2026-11-21)
 
 **백엔드 기반**
 - [ ] BE-01 Nest 프로젝트, config(스키마 검증)/logging(pino redact)/helmet/ValidationPipe/Swagger(운영 비활성)/에러 필터
