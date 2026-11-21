@@ -61,12 +61,20 @@
             "type": "object"
           },
           "status": {
-            "enum": ["error", "ok", "degraded", "shutting_down"],
+            "enum": [
+              "error",
+              "ok",
+              "degraded",
+              "shutting_down"
+            ],
             "example": "ok",
             "type": "string"
           }
         },
-        "required": ["status", "details"],
+        "required": [
+          "status",
+          "details"
+        ],
         "type": "object"
       },
       "TerminusHealthIndicatorResult": {
@@ -81,11 +89,17 @@
           },
           "status": {
             "description": "The status of this health indicator",
-            "enum": ["up", "degraded", "down"],
+            "enum": [
+              "up",
+              "degraded",
+              "down"
+            ],
             "type": "string"
           }
         },
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "type": "object"
       }
     }
@@ -125,7 +139,10 @@
                       "example": {}
                     },
                     "status": {
-                      "enum": ["ok", "degraded"],
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ],
                       "example": "ok"
                     }
                   }
@@ -167,7 +184,10 @@
                       }
                     },
                     "status": {
-                      "enum": ["error", "shutting_down"],
+                      "enum": [
+                        "error",
+                        "shutting_down"
+                      ],
                       "example": "error"
                     }
                   }
@@ -177,7 +197,9 @@
             "description": "The Health Check is not successful"
           }
         },
-        "tags": ["Health"]
+        "tags": [
+          "Health"
+        ]
       }
     }
   },
