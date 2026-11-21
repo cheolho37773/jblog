@@ -31,6 +31,25 @@
       "frontend/src/generated/**"
     ]
   },
+  "pr_contract_openapi": {
+    "$comment": "PR 단위 검사(CI ownership-check) 전용, 규칙 R7. OpenAPI 계약 원본은 contract/ 브랜치이고 참여 역할에 required_role이 있을 때만 변경을 허용한다. 그 밖에는 역할 범위와 무관하게 실패 (협업 §5.2 조건부 허용).",
+    "branch_prefix": "contract/",
+    "required_role": "backend-dev",
+    "patterns": [
+      "backend/openapi.json"
+    ]
+  },
+  "pr_orchestrator_allow": {
+    "$comment": "PR 단위 검사(CI ownership-check) 전용, 규칙 R8. 오케스트레이터 경로는 참여 역할과 무관하게 모든 PR에서 허용한다. protected 경로(R3)는 여기에 맞아도 R3가 먼저 판정한다. roles.orchestrator(**)는 PR 검사에 쓰지 않는다 (M0-08 지시서).",
+    "patterns": [
+      "docs/**",
+      "README.md",
+      "CLAUDE.md",
+      "AGENTS.md",
+      ".claude/**",
+      "scripts/ownership/roles.json"
+    ]
+  },
   "roles": {
     "orchestrator": {
       "allow": [
