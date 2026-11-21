@@ -9,7 +9,8 @@
     "dev": "nest start --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.mjs --passWithNoTests",
-    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.e2e.mjs --passWithNoTests"
+    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.e2e.mjs --passWithNoTests",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.integration.mjs --passWithNoTests"
   },
   "dependencies": {
     "@nestjs/common": "12.5.1",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@nestjs/cli": "12.0.13",
     "@nestjs/testing": "12.5.1",
+    "@testcontainers/postgresql": "12.2.2",
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
     "@types/node": "24.19.2",

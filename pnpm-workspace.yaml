@@ -11,6 +11,13 @@ savePrefix: ''
 # - @scarf/scarf: swagger-ui-dist의 전이 의존성. 스크립트가 텔레메트리라 동작에 필요 없다.
 # - @parcel/watcher: jest-haste-map의 전이 의존성. 스크립트는 네이티브 빌드 폴백이고,
 #   `jest --watch`에서만 쓰이며 플랫폼별 사전 빌드 패키지로 충분하다.
+# - ssh2·cpu-features: testcontainers(dockerode) 전이 의존성. ssh2 스크립트는 선택적 네이티브
+#   암호 바인딩 빌드(실패해도 순수 JS로 동작)이고 cpu-features는 그 선택 의존성이다.
+#   Docker에 ssh:// 로 접속할 때만 쓰이며 로컬 소켓 접속에는 필요 없다.
+# - protobufjs: dockerode 전이 의존성. postinstall은 버전 표기 경고만 출력한다.
 allowBuilds:
   '@scarf/scarf': false
   '@parcel/watcher': false
+  'cpu-features': false
+  protobufjs: false
+  ssh2: false
