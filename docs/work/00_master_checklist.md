@@ -96,7 +96,7 @@
 
 **백엔드 기반**
 - [x] BE-01 Nest 프로젝트, config(스키마 검증)/logging(pino redact)/helmet/ValidationPipe/Swagger(운영 비활성)/에러 필터 — #11 (2026-11-21)
-- [ ] BE-02 Prisma 스키마, 마이그레이션, `pg_trgm`·부분 unique 인덱스 수동 SQL, seed(더미 데이터)
+- [x] BE-02 Prisma 스키마, 마이그레이션, `pg_trgm`·부분 unique 인덱스 수동 SQL, seed(더미 데이터) — #17 (2026-11-21)
 - [ ] `backend/.env.example`
 
 **프론트엔드 기반**
