@@ -32,14 +32,23 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
    ```bash
    gh issue create --title "[<ID>] <요약>" --label "<M>,<영역>,type:<유형>" --body "<지시서 링크·완료 기준>"
    gh issue develop <번호> --base dev --name <feat|fix|contract>/<ID>-<요약>
-   git worktree add ../jblog-worktrees/<브랜치> <브랜치>
    ```
-4. **위임**: 서브에이전트를 실행하기 전에 worktree에 역할을 기록한다 (`echo <역할> > .claude/.current-role`, 소유권 훅이 읽음). 난도 높음이면 모델을 Opus로 지정
+   - 작업은 주 작업 폴더에서 한다. worktree를 쓰면 소유권 훅이 저장소 경로 밖 파일을 검사하지 못한다(M0 report). 의존성이 겹치는 작업(잠금 파일)은 동시에 진행하지 않는다
+4. **위임**: 서브에이전트를 실행하기 전에 역할을 기록한다 (`echo <역할> > .claude/.current-role`, 소유권 훅이 읽음). 난도 높음이면 모델을 Opus로 지정
+   - 위임 프롬프트에 항상 넣는 공통 규칙 (M0에서 사고가 난 항목):
+     - 모든 명령 전 `source ~/.nvm/nvm.sh && nvm use`. 커밋 훅이 pnpm 전환(ENOEXEC)에 실패하면 `corepack pnpm`을 부르는 래퍼를 PATH 앞에
+     - **`git config` 변경 금지** (`core.hooksPath`는 `.husky/_`. 세션 시작 때 읽은 예전 안내를 따르지 않게)
+     - 저장소 `.env*` 생성·읽기 금지, 접속 URL을 `이름:값@` 형태로 쓰지 않기(비밀정보 검사가 막음)
+     - `git add`는 파일을 지정한다 (오케스트레이터나 다른 단계의 미커밋 변경·검수 결과 파일이 섞이지 않게)
+     - 테스트 선작성 단계가 있으면 "테스트 대상 인터페이스"(경로·시그니처)를 지시서에 먼저 확정한다
    - 테스트 선작성(test-engineer) → 의도대로 실패 확인 → 구현(담당 에이전트) → 독립 검증(test-engineer)
 5. **자체 검사 확인**: 지시서의 실행 명령, `git diff --name-only $(git merge-base origin/dev HEAD)`가 참여 역할 범위 합집합 안인지, 민감 정보 없음
 6. **기록**: docs-writer(또는 단일 실행이면 인계 노트) + `docs/work/00_master_checklist.md`에서 이 작업 항목 체크(이슈 번호·날짜) — **검수 전에** 커밋. `dev`는 직접 push가 막혀 있으므로 체크리스트는 작업 PR 안에서 갱신한다
 7. **Codex 최종 검수 (push 전)**: `scripts/codex-review.sh <ID>` → `docs/reviews/<ID>/r<N>.codex.md`. 지적마다 `r<N>.response.md`에 수정함 / 후속 처리(Issue) / 반박 기록. 높음은 반드시 수정 후 재검수, 반박은 G3. **push 허용 조건(협업 §6.4-a)을 만족할 때까지 push하지 않는다**: 최근 검수가 push할 head SHA 대상, 높음 0건, 중간은 모두 재검수로 해소·후속 Issue·G3 수용 반박 중 하나
-8. **push**: Codex 최종 통과 후 `git push -u origin <브랜치>` (검수 결과·대응 기록 커밋 포함) → push 이벤트로 CI 실행. CI 실패 → 수정 → **재검수** → 다시 push (3회 상한)
+8. **push**: Codex 최종 통과 후 `git push -u origin <브랜치>` (검수 결과·대응 기록 커밋 포함) → push 이벤트로 CI 실행(8개 잡: lint·test·integration·e2e·build·contract·docker·ownership-check). CI 실패 → 수정 → **재검수** → 다시 push (3회 상한)
+   - push 전 로컬에서 `pnpm verify`(통합·E2E·Docker까지는 `pnpm verify:full`)
+   - CI 설정 자체를 바꾸는 작업은 검수 전에 시험용 브랜치(`<유형>/<ID>-trial` 등, 같은 작업 ID로 판정됨)로 CI를 확인하고, 확인 후 원격에서 삭제한다
+   - `dev` 필수 상태 검사는 **최신 `dev` 기준**을 요구한다. PR 전에 다른 PR이 Merge되면 `dev`에 rebase → 영향 범위 판단(§3 rebase 행) → push → 새 head SHA 보고
 9. **PR 요청 (개발자에게 보고)**: 아래를 한 번에 전달한다
    - **브랜치 이름과 연결 이슈 번호** (PR 본문에 `Closes #<이슈>`를 넣으면 Merge 시 이슈 자동 종료). **PR 생성 링크는 보내지 않는다** (2026-11-21 개발자 지시)
    - **head SHA** (개발자가 Merge 전에 PR 최신 커밋과 대조)

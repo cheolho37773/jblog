@@ -43,7 +43,7 @@ Claude Code 오케스트레이터 + 서브에이전트가 구현하고, Codex가
 ```bash
 nvm use                                   # Node 24 (.nvmrc)
 corepack enable && pnpm install           # 최초 1회: pnpm 준비 + Husky 훅 설치 (비밀정보·커밋 메시지 검사)
-pnpm lint && pnpm format:check && pnpm typecheck && pnpm test   # 로컬 자체 검사
+pnpm verify                               # CI와 같은 로컬 자체 검사 (통합·E2E·Docker 포함: pnpm verify:full)
 scripts/codex-review.sh <작업ID>          # Codex 로컬 검수
 gh issue develop <번호> --base dev --name <브랜치>
 git push -u origin <브랜치>               # PR은 개발자가 GitHub에서 생성·Merge
