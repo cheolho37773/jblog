@@ -17,7 +17,7 @@
 |---|---|---|
 | 기획 | ✅ 완료 | 2026-11-21 |
 | P1 협업 체계 준비 | 🔄 진행 중 (저장소 완료) | |
-| M0 셋업 | ⬜ | |
+| M0 셋업 | 🔄 진행 중 | |
 | M1 디자인 시스템 | ⬜ | |
 | M2 블로그 읽기 | ⬜ | |
 | M3 관리자 & 작성 | ⬜ | |
@@ -82,7 +82,7 @@
 > 작업 계획: [docs/work/M0/plan.md](M0/plan.md) (작업 ID M0-01 ~ M0-09)
 
 **검수 도구**
-- [ ] M0-01 `codex-review.sh` 보완: `--plan` 회차 날짜 무관 증가, Codex 실행 시간 제한, 실제 Codex 실행 파일 사용 (Issue #2)
+- [x] M0-01 `codex-review.sh` 보완: `--plan` 회차 날짜 무관 증가, Codex 실행 시간 제한, 실제 Codex 실행 파일 사용 (Issue #2) — #2 (2026-11-21)
 
 **모노레포·도구** (DevOps)
 - [ ] pnpm workspace + Turborepo, `apps/`·`packages/`·`infra/` 구조
