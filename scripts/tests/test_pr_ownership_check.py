@@ -817,10 +817,8 @@ class MainGitIntegrationTest(unittest.TestCase):
         exit_code, output = self.run_main(head)
         self.assertEqual(exit_code, 0, output)
 
-    # ④ 독립 검증에서 발견한 구현 누락: _collect_commits가 merge 커밋의 변경을 보지 않는다
-    # (diff-tree는 merge 커밋을 출력하지 않고, PR 전체 diff에는 '추가'로만 남는다).
-    # 오케스트레이터 판정 전까지 expectedFailure로 둔다. 구현이 고쳐지면 '예상 밖 성공'으로 실패하므로 이 표시를 지운다.
-    @unittest.expectedFailure
+    # ④ 독립 검증에서 발견한 누락의 회귀 테스트: diff-tree 기본 출력은 merge 커밋을 비워 두므로
+    # 커밋별 이력에 merge 결과에서 직접 고친 경로가 들어가는지 확인한다(④ 결정 1).
     def test_merge_커밋_안에서_이_작업_검수_결과를_고치면_위반(self):
         # 커밋별 이력에는 merge 커밋도 포함된다: merge 결과에서 직접 고친 내용(evil merge)도 '수정'이다
         dev_head = self.make_dev_with_other_review()
