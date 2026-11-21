@@ -20,7 +20,8 @@
     "db:up": "docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --wait db",
     "db:down": "docker compose -f infra/docker-compose.yml --env-file infra/.env down",
     "db:psql": "docker compose -f infra/docker-compose.yml --env-file infra/.env exec db sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:e2e": "pnpm --filter @jblog/frontend test:e2e"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx}": [
@@ -33,9 +34,11 @@
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "16.4.6",
     "@types/node": "24.19.2",
     "eslint": "10.15.0",
     "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
     "globals": "17.14.0",
     "husky": "9.1.7",
     "lint-staged": "17.6.1",

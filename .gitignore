@@ -40,3 +40,9 @@ docs/ui_design/references/
 # Claude Code 로컬 전용 (개인 설정, 오케스트레이터가 기록하는 현재 역할)
 .claude/settings.local.json
 .claude/.current-role
+
+# Next.js가 build·dev 때마다 재생성하는 파일
+frontend/next-env.d.ts
+
+# next dev가 자동 생성하는 AI 에이전트 안내. 루트 AGENTS.md(Codex 검수 지침)와 섞이지 않게 커밋하지 않는다.
+frontend/AGENTS.md
