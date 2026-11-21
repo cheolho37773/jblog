@@ -1,0 +1,30 @@
+# 로컬 개발용 PostgreSQL (개요 §6 local). 앱(web·api)은 호스트에서 실행한다.
+# 값은 이 파일에 쓰지 않고 --env-file(infra/.env)로 받는다 (개요 §6-b).
+name: jblog
+
+services:
+  db:
+    # 17 라인 최신 패치를 고정한다. 움직이는 태그(17, latest)는 쓰지 않는다 (개요 §2.1).
+    image: postgres:17.12
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER 가 필요합니다 (infra/.env.example 참고)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 가 필요합니다 (infra/.env.example 참고)}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB 가 필요합니다 (infra/.env.example 참고)}
+    ports:
+      # 같은 네트워크의 다른 기기에서 접속하지 못하도록 루프백에만 연다.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      # 기동 직후 초기화(initdb) 동안의 실패는 재시도 횟수에 세지 않는다.
+      start_period: 10s
+      # 5초마다 확인하면 `up --wait`가 빠르게 끝나고 부하는 무시할 수준이다.
+      interval: 5s
+      timeout: 3s
+      # 15초 연속 실패하면 비정상으로 본다.
+      retries: 3
+
+volumes:
+  pgdata:
