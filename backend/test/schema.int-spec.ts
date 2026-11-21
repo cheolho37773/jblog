@@ -91,15 +91,12 @@ describe('Prisma 스키마·마이그레이션 (실제 PostgreSQL)', () => {
     if (db) await closeIntegrationDatabase(db);
   });
 
-  // Prisma 쿼리 인자 키 `data`는 라이브러리 API 이름이라 바꿀 수 없어 이 두 줄만 id-denylist 예외로 둔다.
   async function createPost(slug: string): Promise<{ id: number }> {
     const fields = { slug, title: `더미 글 ${slug}`, contentMd: '더미 본문' };
-    // eslint-disable-next-line id-denylist -- Prisma API 인자 이름
     return db.prisma.post.create({ data: fields, select: { id: true } });
   }
 
   async function createPostSlug(slug: string, postId: number, isCurrent: boolean) {
-    // eslint-disable-next-line id-denylist -- Prisma API 인자 이름
     return db.prisma.postSlug.create({ data: { slug, postId, isCurrent } });
   }
 
@@ -198,6 +195,46 @@ describe('Prisma 스키마·마이그레이션 (실제 PostgreSQL)', () => {
       await createPostSlug('current-slug-1', post.id, true);
 
       await expectUniqueViolation(createPostSlug('current-slug-2', post.id, true));
+    });
+
+    it('이전 slug 여러 개 + 현재 1개인 글에 현재 slug 를 하나 더 만들면 DB 제약 위반이다', async () => {
+      const post = await createPost('dummy-post-renamed');
+      await createPostSlug('renamed-old-1', post.id, false);
+      await createPostSlug('renamed-old-2', post.id, false);
+      await createPostSlug('renamed-current', post.id, true);
+
+      await expectUniqueViolation(createPostSlug('renamed-extra', post.id, true));
+      expect(await db.prisma.postSlug.count({ where: { postId: post.id, isCurrent: true } })).toBe(
+        1,
+      );
+    });
+
+    it('현재 slug 가 있는 글의 이전 slug 를 isCurrent=true 로 바꾸면 DB 제약 위반이다', async () => {
+      const post = await createPost('dummy-post-revert');
+      await createPostSlug('revert-old', post.id, false);
+      await createPostSlug('revert-current', post.id, true);
+
+      await expectUniqueViolation(
+        db.prisma.postSlug.update({ where: { slug: 'revert-old' }, data: { isCurrent: true } }),
+      );
+    });
+
+    it('기존 현재 slug 를 false 로 바꾼 뒤 새 slug 를 true 로 만드는 교체는 허용된다', async () => {
+      const post = await createPost('dummy-post-switch');
+      await createPostSlug('switch-old', post.id, true);
+
+      await db.prisma.$transaction([
+        db.prisma.postSlug.update({ where: { slug: 'switch-old' }, data: { isCurrent: false } }),
+        db.prisma.postSlug.create({
+          data: { slug: 'switch-new', postId: post.id, isCurrent: true },
+        }),
+      ]);
+
+      const current = await db.prisma.postSlug.findMany({
+        where: { postId: post.id, isCurrent: true },
+        select: { slug: true },
+      });
+      expect(current).toEqual([{ slug: 'switch-new' }]);
     });
 
     it('한 글에 isCurrent=false 는 여러 행을 허용한다', async () => {

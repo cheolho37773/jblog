@@ -36,6 +36,25 @@ describe('seed (실제 PostgreSQL)', () => {
     };
   }
 
+  // 재실행 비교용 상태. 개수만 같고 내용이 바뀌는 경우(중복 생성 후 삭제, slug 교체 등)도 잡는다.
+  async function seededSnapshot(): Promise<unknown> {
+    return {
+      profileIds: await db.prisma.profile.findMany({ select: { id: true } }),
+      categories: await db.prisma.category.findMany({
+        select: { id: true, name: true, slug: true },
+        orderBy: { id: 'asc' },
+      }),
+      posts: await db.prisma.post.findMany({
+        select: { id: true, slug: true, status: true, publishedAt: true, categoryId: true },
+        orderBy: { id: 'asc' },
+      }),
+      postSlugs: await db.prisma.postSlug.findMany({
+        select: { slug: true, postId: true, isCurrent: true },
+        orderBy: { slug: 'asc' },
+      }),
+    };
+  }
+
   it('Profile 1행(id=1)을 넣는다', async () => {
     await runSeed(db.databaseUrl);
 
@@ -71,6 +90,25 @@ describe('seed (실제 PostgreSQL)', () => {
     expect(await db.prisma.post.count({ where: { status: 'PUBLISHED' } })).toBeGreaterThan(0);
   });
 
+  it('발행 글은 모두 publishedAt 이 있고, 지금 공개되는 글(publishedAt <= 지금)이 1개 이상이다', async () => {
+    await runSeed(db.databaseUrl);
+
+    const published: { publishedAt: Date | null }[] = await db.prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { publishedAt: true },
+    });
+    expect(published.every((post) => post.publishedAt !== null)).toBe(true);
+    const now = Date.now();
+    expect(published.some((post) => (post.publishedAt?.getTime() ?? Infinity) <= now)).toBe(true);
+  });
+
+  it('현재 slug 외의 PostSlug 를 만들지 않는다 (PostSlug 9행 = 글 9개의 현재 slug)', async () => {
+    await runSeed(db.databaseUrl);
+
+    expect(await db.prisma.postSlug.count()).toBe(SEED_POST_COUNT);
+    expect(await db.prisma.postSlug.count({ where: { isCurrent: true } })).toBe(SEED_POST_COUNT);
+  });
+
   it('관리자 계정(User)을 시드하지 않는다', async () => {
     await runSeed(db.databaseUrl);
 
@@ -81,6 +119,8 @@ describe('seed (실제 PostgreSQL)', () => {
     await runSeed(db.databaseUrl);
     const afterFirst = await seededCounts();
 
+    const snapshotAfterFirst = await seededSnapshot();
+
     await runSeed(db.databaseUrl);
     const afterSecond = await seededCounts();
 
@@ -88,9 +128,10 @@ describe('seed (실제 PostgreSQL)', () => {
       profile: 1,
       category: SEED_CATEGORY_NAMES.length,
       post: SEED_POST_COUNT,
-      postSlug: afterFirst.postSlug,
+      postSlug: SEED_POST_COUNT,
       user: 0,
     });
     expect(afterSecond).toEqual(afterFirst);
+    expect(await seededSnapshot()).toEqual(snapshotAfterFirst);
   });
 });
