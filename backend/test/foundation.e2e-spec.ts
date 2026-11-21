@@ -207,6 +207,24 @@ describe('Nest 기반 (development)', () => {
       expect(output).not.toContain(PROBE_SET_COOKIE_VALUE);
     });
 
+    it('헤더가 로그에 실제로 기록되며 값만 [Redacted] 로 가려진다 (redact 대상이 비어 있어 우연히 통과하는 것 방지)', async () => {
+      await request(app.getHttpServer())
+        .get('/api/probe/set-cookie')
+        .set('Authorization', AUTHORIZATION_VALUE)
+        .set('Cookie', COOKIE_VALUE);
+      await waitForLogFlush();
+
+      const entry = logs
+        .output()
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line))
+        .find((parsed) => parsed.req?.url === '/api/probe/set-cookie' && parsed.res);
+      expect(entry.req.headers.authorization).toBe('[Redacted]');
+      expect(entry.req.headers.cookie).toBe('[Redacted]');
+      expect(entry.res.headers['set-cookie']).toBe('[Redacted]');
+    });
+
     it('로그는 한 줄에 하나씩 JSON 이다', async () => {
       await request(app.getHttpServer()).get('/api/does-not-exist');
       await waitForLogFlush();
