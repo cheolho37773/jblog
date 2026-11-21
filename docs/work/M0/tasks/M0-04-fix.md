@@ -37,3 +37,12 @@
 ## 인계 노트
 
 (단계별로 덧붙인다)
+
+### ① 재현 테스트 (test-engineer)
+
+- 파일: `backend/src/config/env.source.spec.ts` (구현 파일 수정 없음, 저장소 `.env*` 미사용 — `os.tmpdir()` 아래 `mkdtemp` 폴더의 더미 파일만, 테스트 후 삭제)
+- `readEnvFile`: KEY=값 읽기(`API_PORT=4123`) / 따옴표 값 / 주석·빈 줄 무시 / 없는 경로는 `{}`
+- `mergeEnvSources`: 파일 전용 키 포함 / 프로세스 전용 키 포함 / 같은 키는 프로세스 값 우선 / 프로세스 값 `undefined`면 파일 값 유지 / 입력 객체 불변
+- 프로세스 값은 인자 객체로만 넘긴다(실제 `process.env` 미사용)
+- 실패 확인: 신규 9건 실패, 기존 19건 통과. 원인은 `TypeError: (0 , env_source_1.mergeEnvSources) is not a function`(`readEnvFile`도 동일) 즉 두 함수가 아직 내보내지지 않아서이며 테스트 오류가 아님
+- backend-dev 참고: 따옴표 제거·주석 처리는 `node:util` `parseEnv`의 동작에 기대고 있다
