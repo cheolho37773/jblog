@@ -7,6 +7,10 @@ packages:
 # 개요 §2.1: 의존성은 정확한 버전으로 고정한다. `pnpm add`가 ^·~를 붙이지 않게 한다.
 savePrefix: ''
 
-# 설치 스크립트(텔레메트리) 실행 거부. swagger-ui-dist의 전이 의존성이며 동작에 필요 없다.
+# 설치 스크립트 실행 거부 목록 (pnpm 12는 검토 안 된 빌드 스크립트가 있으면 설치를 실패시킨다).
+# - @scarf/scarf: swagger-ui-dist의 전이 의존성. 스크립트가 텔레메트리라 동작에 필요 없다.
+# - @parcel/watcher: jest-haste-map의 전이 의존성. 스크립트는 네이티브 빌드 폴백이고,
+#   `jest --watch`에서만 쓰이며 플랫폼별 사전 빌드 패키지로 충분하다.
 allowBuilds:
   '@scarf/scarf': false
+  '@parcel/watcher': false
