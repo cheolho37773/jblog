@@ -15,6 +15,7 @@ model: sonnet
 2. 지시서가 가리키는 기획 섹션 — `docs/plan/02_frontend_plan.md`, `docs/ui_design/ui_design_spec.md`
 3. 공통 규칙 — `docs/plan/05_collaboration_architecture.md` §3.3, §10-a, `docs/plan/00_overview.md` §6-b
 4. API 응답 구조는 `frontend/src/generated/**`(`backend/openapi.json`에서 생성한 타입, 수동 수정 금지)를 기준으로 한다. `backend/` 코드를 import하지 않는다 (개요 §4 분리 원칙). 지시서에 복제된 예시보다 생성 타입이 우선
+5. 코드 위치는 기능별 구조를 따른다 (개요 D26, 프론트엔드 §3): 기능 코드는 `src/features/<기능>/`, 여러 기능이 쓰는 것만 `components/`·`lib/`. 기능끼리 import하지 않고 `app/`에서 조립한다
 
 ## 쓰기 범위
 

@@ -1,6 +1,6 @@
 # jblog 프론트엔드 기획서
 
-> 버전 v0.1 · 작성일 2026-11-20
+> 버전 v0.2 · 작성일 2026-11-20 · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26)
 > 스택: **Next.js (App Router) + React + TypeScript + Tailwind CSS v4**
 > 화면/토큰/컴포넌트 스펙의 기준: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · API 계약: [백엔드 기획서 §4](./01_backend_plan.md#4-api-명세)
 
@@ -73,19 +73,28 @@ frontend/src/                         # frontend/ 루트에는 public/, e2e/, pa
 │   ├── not-found.tsx · error.tsx
 │   ├── layout.tsx                    # <html>, ThemeProvider, 폰트
 │   └── globals.css                   # Tailwind + 토큰
-├── components/
+├── features/                         # 기능(도메인)별 폴더. 기능 하나의 화면·훅·fetch·스키마를 한곳에 둔다 (개요 D26)
+│   ├── posts/
+│   │   ├── components/               # PostCardGrid, PostCardOverlay, FeaturedHeroCard, AuthorMeta, PostGrid, LoadMoreGrid, CategoryChips, Toc
+│   │   ├── admin/                    # 글·카테고리 관리 화면 조각: PostTable, PostForm, MarkdownEditor, PublishPanel, ConflictDialog
+│   │   ├── hooks/                    # useAdminPosts, useDraftAutosave
+│   │   ├── api.ts                    # 서버용 fetch 함수 (lib/api/server.ts + 캐시 태그 posts·post:<slug>)
+│   │   └── schemas.ts                # Zod 폼 스키마
+│   ├── reactions/                    # LikeButton, ViewTracker, useLike (FEATURE_REACTIONS)
+│   ├── projects/                     # ProjectCard (+ admin/, hooks/, api.ts, schemas.ts)
+│   ├── profile/                      # ProfileHero, TechLogoRow, ExperienceItem, ContactSection, AuthorInfoBox (+ admin/: 프로필·경력·기술스택 편집)
+│   ├── media/                        # 관리자 미디어 라이브러리
+│   └── search/                       # 검색 결과 목록
+├── components/                       # 여러 기능이 함께 쓰는 것만 둔다
 │   ├── ui/                           # Atom: Badge, Button, Avatar, Input, ThemeToggle, Icon
-│   ├── blog/                         # PostCardGrid, PostCardOverlay, FeaturedHeroCard, AuthorMeta, PostGrid, CategoryChips, LikeButton, ViewTracker, Toc
-│   ├── portfolio/                    # ProfileHero, TechLogoRow, ProjectCard, ExperienceItem, ContactSection, AuthorInfoBox
 │   ├── layout/                       # Navbar, MobileMenu, SearchBox, Footer, PageInfo, Container, Section
 │   ├── markdown/                     # MarkdownRenderer, CodeBlock(복사 버튼), Callout, MdImage
 │   ├── protection/                   # CopyGuard (공개 사이트 복사 방지)
-│   └── admin/                        # AdminShell, DataTable, MarkdownEditor, ImageUploader, TagInput, SortableList, PublishPanel
+│   └── admin/                        # AdminShell, DataTable, ImageUploader, TagInput, SortableList (관리자 공용 UI)
 ├── lib/
 │   ├── api/
 │   │   ├── server.ts                 # RSC용: API_INTERNAL_URL + next: { tags } (+ /internal/* 원문 조회 시 X-Internal-Key)
 │   │   └── client.ts                 # 브라우저용: /api + credentials + X-Requested-With 헤더 + 401 시 refresh 재시도
-│   ├── queries/                      # TanStack Query 훅 (useAdminPosts, useLike ...)
 │   ├── markdown/                     # remark/rehype 파이프라인 (§5.3)
 │   ├── seo.ts                        # generateMetadata 헬퍼
 │   ├── env.ts                        # 환경변수 스키마 검증, process.env를 읽는 유일한 곳 (개요 §6-b)
@@ -95,6 +104,19 @@ frontend/src/                         # frontend/ 루트에는 public/, e2e/, pa
 
 # frontend/next.config.ts: rewrites(/api → localhost:4000, dev), images.remotePatterns
 ```
+
+**계층 규칙 (개요 D26)** — 의존은 위에서 아래로만 흐른다. 아래 규칙은 ESLint로 오류 처리한다 (M0-02).
+
+| 계층 | import할 수 있는 것 | 하지 않는 것 |
+|---|---|---|
+| `app/` (라우트) | `features/*`, `components/*`, `lib/*`, `generated/` | 비즈니스 로직 작성. `page.tsx`는 데이터를 가져와 기능 컴포넌트에 넘기는 조립만 한다 |
+| `features/<기능>/` | 같은 기능 내부, `components/*`, `lib/*`, `generated/` | **다른 기능 import 금지.** 두 기능이 한 화면에 필요하면 `app/`에서 조립한다 (예: 글 상세 = `posts` + `reactions` + `profile`의 AuthorInfoBox) |
+| `components/`, `lib/` | `components/*`, `lib/*`, `generated/` | `features/*`·`app/` import 금지 |
+
+- **배럴 파일(`index.ts`)을 두지 않는다.** 서버 컴포넌트와 `'use client'` 컴포넌트를 한 파일에서 다시 내보내면 클라이언트 번들에 서버 코드가 섞이거나 트리 셰이킹이 깨질 수 있다. 파일 경로로 직접 import한다.
+- 처음엔 한 기능에서만 쓰던 것을 두 번째 기능이 필요로 하면, 다른 기능에서 가져오지 않고 `components/`·`lib/`로 옮긴다.
+- 관리자 화면 조각은 `features/<기능>/admin/`에 둔다. 공개 화면과 같은 기능의 fetch·스키마를 함께 쓰기 위해서다. 관리자 전용 공용 UI(shadcn/ui 기반)는 `components/admin/`.
+- 기능 폴더의 하위 구성(`components/`·`admin/`·`hooks/`·`api.ts`·`schemas.ts`)은 필요한 것만 만든다.
 
 ---
 

@@ -1,6 +1,6 @@
 # M0 셋업 — 작업 계획서
 
-> 작성 2026-11-21 · 상태: **G1 승인됨 (2026-11-21, 개발자)** · 개정 2026-11-21: 저장소 구조 변경(개요 D25) 반영 — M0-02는 Merge 전 재작업
+> 작성 2026-11-21 · 상태: **G1 승인됨 (2026-11-21, 개발자)** · 개정 2026-11-21: 저장소 구조 변경(개요 D25)·프론트엔드 기능별 구조(D26) 반영 — M0-02는 Merge 전 재작업
 > 기준: [전체 체크리스트 M0](../00_master_checklist.md#m0-셋업), [개요 §2·§4·§6](../../plan/00_overview.md), [협업 아키텍처](../../plan/05_collaboration_architecture.md) v0.7.4
 
 ## 1. 목표
@@ -16,10 +16,10 @@
 | ID | 작업 | 실행 방식 · 참여 역할 | 난도 · 모델 | 의존 |
 |---|---|---|---|---|
 | **M0-01** | 검수 스크립트 보완 (Issue #2, 버그 수정): `--plan` 회차를 날짜와 무관하게 증가, Codex 실행 시간 제한(시간 초과 시 Codex 자식 프로세스까지 종료), **터미널 shim을 거치지 않고 실제 Codex 실행 파일 사용**(`CODEX_BIN` 환경변수로 지정 가능). 테스트는 가짜 `codex`(stub)로 네트워크 없이 실행 | **단일 실행 + 재발 방지 테스트** · test-engineer(재현 테스트 선작성: 날짜 넘김 회차, 작업 ID 경계, 시간 초과) → devops-engineer. 테스트 위치 `scripts/tests/**`를 test-engineer 쓰기 범위에 추가(오케스트레이터가 `roles.json` 갱신) | 보통 · Sonnet | 없음 |
-| **M0-02** | 모노레포·도구 기반: pnpm workspace, Turborepo, 루트 `package.json`·`tsconfig.base.json`, 루트 `eslint.config.mjs`(가독성 규칙·`process.env` 제한·**`frontend`↔`backend` 상호 import 금지**) — 공용 코드 패키지 없음(개요 D25), Prettier, Husky + lint-staged + commitlint, Husky pre-commit이 `check-secrets.sh` 호출 | 단일 실행 · devops-engineer | 보통 · Sonnet | 없음 |
+| **M0-02** | 모노레포·도구 기반: pnpm workspace, Turborepo, 루트 `package.json`·`tsconfig.base.json`, 루트 `eslint.config.mjs`(가독성 규칙·`process.env` 제한·**`frontend`↔`backend` 상호 import 금지**·프론트엔드 계층 규칙(기능 간 import 금지, `components`·`lib` → `features`·`app` 금지, 개요 D26)) — 공용 코드 패키지 없음(개요 D25), Prettier, Husky + lint-staged + commitlint, Husky pre-commit이 `check-secrets.sh` 호출 | 단일 실행 · devops-engineer | 보통 · Sonnet | 없음 |
 | **M0-03** | 로컬 DB: `infra/docker-compose.yml`(PostgreSQL 17 + healthcheck), `infra/.env.example`, `infra/README.md` | 단일 실행 · devops-engineer | 낮음 · Sonnet | 없음 |
 | **M0-04** | BE-01 Nest 기반: `backend` 생성, 환경변수 스키마 검증(누락 시 부팅 실패), pino(redact), helmet, ValidationPipe, Swagger(운영 비활성), 공통 에러 필터(01 §4.1 형식), `backend/.env.example`, Jest 설정 | 서브에이전트 조합 · devops-engineer(Jest 설정) → test-engineer(테스트 선작성) → backend-dev | 보통 · Sonnet | M0-02 |
-| **M0-05** | FE-01 Next 기반: `frontend` 생성(Next.js 버전 고정, `src/` 구조), Tailwind v4, next-themes, 폰트 로딩 골격, `src/lib/env.ts`(스키마 검증), `frontend/.env.example`, Vitest 설정, **Playwright 공통 설정**(`frontend/playwright.config.ts`, `webServer`로 frontend 기동, `pnpm test:e2e`). **개요 Q5**: 고정한 버전의 `revalidateTag` 시그니처·즉시 만료 옵션 확인 결과를 인계 노트에 기록 | 서브에이전트 조합 · devops-engineer(Vitest·Playwright 설정) → test-engineer(단위 테스트 + E2E 스모크 1건) → frontend-dev | 보통 · Sonnet | M0-02 |
+| **M0-05** | FE-01 Next 기반: `frontend` 생성(Next.js 버전 고정, `src/` 기능별 구조 — 개요 D26), Tailwind v4, next-themes, 폰트 로딩 골격, `src/lib/env.ts`(스키마 검증), `frontend/.env.example`, Vitest 설정, **Playwright 공통 설정**(`frontend/playwright.config.ts`, `webServer`로 frontend 기동, `pnpm test:e2e`). **개요 Q5**: 고정한 버전의 `revalidateTag` 시그니처·즉시 만료 옵션 확인 결과를 인계 노트에 기록 | 서브에이전트 조합 · devops-engineer(Vitest·Playwright 설정) → test-engineer(단위 테스트 + E2E 스모크 1건) → frontend-dev | 보통 · Sonnet | M0-02 |
 | **M0-06** | BE-02 Prisma (공유 계약): MVP 스키마 전체(01 §3.2, M7 관계 제외), 마이그레이션, `pg_trgm`·`PostSlug` 부분 unique 인덱스 수동 SQL, 더미 seed, `/api/health` DB ping, Testcontainers 통합 테스트 기반 | 공유 계약 변경 · test-engineer → backend-dev (계약 책임자) | **높음 · Opus** (스키마가 이후 모든 작업의 계약) | M0-03, M0-04 |
 | **M0-07** | API 타입 파이프라인 (**공유 계약**, 브랜치 `contract/M0-07-api-types`): backend-dev — Nest Swagger에서 `backend/openapi.json` 출력 명령 / devops-engineer — 생성 스크립트 `pnpm gen:api-types`(`backend/openapi.json` → `frontend/src/generated/api-types.ts`, `--check`로 커밋된 결과와 불일치 검출. 공용 패키지 없음, 개요 D25) / frontend-dev — `frontend/src/lib/api`에서 생성 타입 사용 연결. 계약 책임자 backend-dev. **DTO 변경 → 타입 반영 확인은 로컬 임시 시험으로만 하고 커밋하지 않는다** | 공유 계약 변경 · backend-dev → devops-engineer → frontend-dev | 보통 · Sonnet | M0-04, M0-05 |
 | **M0-08** | CI: `ci.yml`(작업 브랜치 push + `dev` 대상 pull_request) — lint · typecheck · test(Testcontainers) · build · Dockerfile 빌드 검증 · **`ownership-check`**(`roles.json` + `pr_common_allow.py` + 지시서의 참여 역할) · 잠금 파일 검사 · SHA 3종 출력 · `permissions` 최소화. 루트 `pnpm verify`(CI와 같은 로컬 검사). `backend/Dockerfile`·`frontend/Dockerfile`. 완료 후 `dev` Ruleset에 필수 상태 검사 추가 | 서브에이전트 조합 · test-engineer(ownership-check 판정 테스트) → devops-engineer | **높음 · Opus** (소유권 판정 로직, CI 보안 설정) | M0-02 ~ M0-07 |
@@ -47,7 +47,7 @@
 | ID | 성공 | 거부·회귀 |
 |---|---|---|
 | M0-01 | 이전 날짜에 r2가 있으면 다음 날 `--plan` 재검수가 r3, stub `codex`로 정상 실행 시 결과 파일 생성 | 다른 작업 ID 파일은 회차 계산에서 제외 / 시간 초과 시 결과 파일 없이 실패 코드 + stub 자식 프로세스 종료 확인 / PATH 앞에 shim이 있어도 `CODEX_BIN` 또는 실제 실행 파일 사용 |
-| M0-02 | `pnpm install`·`pnpm lint`·`pnpm format:check` 통과, Conventional Commits 메시지 통과 | 형식이 틀린 커밋 메시지 거부 / `.env` 커밋 거부 / 가독성 규칙 위반 샘플이 lint 실패 |
+| M0-02 | `pnpm install`·`pnpm lint`·`pnpm format:check` 통과, Conventional Commits 메시지 통과 | 형식이 틀린 커밋 메시지 거부 / `.env` 커밋 거부 / 가독성 규칙 위반 샘플이 lint 실패 / `frontend`↔`backend` 상호 import·기능 간 import·`components`→`features` import 샘플이 lint 실패 (같은 기능 내부·`app`→`features` import는 통과) |
 | M0-03 | `docker compose up -d` 후 healthcheck 정상, 앱 없이 `psql` 접속 | 비밀값 없이 `.env.example`만으로 실행 안내가 완결 |
 | M0-04 | `pnpm --filter backend start`·`test` 통과, 에러 응답이 01 §4.1 형식 | 필수 환경변수 누락 시 부팅 실패 / 운영 모드에서 `/api/docs` 404 / 로그에 쿠키·Authorization 미출력 |
 | M0-05 | `pnpm --filter frontend build`·`test` 통과, `pnpm test:e2e`가 frontend를 띄워 스모크 1건 통과, Light/Dark 전환 골격 동작 | 필수 환경변수 누락 시 빌드 실패 / `NEXT_PUBLIC_`에 비밀값 없음 |
