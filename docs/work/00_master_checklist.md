@@ -100,9 +100,9 @@
 - [ ] `backend/.env.example`
 
 **프론트엔드 기반**
-- [ ] FE-01 Next.js 앱, Tailwind v4, 폰트, next-themes, `lib/env.ts`, api-types 연동 · 진행: api-types 연동 외 완료 — #13 (2026-11-21), api-types 연동은 M0-07
+- [x] FE-01 Next.js 앱, Tailwind v4, 폰트, next-themes, `lib/env.ts`, api-types 연동 — #13, api-types 연동 #19 (2026-11-21)
 - [ ] `frontend/.env.example`
-- [ ] M0-07 API 타입 파이프라인 (Swagger → `backend/openapi.json` → `frontend/src/generated/api-types.ts`)
+- [x] M0-07 API 타입 파이프라인 (Swagger → `backend/openapi.json` → `frontend/src/generated/api-types.ts`) — #19 (2026-11-21)
 - [ ] Next.js 버전 고정 + `revalidateTag` 시그니처·즉시 만료 옵션 확인 (개요 Q5)
 
 **협업 흐름 시험** (협업 §12 P2)

@@ -1,0 +1,126 @@
+{
+  "components": {
+    "schemas": {
+      "ErrorResponseDto": {
+        "properties": {
+          "code": {
+            "example": "SERVICE_UNAVAILABLE",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "example": "/api/health",
+            "type": "string"
+          },
+          "statusCode": {
+            "example": 503,
+            "type": "number"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ],
+        "type": "object"
+      },
+      "HealthResponseDto": {
+        "properties": {
+          "details": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "example": {
+              "database": {
+                "status": "up"
+              }
+            },
+            "type": "object"
+          },
+          "error": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "example": {},
+            "type": "object"
+          },
+          "info": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "example": {
+              "database": {
+                "status": "up"
+              }
+            },
+            "type": "object"
+          },
+          "status": {
+            "example": "ok",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "info",
+          "error",
+          "details"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "",
+    "title": "jblog API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponseDto"
+                }
+              }
+            },
+            "description": "DB 연결 정상"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            },
+            "description": "DB 연결 실패"
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "servers": [],
+  "tags": []
+}

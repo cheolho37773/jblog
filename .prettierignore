@@ -17,3 +17,6 @@ scripts/eslint/fixtures/
 # 이 작업의 범위 밖 파일(소유권 규칙, GitHub 템플릿)은 기존 서식을 유지한다
 scripts/ownership/roles.json
 .github/
+# 생성물은 생성기가 만든 형식을 유지한다 (pnpm gen:api-types, openapi:generate). 형식이 바뀌면 재생성 때 diff가 난다.
+backend/openapi.json
+frontend/src/generated/

@@ -25,6 +25,8 @@ export default [
       'scripts/eslint/fixtures/**',
       // Prisma 생성 클라이언트. 생성물이라 검사 대상이 아니다 (.gitignore 대상).
       'backend/src/generated/**',
+      // openapi-typescript 생성물. 커밋하지만 생성 형식을 유지한다 (pnpm gen:api-types).
+      'frontend/src/generated/**',
     ],
   },
   ...baseConfig,

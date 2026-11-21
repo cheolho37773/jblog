@@ -1,6 +1,6 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppModule, type AppModuleOptions } from './app.module';
@@ -13,9 +13,17 @@ export type CreateAppOptions = AppModuleOptions;
 const GLOBAL_PREFIX = 'api';
 const SWAGGER_PATH = `${GLOBAL_PREFIX}/docs`;
 
+const API_TITLE = 'jblog API';
+const API_VERSION = '1.0.0';
+
+// /api/docs와 backend/openapi.json(openapi:generate)이 같은 문서 정보를 쓰도록 한 곳에서 만든다.
+export function createApiDocument(app: INestApplication): OpenAPIObject {
+  const config = new DocumentBuilder().setTitle(API_TITLE).setVersion(API_VERSION).build();
+  return SwaggerModule.createDocument(app, config);
+}
+
 function setupSwagger(app: INestApplication): void {
-  const config = new DocumentBuilder().setTitle('jblog API').build();
-  SwaggerModule.setup(SWAGGER_PATH, app, SwaggerModule.createDocument(app, config));
+  SwaggerModule.setup(SWAGGER_PATH, app, createApiDocument(app));
 }
 
 function applyHttpSettings(app: INestApplication, env: AppEnv): void {
