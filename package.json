@@ -17,6 +17,9 @@
     "test": "turbo run //#test:root test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "db:up": "docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --wait db",
+    "db:down": "docker compose -f infra/docker-compose.yml --env-file infra/.env down",
+    "db:psql": "docker compose -f infra/docker-compose.yml --env-file infra/.env exec db sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'",
     "prepare": "husky"
   },
   "lint-staged": {

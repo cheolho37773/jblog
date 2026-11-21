@@ -28,6 +28,8 @@ pnpm install                     # Husky 훅 설치: 커밋 전 비밀정보 검
 pnpm lint && pnpm format:check && pnpm typecheck && pnpm test
 ```
 
+로컬 DB(PostgreSQL 17, Docker Compose): `cp infra/.env.example infra/.env` 후 `pnpm db:up` — 자세한 내용은 [infra/README.md](infra/README.md).
+
 비밀값은 `.env` 파일로만 주입하고 커밋하지 않습니다 ([개요 §6-b](docs/plan/00_overview.md)).
 
 ## 브랜치
