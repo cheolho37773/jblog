@@ -1,6 +1,6 @@
 # jblog 프론트엔드 기획서
 
-> 버전 v0.2 · 작성일 2026-11-20 · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26)
+> 버전 v0.2 · 작성일 2026-11-20 · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26), `revalidateTag` 시그니처 확인 완료 (§4, 개요 Q5)
 > 스택: **Next.js (App Router) + React + TypeScript + Tailwind CSS v4**
 > 화면/토큰/컴포넌트 스펙의 기준: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · API 계약: [백엔드 기획서 §4](./01_backend_plan.md#4-api-명세)
 
@@ -146,7 +146,7 @@ if (req.headers.get('x-revalidate-secret') !== process.env.REVALIDATE_SECRET) re
 for (const t of body.tags) revalidateTag(t, { expire: 0 });   // 즉시 만료: 다음 요청은 stale 없이 새로 생성
 ```
 - webhook은 **즉시 만료** 정책을 쓴다. 기본(stale-while-revalidate) 정책은 무효화 후 첫 요청에 이전 응답을 줄 수 있어서 "무효화 이후 새 요청은 최신"이라는 기준을 깨기 때문이다.
-- `revalidateTag`의 단일 인자 형태는 최신 Next.js에서 폐기 예정이다. M0에서 Next.js 버전을 고정할 때 **해당 버전 공식 문서로 시그니처와 즉시 만료 옵션을 확인**하고 이 예시를 갱신한다.
+- `revalidateTag`의 단일 인자 형태는 폐기 예정이다. **Next.js 16.4.6에서 확인 완료 (M0-05, 2026-11-21)**: 시그니처 `revalidateTag(tag, profile)`, `profile`이 `{ expire: 0 }`이면 즉시 만료, `"max"`면 stale-while-revalidate. Server Function·Route Handler에서만 호출할 수 있다. 위 예시가 이 형태다 ([공식 문서](https://nextjs.org/docs/app/api-reference/functions/revalidateTag)).
 - 이 webhook은 서버 캐시만 지운다. 이미 열린 브라우저 화면은 갱신하지 않는다.
 
 **경로 라우팅 규칙** (요청을 누가 받는가)

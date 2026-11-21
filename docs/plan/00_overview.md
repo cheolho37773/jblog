@@ -324,7 +324,7 @@ INTERNAL_API_KEY=
 | ~~Q2~~ | ~~관리자 로그인 방식~~ | **확정 (D10)**: GitHub OAuth + 허용 목록 |
 | Q3 | 블로그 카테고리 초기 목록 | 관리자에서 자유롭게 생성 (시드: Backend, Frontend, DevOps, Retrospect) |
 | Q4 | UI 기획서 §10 미확정 9개 항목 | Figma MCP 한도가 리셋된 뒤 확인 (M1 시작 시) |
-| Q5 | Next.js 버전과 `revalidateTag` 시그니처 | M0에서 버전 고정 시 공식 문서로 즉시 만료 옵션 확인 ([프론트엔드 §4](./02_frontend_plan.md#4-라우팅--렌더링-전략)) |
+| Q5 | Next.js 버전과 `revalidateTag` 시그니처 | **해결 (M0-05, 2026-11-21)**: Next.js 16.4.6, `revalidateTag(tag, { expire: 0 })`이 즉시 만료. 기획 예시와 일치 ([프론트엔드 §4](./02_frontend_plan.md#4-라우팅--렌더링-전략)) |
 
 ### 구현 착수 조건
 
