@@ -8,6 +8,7 @@
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
     "dev": "nest start --watch",
+    "openapi:generate": "nest build && node dist/openapi/generate-openapi.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.mjs --passWithNoTests",
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.e2e.mjs --passWithNoTests",
