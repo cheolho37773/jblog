@@ -23,11 +23,12 @@ import sys
 from pathlib import Path
 from typing import Iterable, Mapping
 
-from pr_common_allow import compile_patterns
+from pr_common_allow import TASK_ID_PATTERN, compile_patterns
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 HOOK_FILE = SCRIPT_DIR.parent / "hooks" / "check-ownership.py"
 ROLES_RELATIVE_PATH = Path("scripts/ownership/roles.json")
+ROLES_RULE_FILE = ROLES_RELATIVE_PATH.as_posix()
 BRIEF_GLOB = "docs/work/*/tasks/*.md"
 
 LOCK_FILE = "pnpm-lock.yaml"
@@ -91,11 +92,18 @@ def _find_task_id_by_branch_line(branch: str, briefs: Mapping[str, str]) -> str 
     return matched[0] if matched else None
 
 
-def _find_task_id_by_prefix(branch: str, task_ids: Iterable[str]) -> str | None:
-    """R1-②: <유형>/<나머지>에서 <나머지>와 같거나 '<ID>-'로 시작하는 가장 긴 ID (시험용 브랜치 등)."""
+def _branch_rest(branch: str) -> str | None:
+    """브랜치 <유형>/<나머지>의 <나머지>. 유형이 없으면 None."""
     if "/" not in branch:
         return None
-    rest = branch.split("/", 1)[1]
+    return branch.split("/", 1)[1]
+
+
+def _find_task_id_by_prefix(branch: str, task_ids: Iterable[str]) -> str | None:
+    """R1-②: <유형>/<나머지>에서 <나머지>와 같거나 '<ID>-'로 시작하는 가장 긴 ID (시험용 브랜치 등)."""
+    rest = _branch_rest(branch)
+    if rest is None:
+        return None
     candidates = [task_id for task_id in task_ids if rest == task_id or rest.startswith(f"{task_id}-")]
     return max(candidates, key=len) if candidates else None
 
@@ -131,10 +139,32 @@ class _PrContext:
         self.rules = rules
         self.contract_check_passed = contract_check_passed
         self.package_json_changed = any(PACKAGE_JSON_PATTERN.match(path) for path in changed_paths)
-        self.common_patterns = compile_patterns(rules["pr_common_allow"]["regex"], task_id) if task_id else []
+        common_regex = rules["pr_common_allow"]["regex"]
+        self.common_patterns = compile_patterns(common_regex, task_id) if task_id else []
+        self.review_record_id = task_id or _plan_review_id(branch)
+        self.review_record_patterns = (
+            compile_patterns(common_regex, self.review_record_id) if self.review_record_id else []
+        )
 
     def is_common_allowed(self, path: str) -> bool:
         return any(pattern.match(path) for pattern in self.common_patterns)
+
+    def is_review_record_allowed(self, path: str) -> bool:
+        """R3: 이 PR의 검수 기록 경로인가. 작업 ID가 없으면 브랜치 <나머지>를 ID로 쓴다(④ 결정 2)."""
+        return any(pattern.match(path) for pattern in self.review_record_patterns)
+
+
+def _plan_review_id(branch: str) -> str | None:
+    """④ 결정 2: 지시서 없는 기획 PR(docs/M0-structure 등)의 검수 기록 ID = 브랜치 <나머지>.
+
+    scripts/codex-review.sh --plan이 docs/plan/feedback/<날짜>_<나머지>[_r<N>].md를 만들기 때문이다.
+    R3(보호 경로)에서만 쓰므로 공통 허용 정규식 중 지시서 경로는 대상이 되지 않는다(보호 경로와 겹치지 않음).
+    작업 ID 형식에 맞지 않는 <나머지>(슬래시 포함 등)는 쓰지 않는다.
+    """
+    rest = _branch_rest(branch)
+    if rest is None or not TASK_ID_PATTERN.match(rest):
+        return None
+    return rest
 
 
 def _check_participating_roles(task_id, roles, brief_found, rules) -> list[str]:
@@ -164,8 +194,9 @@ def _check_codex_results(changes, commits, context: _PrContext) -> list[str]:
         if statuses != {ADDED}:
             changed = ", ".join(sorted(statuses - {ADDED}))
             violations.append(f"{path}: R3 Codex 검수 결과는 추가만 허용합니다 (커밋 이력에 {changed})")
-        elif not context.is_common_allowed(path):
-            violations.append(f"{path}: R3 이 작업({context.task_id or '작업 ID 없음'})의 검수 결과 경로가 아닙니다")
+        elif not context.is_review_record_allowed(path):
+            owner = context.review_record_id or "작업 ID 없음"
+            violations.append(f"{path}: R3 이 PR({owner})의 검수 결과 경로가 아닙니다")
     return violations
 
 
@@ -261,6 +292,37 @@ def check_pr(
 
 
 # ---------------------------------------------------------------------------
+# 규칙 확대 경고 (④ 결정 3, 실패가 아님)
+# ---------------------------------------------------------------------------
+
+
+def collect_warnings(
+    *,
+    changes: list[tuple[str, str]],
+    task_id: str | None,
+    briefs_before: Mapping[str, str],
+    briefs_after: Mapping[str, str],
+) -> list[str]:
+    """PR이 자기 판정 규칙을 넓힐 수 있는 변경을 경고로 알린다(종료 코드에 영향 없음).
+
+    판정은 head의 roles.json·지시서를 쓰므로(새 지시서를 같은 PR에 넣는 흐름 유지) 같은 PR에서
+    규칙이나 이 작업의 참여 역할을 바꾸면 범위가 넓어질 수 있다. Codex 검수·개발자 Merge 확인에서 보게 한다.
+    """
+    warnings = []
+    if any(path == ROLES_RULE_FILE for _, path in changes):
+        warnings.append(f"경고: 이 PR이 판정 규칙 {ROLES_RULE_FILE}을 바꿉니다 (바뀐 규칙으로 판정함)")
+    if task_id in briefs_before and task_id in briefs_after:
+        roles_before = parse_participating_roles(briefs_before[task_id])
+        roles_after = parse_participating_roles(briefs_after[task_id])
+        if roles_before != roles_after:
+            warnings.append(
+                f"경고: 이 PR이 기존 지시서 {task_id}의 참여 역할을 바꿉니다 "
+                f"({', '.join(roles_before) or '없음'} → {', '.join(roles_after) or '없음'}, 바뀐 역할로 판정함)"
+            )
+    return warnings
+
+
+# ---------------------------------------------------------------------------
 # git·파일 입력 수집 (main)
 # ---------------------------------------------------------------------------
 
@@ -291,17 +353,37 @@ def _collect_commits(merge_base: str, head: str) -> list[list[tuple[str, str]]]:
     """커밋별 변경 (R3 커밋별 이력).
 
     --first-parent: 브랜치에 dev를 merge한 경우 dev 쪽 커밋(다른 작업의 검수 결과 추가 등)을 이 PR의
-    이력으로 오인하지 않는다. merge 커밋 자체는 diff-tree가 출력하지 않으므로 PR 전체 diff로 보완한다.
+    이력으로 오인하지 않는다.
+    --cc: merge 커밋은 기본 diff-tree가 아무것도 출력하지 않는다. --cc는 모든 부모와 다른 경로, 즉 merge
+    결과에서 직접 고친 경로(evil merge)만 보여 준다(④ 결정 1). 상태는 부모별 글자('MA' 등)이고 첫 글자가
+    첫 번째 부모(이 브랜치) 대비 상태라 그대로 쓴다. 일반 커밋에서는 --cc가 보통 diff와 같다.
     """
     revisions = _git("rev-list", "--reverse", "--first-parent", f"{merge_base}..{head}").split()
     return [
-        _parse_name_status(_git("diff-tree", "--no-commit-id", "-r", "-z", "--name-status", "--no-renames", revision))
+        _parse_name_status(
+            _git("diff-tree", "--cc", "--no-commit-id", "-r", "-z", "--name-status", "--no-renames", revision)
+        )
         for revision in revisions
     ]
 
 
 def _load_briefs(root: Path) -> dict[str, str]:
     return {path.stem: path.read_text(encoding="utf-8") for path in sorted(root.glob(BRIEF_GLOB))}
+
+
+def _load_brief_at(revision: str, root: Path, task_id: str | None) -> dict[str, str]:
+    """④ 결정 3: merge-base 쪽 이 작업의 지시서(경고 비교용). 그때 없던 지시서(새 작업)면 빈 dict."""
+    if task_id is None:
+        return {}
+    for path in root.glob(BRIEF_GLOB):
+        if path.stem != task_id:
+            continue
+        relative = path.relative_to(root).as_posix()
+        try:
+            return {task_id: _git("show", f"{revision}:{relative}")}
+        except subprocess.CalledProcessError:
+            return {}
+    return {}
 
 
 def _load_rules(root: Path) -> dict:
@@ -325,8 +407,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _print_report(task_id, roles, violations) -> None:
+def _print_report(task_id, roles, violations, warnings) -> None:
     print(f"작업 ID: {task_id or '없음'} · 참여 역할: {', '.join(roles) if roles else '없음'}")
+    for warning in warnings:
+        print(f"- {warning}")
     if not violations:
         print("ownership-check 통과: 모든 변경이 R1~R9 안에 있습니다")
         return
@@ -347,8 +431,9 @@ def main(argv: list[str]) -> int:
 
     roles = parse_participating_roles(briefs[task_id]) if task_id else []
     merge_base = _git("merge-base", args.base, args.head).strip()
+    changes = _collect_changes(merge_base, args.head)
     violations = check_pr(
-        changes=_collect_changes(merge_base, args.head),
+        changes=changes,
         commits=_collect_commits(merge_base, args.head),
         branch=args.branch,
         task_id=task_id,
@@ -357,7 +442,13 @@ def main(argv: list[str]) -> int:
         rules=_load_rules(root),
         contract_check_passed=args.contract_check_passed,
     )
-    _print_report(task_id, roles, violations)
+    warnings = collect_warnings(
+        changes=changes,
+        task_id=task_id,
+        briefs_before=_load_brief_at(merge_base, root, task_id),
+        briefs_after=briefs,
+    )
+    _print_report(task_id, roles, violations, warnings)
     return 1 if violations else 0
 
 

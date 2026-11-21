@@ -209,6 +209,10 @@ jobs:
             echo '```'
           } >>"$GITHUB_STEP_SUMMARY"
           status=0
-          python3 scripts/ownership/pr_ownership_check.py "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY" || status=$?
+          report="$RUNNER_TEMP/ownership-report.txt"
+          python3 scripts/ownership/pr_ownership_check.py "${args[@]}" | tee "$report" || status=$?
+          cat "$report" >>"$GITHUB_STEP_SUMMARY"
           echo '```' >>"$GITHUB_STEP_SUMMARY"
+          # ④ 결정 3: 규칙 확대 경고(실패 아님)는 요약 외에 주석으로도 띄워 Codex 검수·Merge 확인에서 보이게 한다.
+          grep '^- 경고:' "$report" | sed 's/^- /::warning title=ownership-check::/' || true
           exit "$status"
