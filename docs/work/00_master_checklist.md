@@ -90,7 +90,7 @@
 - [x] Husky + lint-staged + commitlint (Conventional Commits) — #6 (2026-11-21)
 - [x] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md` — #9 (2026-11-21)
 - [x] 테스트 프레임워크 공통 설정: Jest(api), Vitest(web), Playwright, `pnpm test:*` 명령 — Jest #11, Vitest·Playwright #13 (2026-11-21)
-- [ ] GitHub Actions CI (**작업 브랜치 push 이벤트 + `dev` 대상 pull_request 이벤트** 모두 실행): lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화
+- [x] GitHub Actions CI (**작업 브랜치 push 이벤트 + `dev` 대상 pull_request 이벤트** 모두 실행): lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화 — #21 (2026-11-21, E2E·통합 테스트·API 계약 검사 포함)
 - [ ] `dev` Ruleset에 CI 잡과 `ownership-check`를 **필수 상태 검사**로 추가 (CI가 생긴 뒤)
 - [x] Husky 도입 시 pre-commit이 `scripts/hooks/check-secrets.sh`를 호출하도록 이전 — #6 (2026-11-21)
 
@@ -110,7 +110,7 @@
 - [ ] push 이벤트로 CI가 실행되는지
 - [x] PR 본문의 `Closes #n`으로 Merge 시 이슈가 닫히는지 — #2 (2026-11-21, PR #5)
 - [ ] 검수 후 코드 커밋(CI 실패 수정 포함) 시 재검수 후 push되는지
-- [ ] 범위 밖 파일 변경 시 CI `ownership-check`가 실패하는지
+- [x] 범위 밖 파일 변경 시 CI `ownership-check`가 실패하는지 — #21 (2026-11-21, 시험 브랜치로 R9·R3·R6·R7 실패 확인, R5는 Merge 후 재확인)
 - [ ] CI 요약에 head·base·검사 SHA가 나오는지
 
 **M0 완료 확인**

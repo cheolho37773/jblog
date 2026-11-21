@@ -1,0 +1,39 @@
+# CI 잡 공통 준비: .nvmrc의 Node, corepack으로 packageManager의 pnpm, 잠금 파일 그대로 설치 (M0-08 동작 규약 4).
+# 외부 액션은 커밋 SHA로 고정하고 주석에 버전을 적는다 (규약 2).
+name: 작업 공간 준비
+description: Node·pnpm 준비와 pnpm install --frozen-lockfile (pnpm 저장소 캐시 사용)
+
+runs:
+  using: composite
+  steps:
+    - name: Node 설치 (.nvmrc)
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: .nvmrc
+
+    - name: corepack으로 pnpm 준비 (package.json packageManager)
+      shell: bash
+      env:
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      run: |
+        corepack enable
+        pnpm --version
+
+    - name: pnpm 저장소 경로
+      id: pnpm-store
+      shell: bash
+      run: echo "path=$(pnpm store path --silent)" >>"$GITHUB_OUTPUT"
+
+    # 저장소 캐시는 내려받기만 줄인다. 설치·postinstall(prisma generate, @prisma/engines)은 매번 실행된다.
+    - name: pnpm 저장소 캐시
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-store-${{ runner.os }}-
+
+    # --frozen-lockfile: package.json과 잠금 파일이 어긋나면 실패한다(잠금 파일 검사).
+    - name: 의존성 설치
+      shell: bash
+      run: pnpm install --frozen-lockfile

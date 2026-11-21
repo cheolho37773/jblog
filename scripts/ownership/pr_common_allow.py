@@ -16,12 +16,17 @@ ROLES_FILE = Path(__file__).with_name("roles.json")
 TASK_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")  # scripts/codex-review.sh와 같은 규칙
 
 
-def load_patterns(task_id: str) -> list:
+def compile_patterns(raw_patterns: list, task_id: str) -> list:
+    """정규식 목록의 {ID}를 작업 ID로 치환해 컴파일한다. PR 판정(pr_ownership_check.py)도 쓴다."""
     if not TASK_ID_PATTERN.match(task_id):
         raise ValueError(f"잘못된 작업 ID: {task_id}")
-    rules = json.loads(ROLES_FILE.read_text(encoding="utf-8"))
     escaped_id = re.escape(task_id)
-    return [re.compile(raw.replace("{ID}", escaped_id)) for raw in rules["pr_common_allow"]["regex"]]
+    return [re.compile(raw.replace("{ID}", escaped_id)) for raw in raw_patterns]
+
+
+def load_patterns(task_id: str) -> list:
+    rules = json.loads(ROLES_FILE.read_text(encoding="utf-8"))
+    return compile_patterns(rules["pr_common_allow"]["regex"], task_id)
 
 
 def is_common_allowed(path: str, task_id: str) -> bool:

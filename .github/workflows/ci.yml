@@ -1,0 +1,218 @@
+# jblog CI (작업 M0-08, 동작 규약 1~5). 배포·이미지 push는 하지 않는다 (개요 §6-a).
+#
+# 잡 이름이 GitHub 상태 검사 이름이 된다. 브랜치 보호의 필수 검사가 이 이름을 쓰므로 바꾸지 않는다:
+#   lint · test · integration · e2e · build · contract · docker · ownership-check
+# 로컬에서 같은 검사: pnpm verify (lint·test·build·contract), pnpm verify:full (+ integration·e2e·docker)
+# GitHub Secrets는 쓰지 않는다. 테스트 DB는 Testcontainers, 빌드용 환경값은 명백한 더미다.
+name: CI
+
+on:
+  # 작업 브랜치 push. dev·main은 PR로만 바뀌므로 push 이벤트에서는 제외한다.
+  push:
+    branches-ignore:
+      - dev
+      - main
+  # dev 대상 PR. 포크 PR에 쓰기 권한·비밀값을 주는 pull_request_target은 쓰지 않는다.
+  pull_request:
+    branches:
+      - dev
+
+# 같은 브랜치·같은 이벤트의 이전 실행은 취소한다. push와 PR은 서로 다른 그룹이라 함께 돈다.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+# 최소 권한: 코드 읽기만. 더 필요한 잡이 생기면 그 잡에만 추가한다.
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # 명시하면 -eo pipefail로 실행되어 파이프 중간의 실패도 단계 실패가 된다.
+    shell: bash
+
+env:
+  # CI 러너의 git 설정을 바꾸지 않는다(husky prepare 생략).
+  HUSKY: '0'
+  TURBO_TELEMETRY_DISABLED: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: 코드 받기 (push의 merge-base 계산에 전체 이력 필요)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # 협업 §6.5: 실행 요약에 head·base·검사 SHA를 남긴다.
+      - name: SHA 3종 요약
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_REF: ${{ github.head_ref }}
+          PUSH_REF_NAME: ${{ github.ref_name }}
+        run: scripts/ci/resolve-shas.sh --summary
+
+      - uses: ./.github/actions/setup-workspace
+
+      - name: ESLint
+        run: pnpm lint
+      - name: Prettier 검사
+        run: pnpm format:check
+      - name: 타입 검사
+        run: pnpm typecheck
+
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+
+      - name: 단위·규칙 테스트 (루트 test)
+        run: pnpm test
+      # DB 없이 Nest 앱을 띄우는 backend e2e(supertest). 루트 test에는 들어 있지 않다.
+      - name: backend e2e 테스트
+        run: pnpm test:api-e2e
+      - name: 스크립트 테스트 (Python unittest, 공통 허용 자체 테스트)
+        run: pnpm test:scripts
+
+  integration:
+    name: integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+
+      # Testcontainers가 러너의 Docker로 PostgreSQL 컨테이너를 띄운다 (M0-06).
+      - name: backend 통합 테스트 (Testcontainers)
+        run: pnpm test:integration
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Playwright Chromium 설치 (시스템 의존성 포함)
+        run: pnpm --filter @jblog/frontend exec playwright install --with-deps chromium
+      # webServer가 frontend를 빌드하고 standalone 서버로 띄운다(더미 env는 playwright.config.ts).
+      - name: Playwright E2E
+        run: pnpm test:e2e
+
+      - name: 실패 시 Playwright 보고서 보관
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+
+      # 빌드 시 env 검증을 통과시키는 명백한 더미 주소로 루트 build를 실행한다(package.json build:verify).
+      - name: 루트 build (더미 환경값)
+        run: pnpm build:verify
+
+  contract:
+    name: contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+
+      # M0-07 인계: 생성 타입 일치(gen:api-types --check) + OpenAPI 원본 최신 여부(재생성 후 diff 없음).
+      - name: 계약 생성물 일치 검사
+        run: pnpm contract:check
+
+  docker:
+    name: docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # 빌드만 검증한다. 레지스트리 push는 하지 않는다(배포 보류).
+      - name: backend 이미지 빌드
+        run: docker build -f backend/Dockerfile -t jblog-backend:ci .
+      - name: frontend 이미지 빌드
+        run: docker build -f frontend/Dockerfile -t jblog-frontend:ci .
+
+  ownership-check:
+    name: ownership-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # R6: 계약 생성물 허용에는 같은 실행의 contract 결과가 필요하다.
+    # contract가 실패해도 판정은 돌아야 하므로(건너뛴 필수 검사는 통과로 보일 수 있다) 취소가 아니면 실행한다.
+    needs: contract
+    if: ${{ !cancelled() }}
+    steps:
+      - name: 코드 받기 (PR 전체 커밋 이력 필요)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 검사 범위 (base~head)
+        id: shas
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_REF: ${{ github.head_ref }}
+          PUSH_REF_NAME: ${{ github.ref_name }}
+        run: scripts/ci/resolve-shas.sh
+
+      - name: PR 단위 소유권 판정 (R1~R9)
+        env:
+          BASE_SHA: ${{ steps.shas.outputs.base }}
+          HEAD_SHA: ${{ steps.shas.outputs.head }}
+          BRANCH: ${{ steps.shas.outputs.branch }}
+          CONTRACT_RESULT: ${{ needs.contract.result }}
+        run: |
+          args=(--base "$BASE_SHA" --head "$HEAD_SHA" --branch "$BRANCH")
+          if [[ "$CONTRACT_RESULT" == "success" ]]; then
+            args+=(--contract-check-passed)
+          fi
+          {
+            echo "### ownership-check (contract: ${CONTRACT_RESULT})"
+            echo
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          status=0
+          report="$RUNNER_TEMP/ownership-report.txt"
+          python3 scripts/ownership/pr_ownership_check.py "${args[@]}" | tee "$report" || status=$?
+          cat "$report" >>"$GITHUB_STEP_SUMMARY"
+          echo '```' >>"$GITHUB_STEP_SUMMARY"
+          # ④ 결정 3: 규칙 확대 경고(실패 아님)는 요약 외에 주석으로도 띄워 Codex 검수·Merge 확인에서 보이게 한다.
+          grep '^- 경고:' "$report" | sed 's/^- /::warning title=ownership-check::/' || true
+          exit "$status"

@@ -331,7 +331,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 - **계약 생성물**: `frontend/src/generated/**`는 어떤 역할도 손으로 고칠 수 없다(역할 단위 deny). 대신 PR 단위 검사에서는 **`contract/` 브랜치이고 생성 결과 일치 검사(`pnpm gen:api-types --check`)가 통과한 경우에만** 참여 역할과 무관하게 허용하고, 다른 브랜치에서 바뀌면 실패한다. 규칙 원본은 `roles.json`의 `pr_contract_generated`
 - 역할별 커밋 구분은 커밋 trailer로 한다 (`Agent: backend-dev`). PR 단위 검사는 합집합만 보고, 역할을 넘은 수정은 역할 단위 검사와 Codex 검수가 잡는다
 
-**Codex 결과 파일 보호**: `*.codex.md`는 생성 커밋 이후 내용이 바뀌면 CI `ownership-check`가 실패한다 (파일 해시를 대응 기록 첫 줄에 기록해 대조).
+**Codex 결과 파일 보호**: `*.codex.md`·`docs/plan/feedback/**`는 PR의 **모든 커밋에서 추가만** 허용하고, 어느 커밋에서든 수정·삭제되면 CI `ownership-check`가 실패한다 (커밋별 이력으로 판정, M0-08에서 해시 기록 방식 대신 채택).
 
 ### 5.3 공유 계약 우선 원칙
 
@@ -608,6 +608,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 # BE-05-1 Post 작업본 생성·저장
 - 마일스톤: M3 · 이슈: #34 · 브랜치: feat/BE-05-1-post-draft-save
 - 실행 방식: 서브에이전트 조합 (test-engineer → backend-dev)
+- 참여 역할: test-engineer, backend-dev   ← CI `ownership-check`가 읽는 줄 (쉼표 구분, `roles.json`의 역할 이름)
 - 선택 이유: 새 동작(완료 기준 테스트 필요), 공유 계약 변경 없음(계약은 BE-05a에서 확정), 단일 영역
 - 난도·모델: 높음(버전 규칙·동시성) → backend-dev·test-engineer 모두 Opus
 - 의존 / 선행 준비: contract/BE-05a Merge 완료 · 로컬 PostgreSQL(Docker Compose) · 테스트 DB는 Testcontainers 자동
@@ -840,3 +841,4 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | v0.7.4 | 2026-11-21 | Codex 검수 r4 반영(개발자 승인 추가 수정): 공통 허용 경로를 작업 ID 경계를 정확히 검사하는 정규식으로 변경, 판정 스크립트·자체 테스트 추가 |
 | v0.8 | 2026-11-21 | 저장소 구조 변경(개요 D25), 계약 생성물의 PR 단위 허용 규칙(`pr_contract_generated`, §5.2): `apps/web`·`apps/api`·`packages/*` → `frontend/`·`backend/`, 공용 패키지 없음. 소유권 표·계약 규칙(`backend/openapi.json` + `frontend/src/generated/**`)·테스트 경로 갱신. PR 생성 링크 전달 중단(C17·§4.2·§5.6·G4, 개발자 지시) |
 | v0.8.1 | 2026-11-21 | §10-a 금지 이름 검사를 선언만 대상으로 조정(외부 API 객체 키 허용, M0-06 중 개발자 승인) |
+| v0.8.2 | 2026-11-21 | M0-08: Codex 결과 보호를 커밋별 "추가만 허용" 판정으로 변경(§5.2), 지시서 형식에 `참여 역할` 줄 추가(§9, CI `ownership-check`가 읽음) |

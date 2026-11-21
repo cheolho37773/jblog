@@ -1,0 +1,39 @@
+# Docker 빌드 컨텍스트(저장소 루트)에서 뺄 파일 (M0-08 동작 규약 7).
+# 빌드: docker build -f backend/Dockerfile .  /  docker build -f frontend/Dockerfile .
+
+# 민감 정보: .env 파일은 이미지에 넣지 않는다. 런타임 값은 실행 시 주입한다 (개요 §6-b).
+**/.env
+**/.env.*
+
+# 이미지 안에서 다시 설치·생성하는 것
+**/node_modules
+**/.pnpm-store
+**/dist
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+backend/src/generated
+frontend/next-env.d.ts
+
+# 저장소·도구·문서 (이미지 빌드에 필요 없음)
+.git
+.github
+.husky
+.githooks
+.claude
+.idea
+.vscode
+docs
+infra
+**/*.md
+
+# 테스트 결과물
+**/coverage
+**/test-results
+**/playwright-report
+**/blob-report
+
+# 로컬 업로드 파일·로그
+**/uploads
+**/*.log
+**/.DS_Store

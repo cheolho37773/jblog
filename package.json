@@ -22,7 +22,15 @@
     "db:down": "docker compose -f infra/docker-compose.yml --env-file infra/.env down",
     "db:psql": "docker compose -f infra/docker-compose.yml --env-file infra/.env exec db sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'",
     "prepare": "husky",
-    "test:e2e": "pnpm --filter @jblog/frontend test:e2e"
+    "test:e2e": "pnpm --filter @jblog/frontend test:e2e",
+    "test:api-e2e": "pnpm --filter @jblog/backend test:e2e",
+    "test:integration": "pnpm --filter @jblog/backend test:integration",
+    "test:scripts": "python3 -m unittest discover -s scripts/tests && python3 scripts/ownership/pr_common_allow.py --self-test",
+    "build:verify": "API_INTERNAL_URL=http://localhost:4999 NEXT_PUBLIC_SITE_URL=http://localhost:3100 turbo run build",
+    "contract:check": "pnpm gen:api-types --check && pnpm --filter @jblog/backend openapi:generate && git diff --exit-code -- backend/openapi.json",
+    "docker:build": "docker build -f backend/Dockerfile -t jblog-backend:local . && docker build -f frontend/Dockerfile -t jblog-frontend:local .",
+    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm test:api-e2e && pnpm test:scripts && pnpm build:verify && pnpm contract:check",
+    "verify:full": "pnpm verify && pnpm test:integration && pnpm test:e2e && pnpm docker:build"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx}": [
