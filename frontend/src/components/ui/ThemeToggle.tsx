@@ -1,11 +1,24 @@
 'use client';
 
 import { useTheme } from 'next-themes';
+import { useSyncExternalStore } from 'react';
 
-// resolvedTheme은 서버에서 알 수 없어 첫 렌더에 undefined다. 그동안은 라이트로 그린다.
+const subscribeNothing = () => () => {};
+
+// 서버·하이드레이션 중에는 false, 하이드레이션이 끝난 클라이언트에서는 true다.
+// 저장된 테마는 서버가 모르므로, 마운트 전에는 서버와 같은 모양으로 그려 불일치를 막는다.
+function useIsMounted(): boolean {
+  return useSyncExternalStore(
+    subscribeNothing,
+    () => true,
+    () => false,
+  );
+}
+
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const isMounted = useIsMounted();
+  const isDark = isMounted && resolvedTheme === 'dark';
 
   return (
     <button
