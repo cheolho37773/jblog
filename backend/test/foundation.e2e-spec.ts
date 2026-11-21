@@ -3,7 +3,9 @@ import { Writable } from 'node:stream';
 import request from 'supertest';
 import { createApp } from '../src/bootstrap';
 import {
+  PROBE_APP_500_CODE,
   PROBE_APP_ERROR,
+  PROBE_HTTP_5XX_MESSAGE,
   PROBE_INTERNAL_ERROR_MESSAGE,
   PROBE_SET_COOKIE_VALUE,
   ProbeModule,
@@ -157,6 +159,51 @@ describe('Nest 기반 (development)', () => {
       expect(logs.output()).toContain(PROBE_INTERNAL_ERROR_MESSAGE);
     });
 
+    describe('5xx HttpException 계열도 내부 메시지를 응답에 넣지 않는다 (Codex r1 #1)', () => {
+      const GENERIC_MESSAGE_ROUTE = '/api/probe/unknown-error';
+      const cases = [
+        {
+          name: 'InternalServerErrorException',
+          path: '/api/probe/internal-server-error',
+          status: 500,
+          code: 'INTERNAL_ERROR',
+        },
+        {
+          name: 'HttpException(500)',
+          path: '/api/probe/http-500',
+          status: 500,
+          code: 'INTERNAL_ERROR',
+        },
+        {
+          name: 'AppException(500) 은 지정 코드를 유지한다',
+          path: '/api/probe/app-500',
+          status: 500,
+          code: PROBE_APP_500_CODE,
+        },
+        {
+          name: 'ServiceUnavailableException(503)',
+          path: '/api/probe/service-unavailable',
+          status: 503,
+          code: 'SERVICE_UNAVAILABLE',
+        },
+      ];
+
+      it.each(cases)(
+        '$name: 일반 문구로 응답하고 원래 메시지는 서버 로그에 남는다',
+        async ({ path, status, code }) => {
+          const generic = await request(app.getHttpServer()).get(GENERIC_MESSAGE_ROUTE);
+          const response = await request(app.getHttpServer()).get(path);
+          await waitForLogFlush();
+
+          expect(response.status).toBe(status);
+          expectErrorShape(response.body, { statusCode: status, code, path });
+          expect(response.body.message).toBe(generic.body.message);
+          expect(response.text).not.toContain(PROBE_HTTP_5XX_MESSAGE);
+          expect(logs.output()).toContain(PROBE_HTTP_5XX_MESSAGE);
+        },
+      );
+    });
+
     it('path 에는 쿼리 문자열이 아닌 요청 경로가 담긴다', async () => {
       const response = await request(app.getHttpServer()).get('/api/does-not-exist?x=1');
 
@@ -188,6 +235,23 @@ describe('Nest 기반 (development)', () => {
       expect(first.headers[REQUEST_ID_HEADER]).toBeTruthy();
       expect(second.headers[REQUEST_ID_HEADER]).toBeTruthy();
       expect(first.headers[REQUEST_ID_HEADER]).not.toBe(second.headers[REQUEST_ID_HEADER]);
+    });
+  });
+
+  describe('Swagger 경로의 x-request-id (Codex r1 #2)', () => {
+    it('/api/docs 에 보낸 x-request-id 를 응답 헤더로 돌려준다', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/docs')
+        .set(REQUEST_ID_HEADER, SENT_REQUEST_ID);
+
+      expect(response.status).toBe(200);
+      expect(response.headers[REQUEST_ID_HEADER]).toBe(SENT_REQUEST_ID);
+    });
+
+    it('/api/docs 에 x-request-id 가 없으면 생성한다', async () => {
+      const response = await request(app.getHttpServer()).get('/api/docs');
+
+      expect(response.headers[REQUEST_ID_HEADER]).toBeTruthy();
     });
   });
 

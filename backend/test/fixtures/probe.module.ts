@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpStatus, Module, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  InternalServerErrorException,
+  Module,
+  Post,
+  Res,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { IsString } from 'class-validator';
 import type { Response } from 'express';
 import { AppException } from '../../src/common/errors/app.exception';
@@ -10,6 +21,9 @@ export const PROBE_APP_ERROR = {
 };
 export const PROBE_INTERNAL_ERROR_MESSAGE = 'internal-secret-detail-7c21';
 export const PROBE_SET_COOKIE_VALUE = 'session=probe-set-cookie-value-51d';
+
+export const PROBE_HTTP_5XX_MESSAGE = 'http-5xx-internal-detail-3e8';
+export const PROBE_APP_500_CODE = 'SOME_CODE';
 
 class ProbeBodyDto {
   @IsString()
@@ -26,6 +40,30 @@ class ProbeController {
   @Get('unknown-error')
   throwUnknownError(): never {
     throw new Error(PROBE_INTERNAL_ERROR_MESSAGE);
+  }
+
+  @Get('internal-server-error')
+  throwInternalServerError(): never {
+    throw new InternalServerErrorException(PROBE_HTTP_5XX_MESSAGE);
+  }
+
+  @Get('http-500')
+  throwHttp500(): never {
+    throw new HttpException(PROBE_HTTP_5XX_MESSAGE, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+
+  @Get('app-500')
+  throwAppException500(): never {
+    throw new AppException(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      PROBE_APP_500_CODE,
+      PROBE_HTTP_5XX_MESSAGE,
+    );
+  }
+
+  @Get('service-unavailable')
+  throwServiceUnavailable(): never {
+    throw new ServiceUnavailableException(PROBE_HTTP_5XX_MESSAGE);
   }
 
   @Post('validate')
