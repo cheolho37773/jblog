@@ -498,6 +498,112 @@ class DevopsOnlyPathsTest(ViolationAssertions):
         self.assertViolation(run_check([("A", path)], roles=("devops-engineer",)), path, "R9")
 
 
+class PlanPrReviewRecordsTest(ViolationAssertions):
+    """R3 보완(④ 결정 2): 작업 ID가 없으면 브랜치 <나머지>를 기획 검수 기록의 공통 허용 ID로 쓴다.
+
+    scripts/codex-review.sh --plan 이 docs/plan/feedback/<날짜>_<나머지>[_r<N>].md 를 만든다.
+    """
+
+    PLAN_BRANCH = "docs/M0-structure"
+    PLAN_FEEDBACK = "docs/plan/feedback/2026-11-21_M0-structure.md"
+    PLAN_FEEDBACK_ROUND = "docs/plan/feedback/2026-11-21_M0-structure_r2.md"
+    PLAN_REVIEW_RESULT = "docs/reviews/M0-structure/r1.codex.md"
+
+    def check_plan_pr(self, changes, commits=None, branch=PLAN_BRANCH):
+        return run_check(changes, commits=commits, branch=branch, task_id=None, roles=(), brief_found=False)
+
+    def test_브랜치_나머지_이름의_피드백_추가는_통과(self):
+        self.assertPasses(self.check_plan_pr([("A", self.PLAN_FEEDBACK), ("A", self.PLAN_FEEDBACK_ROUND)]))
+
+    def test_브랜치_나머지_이름의_검수_결과_추가는_통과(self):
+        self.assertPasses(self.check_plan_pr([("A", self.PLAN_REVIEW_RESULT)]))
+
+    def test_브랜치_나머지_이름의_피드백도_수정하면_위반(self):
+        self.assertViolation(self.check_plan_pr([("M", self.PLAN_FEEDBACK)]), self.PLAN_FEEDBACK, "R3")
+
+    def test_추가_후_다음_커밋에서_수정하면_위반(self):
+        violations = self.check_plan_pr(
+            [("A", self.PLAN_FEEDBACK)],
+            commits=[[("A", self.PLAN_FEEDBACK)], [("M", self.PLAN_FEEDBACK)]],
+        )
+        self.assertViolation(violations, self.PLAN_FEEDBACK, "R3")
+
+    def test_다른_이름의_피드백_추가는_위반(self):
+        for path in [
+            "docs/plan/feedback/2026-11-21_plan_review_05.md",
+            "docs/plan/feedback/2026-11-21_M0.md",
+            "docs/plan/feedback/2026-11-21_M0-structure-extra.md",
+        ]:
+            with self.subTest(path=path):
+                self.assertViolation(self.check_plan_pr([("A", path)]), path, "R3")
+
+    def test_다른_이름의_검수_결과_추가는_위반(self):
+        path = "docs/reviews/M0-other/r1.codex.md"
+        self.assertViolation(self.check_plan_pr([("A", path)]), path, "R3")
+
+    def test_유형_없는_브랜치는_나머지가_없어_위반(self):
+        self.assertViolation(
+            self.check_plan_pr([("A", self.PLAN_FEEDBACK)], branch="M0-structure"), self.PLAN_FEEDBACK, "R3"
+        )
+
+    def test_작업_ID가_있으면_브랜치_나머지를_쓰지_않음(self):
+        # chore/M0-08-ci 의 작업 ID는 M0-08: <나머지>(M0-08-ci) 이름의 기록은 공통 허용이 아니다
+        for path in ["docs/plan/feedback/2026-11-21_M0-08-ci.md", "docs/reviews/M0-08-ci/r1.codex.md"]:
+            with self.subTest(path=path):
+                self.assertViolation(run_check([("A", path)]), path, "R3")
+        self.assertPasses(run_check([("A", FEEDBACK_FILE)]))
+
+
+ROLES_RULE_FILE = "scripts/ownership/roles.json"
+
+
+def brief_with_roles(roles_line: str, extra: str = "") -> str:
+    return f"# 더미\n\n- 마일스톤: M0 · 브랜치: `chore/M0-08-ci` (`dev`에서 생성)\n- 참여 역할: {roles_line}\n{extra}"
+
+
+class CollectWarningsTest(unittest.TestCase):
+    """④ 결정 3: PR이 자기 판정 규칙을 넓힐 수 있는 변경은 경고(실패 아님)."""
+
+    BEFORE = {TASK_ID: brief_with_roles("test-engineer, frontend-dev")}
+
+    def warnings(self, changes, briefs_after, briefs_before=None, task_id=TASK_ID):
+        return checker.collect_warnings(
+            changes=list(changes),
+            task_id=task_id,
+            briefs_before=self.BEFORE if briefs_before is None else briefs_before,
+            briefs_after=briefs_after,
+        )
+
+    def test_roles_json을_바꾸면_경고_1건(self):
+        result = self.warnings([("M", ROLES_RULE_FILE)], briefs_after=self.BEFORE)
+        self.assertEqual(len(result), 1, result)
+        self.assertIn(ROLES_RULE_FILE, result[0])
+
+    def test_기존_지시서의_참여_역할_줄을_바꾸면_경고_1건(self):
+        after = {TASK_ID: brief_with_roles("test-engineer, frontend-dev, backend-dev")}
+        result = self.warnings([("M", TASK_BRIEF)], briefs_after=after)
+        self.assertEqual(len(result), 1, result)
+        self.assertIn(TASK_ID, result[0])
+
+    def test_두_가지가_함께면_경고_2건(self):
+        after = {TASK_ID: brief_with_roles("backend-dev")}
+        result = self.warnings([("M", ROLES_RULE_FILE), ("M", TASK_BRIEF)], briefs_after=after)
+        self.assertEqual(len(result), 2, result)
+
+    def test_참여_역할_줄이_같으면_다른_내용이_바뀌어도_경고_없음(self):
+        after = {TASK_ID: brief_with_roles("test-engineer, frontend-dev", extra="\n## 인계 노트\n\n- 추가 기록\n")}
+        self.assertEqual(self.warnings([("M", TASK_BRIEF)], briefs_after=after), [])
+
+    def test_새_지시서_추가는_경고_없음(self):
+        after = {**self.BEFORE, "M9-01": brief_with_roles("backend-dev")}
+        result = self.warnings([("A", "docs/work/M9/tasks/M9-01.md")], briefs_after=after, task_id="M9-01")
+        self.assertEqual(result, [])
+
+    def test_관련_변경이_없으면_경고_없음(self):
+        self.assertEqual(self.warnings([("M", FRONTEND_PAGE)], briefs_after=self.BEFORE), [])
+        self.assertEqual(self.warnings([], briefs_after=self.BEFORE), [])
+
+
 class ReportShapeTest(ViolationAssertions):
     """판정 결과 형식: 경로 + 규칙 번호, 여러 위반 동시 보고, 빈 PR 통과."""
 
@@ -730,6 +836,32 @@ class MainGitIntegrationTest(unittest.TestCase):
         self.assertEqual(exit_code, 1, output)
         self.assertIn(CODEX_RESULT, output)
         self.assertIn("R3", output)
+
+    def test_규칙을_넓히는_변경은_경고를_출력하지만_종료_코드에_영향_없음(self):
+        # ④ 결정 3: 판정은 head 기준(넓힌 참여 역할로 통과), 대신 경고를 출력한다
+        briefs_before = {TASK_ID: (self.workdir / TASK_BRIEF).read_text(encoding="utf-8")}
+        widened_rules = json.loads((self.workdir / ROLES_RULE_FILE).read_text(encoding="utf-8"))
+        widened_rules["$comment"] = widened_rules.get("$comment", "") + " (더미 변경)"
+        self.write(ROLES_RULE_FILE, json.dumps(widened_rules, ensure_ascii=False, indent=2))
+        widened_brief = briefs_before[TASK_ID].replace(
+            "- 참여 역할: test-engineer, frontend-dev, devops-engineer",
+            "- 참여 역할: test-engineer, frontend-dev, devops-engineer, backend-dev",
+        )
+        self.assertNotEqual(widened_brief, briefs_before[TASK_ID], "M0-08 지시서의 참여 역할 줄 형식이 바뀌었다")
+        self.write(TASK_BRIEF, widened_brief)
+        self.write(BACKEND_SOURCE, "export const dummy = 1;\n")
+        head = self.commit("chore: 규칙과 참여 역할 넓힘")
+        exit_code, output = self.run_main(head)
+        self.assertEqual(exit_code, 0, output)
+        expected_warnings = checker.collect_warnings(
+            changes=[("M", ROLES_RULE_FILE), ("M", TASK_BRIEF), ("A", BACKEND_SOURCE)],
+            task_id=TASK_ID,
+            briefs_before=briefs_before,
+            briefs_after={TASK_ID: widened_brief},
+        )
+        self.assertEqual(len(expected_warnings), 2, expected_warnings)
+        for warning in expected_warnings:
+            self.assertIn(warning, output)
 
     def test_contract_브랜치_생성물은_생성_검사_통과_옵션이_있을_때만_종료_코드_0(self):
         self.write(GENERATED_FILE, "export type Dummy = never;\n")
