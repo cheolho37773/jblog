@@ -2,6 +2,8 @@ import type { INestApplication } from '@nestjs/common';
 import { Writable } from 'node:stream';
 import request from 'supertest';
 import { createApp } from '../src/bootstrap';
+import { buildUnreachableDatabaseUrl } from './fixtures/database-url';
+import { expectErrorShape } from './fixtures/error-body';
 import {
   PROBE_APP_500_CODE,
   PROBE_APP_ERROR,
@@ -11,24 +13,20 @@ import {
   ProbeModule,
 } from './fixtures/probe.module';
 
-const DEV_ENV = { NODE_ENV: 'development', API_PORT: '4000' };
-const PRODUCTION_ENV = { NODE_ENV: 'production', API_PORT: '4000' };
-const ERROR_BODY_KEYS = ['code', 'message', 'path', 'statusCode', 'timestamp'];
-const ISO_8601_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+// DB 없이 앱이 떠야 한다(M0-06 규약 7): 닫힌 포트를 가리키는 더미 DATABASE_URL을 쓴다.
+const DUMMY_DATABASE_URL = buildUnreachableDatabaseUrl();
+const DEV_ENV = { NODE_ENV: 'development', API_PORT: '4000', DATABASE_URL: DUMMY_DATABASE_URL };
+const PRODUCTION_ENV = {
+  NODE_ENV: 'production',
+  API_PORT: '4000',
+  DATABASE_URL: DUMMY_DATABASE_URL,
+};
 const GENERIC_500_MESSAGE_MAX_LENGTH = 100;
 
 const REQUEST_ID_HEADER = 'x-request-id';
 const SENT_REQUEST_ID = 'req-id-from-client-123';
 const AUTHORIZATION_VALUE = 'Bearer dummy-authorization-token-a1';
 const COOKIE_VALUE = 'jb_session=dummy-cookie-value-b2';
-
-interface ErrorBody {
-  statusCode: number;
-  code: string;
-  message: string;
-  path: string;
-  timestamp: string;
-}
 
 function createLogCollector(): { stream: Writable; output: () => string } {
   const chunks: string[] = [];
@@ -43,19 +41,6 @@ function createLogCollector(): { stream: Writable; output: () => string } {
 
 async function waitForLogFlush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve));
-}
-
-function expectErrorShape(
-  body: ErrorBody,
-  expected: { statusCode: number; code: string; path: string },
-): void {
-  expect(Object.keys(body).sort()).toEqual(ERROR_BODY_KEYS);
-  expect(body.statusCode).toBe(expected.statusCode);
-  expect(body.code).toBe(expected.code);
-  expect(body.path).toBe(expected.path);
-  expect(typeof body.message).toBe('string');
-  expect(body.timestamp).toMatch(ISO_8601_UTC);
-  expect(new Date(body.timestamp).toISOString()).toBe(body.timestamp);
 }
 
 async function startApp(
@@ -323,10 +308,12 @@ describe('Nest 기반 (production)', () => {
 
 describe('createApp 환경변수 검증', () => {
   it.each([
-    ['NODE_ENV 누락', { API_PORT: '4000' }, 'NODE_ENV'],
-    ['API_PORT 누락', { NODE_ENV: 'development' }, 'API_PORT'],
-    ['API_PORT=abc', { NODE_ENV: 'development', API_PORT: 'abc' }, 'API_PORT'],
-    ['NODE_ENV=staging', { NODE_ENV: 'staging', API_PORT: '4000' }, 'NODE_ENV'],
+    ['NODE_ENV 누락', { API_PORT: '4000', DATABASE_URL: DUMMY_DATABASE_URL }, 'NODE_ENV'],
+    ['API_PORT 누락', { NODE_ENV: 'development', DATABASE_URL: DUMMY_DATABASE_URL }, 'API_PORT'],
+    ['API_PORT=abc', { ...DEV_ENV, API_PORT: 'abc' }, 'API_PORT'],
+    ['NODE_ENV=staging', { ...DEV_ENV, NODE_ENV: 'staging' }, 'NODE_ENV'],
+    ['DATABASE_URL 누락', { NODE_ENV: 'development', API_PORT: '4000' }, 'DATABASE_URL'],
+    ['DATABASE_URL=not-a-url', { ...DEV_ENV, DATABASE_URL: 'not-a-url' }, 'DATABASE_URL'],
   ])(
     '%s 이면 앱 생성이 reject 되고 메시지에 변수 이름이 있다',
     async (_caseName, env, variableName) => {
@@ -335,4 +322,16 @@ describe('createApp 환경변수 검증', () => {
       );
     },
   );
+
+  it('DATABASE_URL 이 형식 오류면 앱 생성이 reject 되고 메시지에 입력값을 넣지 않는다', async () => {
+    const leakCheckValue = 'leak-check-database-url-3e8a';
+
+    const creation = createApp(
+      { ...DEV_ENV, DATABASE_URL: leakCheckValue },
+      { logStream: createLogCollector().stream },
+    );
+
+    await expect(creation).rejects.toThrow('DATABASE_URL');
+    await expect(creation).rejects.not.toThrow(leakCheckValue);
+  });
 });

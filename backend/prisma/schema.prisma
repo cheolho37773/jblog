@@ -1,0 +1,311 @@
+// jblog 데이터 모델 (백엔드 기획 §3.2). 이 파일은 이후 모든 백엔드 작업의 공유 계약이다.
+// 바꿀 때는 계약 작업(contract/ 브랜치)에서 마이그레이션과 함께 바꾼다 (협업 §5.3).
+//
+// Prisma 7 문법을 따른다. 기획 초안(Prisma 6 문법)과 다른 점은 M0-06 인계 노트의 표 참고.
+// - 접속 URL은 이 파일이 아니라 backend/prisma.config.ts가 넘긴다 (datasource의 url 속성 제거됨).
+// - 생성 클라이언트는 src/generated/prisma에 TypeScript로 만든다 (git·lint·Prettier 제외 대상).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  // backend는 CommonJS로 빌드한다 (package.json에 "type" 없음).
+  moduleFormat        = "cjs"
+  // jest는 .js 확장자를 .ts 원본으로 찾지 못하므로 확장자 없는 import를 만든다 (CommonJS 해석).
+  importFileExtension = ""
+  // PostSlug의 "글당 현재 slug 1개" 부분 unique 인덱스를 스키마에 적어 두기 위해 쓴다.
+  // 스키마가 이 인덱스를 모르면 migrate dev·diff가 인덱스 삭제를 drift로 낸다 (§3.3 수동 SQL).
+  previewFeatures     = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// 허용된 GitHub 계정의 최초 로그인 시 생성 (회원가입 없음)
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  githubId      BigInt         @unique // 허용 목록 비교 기준 (ADMIN_GITHUB_ID)
+  githubLogin   String
+  avatarUrl     String?
+  createdAt     DateTime       @default(now())
+  lastLoginAt   DateTime?
+  tokenVersion  Int            @default(0) // "모든 기기 로그아웃" 시 +1 → 기존 access JWT 즉시 무효 (§5.6)
+  refreshTokens RefreshToken[]
+  // M7에서 mcpTokens McpToken[] 관계를 추가한다 (03 §6). MVP 스키마에는 넣지 않는다
+}
+
+model LoginAudit {
+  id          BigInt   @id @default(autoincrement())
+  result      String // SUCCESS | DENIED | ERROR
+  githubId    BigInt?
+  githubLogin String?
+  ipHash      String
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique // 원문 저장 금지, SHA-256
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?   @db.Uuid // 회전으로 이 토큰을 대체한 새 토큰 (회전 시각 = revokedAt, 동시 갱신 유예 판단, §5.6)
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Category {
+  id        Int    @id @default(autoincrement())
+  name      String @unique
+  slug      String @unique
+  sortOrder Int    @default(0)
+  posts     Post[]
+}
+
+model Tag {
+  id    Int       @id @default(autoincrement())
+  name  String    @unique
+  slug  String    @unique
+  posts PostTag[]
+}
+
+model Post {
+  id             Int             @id @default(autoincrement())
+  slug           String          @unique
+  title          String
+  excerpt        String? // 비우면 본문에서 160자 자동 생성
+  contentMd      String          @db.Text
+  coverImageUrl  String?
+  status         PostStatus      @default(DRAFT) // 예약은 별도 상태 없이 PUBLISHED + 미래 publishedAt (§5.1)
+  publishedAt    DateTime? // 미래 시각 = 예약 발행
+  version        Int             @default(1) // 낙관적 잠금. 저장마다 +1, 요청의 expectedVersion과 다르면 409
+  isFeatured     Boolean         @default(false) // Home Hero 카드 / Blog Overlay 카드
+  readingMinutes Int             @default(1)
+  viewCount      Int             @default(0) // 비정규화 카운터
+  likeCount      Int             @default(0)
+  seoTitle       String?
+  seoDescription String?
+  categoryId     Int?
+  category       Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags           PostTag[]
+  likes          PostLike[]
+  viewLogs       PostViewLog[]
+  viewDaily      PostViewDaily[]
+  draft          PostDraft? // 발행 글의 편집 작업본 (§5.1)
+  slugs          PostSlug[] // 현재 slug + 이전 slug (영구 예약)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([categoryId])
+  // 한글 부분일치 검색용 trgm 인덱스 (§3.3, §5.4). 연산자 클래스를 쓰려면 pg_trgm 확장이 먼저 있어야 해서
+  // 확장 생성은 마이그레이션 SQL에 직접 적는다. 인덱스는 drift가 나지 않도록 스키마에도 적는다.
+  @@index([title(ops: raw("gin_trgm_ops"))], map: "post_title_trgm", type: Gin)
+  @@index([contentMd(ops: raw("gin_trgm_ops"))], map: "post_content_trgm", type: Gin)
+}
+
+model PostTag {
+  postId Int
+  tagId  Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model PostLike {
+  postId    Int
+  visitorId String   @db.Uuid // 익명 방문자 쿠키 jb_vid
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, visitorId])
+}
+
+model PostViewLog {
+  postId      Int
+  visitorHash String // sha256(ip + ua + 일자별 salt), 원본 IP 미저장
+  viewedOn    DateTime @db.Date
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, visitorHash, viewedOn])
+  @@index([viewedOn]) // 중복 판정 전용. 2일 지난 로그는 정리 (§5.2)
+}
+
+// 통계 원본. 로그 정리와 무관하게 영구 보관
+model PostViewDaily {
+  postId Int
+  date   DateTime @db.Date
+  views  Int      @default(0) // 그날의 고유 방문 조회 수
+  post   Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, date])
+  @@index([date])
+}
+
+// 발행된 글을 편집할 때의 작업본 (글당 최대 1개)
+// slug·isFeatured·publishedAt은 작업본 대상이 아니다 (§5.1 필드별 반영 규칙)
+model PostDraft {
+  id             String   @id @default(uuid()) @db.Uuid // 작업본마다 새 ID. 폐기 후 재생성하면 ID가 달라진다 (§5.1 버전 규칙)
+  postId         Int      @unique
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  title          String
+  excerpt        String?
+  contentMd      String   @db.Text
+  coverImageUrl  String?
+  categoryId     Int?
+  tags           String[] // 이름 배열 (발행 시 PostTag로 반영)
+  seoTitle       String?
+  seoDescription String?
+  baseVersion    Int // 작업본을 만든 시점의 Post.version
+  version        Int      @default(1) // 작업본 자체의 낙관적 잠금
+  updatedAt      DateTime @updatedAt
+}
+
+// 한 번 쓴 slug는 전역에서 영구 예약 (§5.1 slug 정책, 개요 D20)
+model PostSlug {
+  slug      String   @id // PK이므로 현재/이전 slug를 통틀어 중복 불가
+  postId    Int? // 글 삭제 시 null → slug는 계속 예약됨
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  isCurrent Boolean // 글마다 정확히 1개만 true (부분 unique 인덱스)
+  createdAt DateTime @default(now())
+
+  // 글마다 isCurrent=true 행을 1개로 강제한다. isCurrent=false(이전 slug)는 여러 행을 허용한다.
+  // 주의: 이 선언 때문에 생성 클라이언트가 findUnique({ where: { postId } })를 허용하지만, Prisma는 이 조회에
+  // isCurrent 조건을 붙이지 않아 이전 slug 행이 나올 수 있다. 현재 slug는 findFirst({ where: { postId, isCurrent: true } })로 찾는다.
+  @@unique([postId], map: "post_slug_current_unique", where: { isCurrent: true })
+  @@index([postId])
+}
+
+enum RevalidateEventStatus {
+  PENDING
+  DONE
+  FAILED
+}
+
+// 캐시 갱신 outbox (§5.7-④). 콘텐츠 변경과 같은 트랜잭션에서 생성
+model RevalidateEvent {
+  id            BigInt                @id @default(autoincrement())
+  tags          String[]
+  reason        String // publish | draft_publish | schedule_due | unpublish | delete | slug_change ...
+  status        RevalidateEventStatus @default(PENDING)
+  attempts      Int                   @default(0)
+  nextAttemptAt DateTime              @default(now())
+  lastError     String?
+  createdAt     DateTime              @default(now())
+  processedAt   DateTime?
+
+  @@index([status, nextAttemptAt])
+}
+
+// 주기 작업의 진행 지점 (예: scheduled_publish.lastRunAt)
+model JobState {
+  key       String   @id
+  value     DateTime
+  updatedAt DateTime @updatedAt
+}
+
+model TechStack {
+  id         Int                @id @default(autoincrement())
+  name       String             @unique // "TypeScript"
+  slug       String             @unique
+  iconKey    String // 프론트 아이콘 매핑 키 (simple-icons slug)
+  category   String? // Language / Framework / DB / Infra
+  showOnHome Boolean            @default(true) // "EXPERIENCE WITH" 노출
+  sortOrder  Int                @default(0)
+  projects   ProjectTechStack[]
+}
+
+model Project {
+  id           Int                @id @default(autoincrement())
+  slug         String             @unique
+  title        String
+  summary      String // 카드 라벨/설명
+  contentMd    String?            @db.Text // 상세 본문
+  thumbnailUrl String? // 초안에서는 비워 둘 수 있음. 공개(isPublished=true) 시 필수 — 없으면 422 THUMBNAIL_REQUIRED
+  role         String?
+  startedOn    DateTime?          @db.Date
+  endedOn      DateTime?          @db.Date // null = 진행 중
+  githubUrl    String?
+  demoUrl      String?
+  isFeatured   Boolean            @default(false) // Home 노출
+  sortOrder    Int                @default(0)
+  isPublished  Boolean            @default(false)
+  techStacks   ProjectTechStack[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model ProjectTechStack {
+  projectId   Int
+  techStackId Int
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  techStack   TechStack @relation(fields: [techStackId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, techStackId])
+}
+
+model Experience {
+  id          Int       @id @default(autoincrement())
+  company     String
+  role        String
+  logoUrl     String?
+  startedOn   DateTime  @db.Date
+  endedOn     DateTime? @db.Date // null = Present
+  description String    @db.Text
+  sortOrder   Int       @default(0)
+}
+
+// 단일 행 (id = 1 고정)
+model Profile {
+  id          Int      @id @default(1)
+  name        String
+  title       String // "Backend Engineer"
+  headline    String // Hero 헤드라인 ("I do code and\nmake content **about it!**")
+  intro       String   @db.Text // Hero 소개문
+  bio         String   @db.Text // About 페이지 Author Info
+  avatarUrl   String?
+  resumeUrl   String? // Download CV — Media(kind=DOCUMENT) 업로드 URL 또는 외부 URL
+  email       String
+  socialLinks Json // [{ type: "github", url }]
+  updatedAt   DateTime @updatedAt
+}
+
+enum MediaKind {
+  IMAGE
+  DOCUMENT
+}
+
+model Media {
+  id           String       @id @default(uuid()) @db.Uuid
+  kind         MediaKind    @default(IMAGE) // DOCUMENT = 이력서 PDF
+  path         String       @unique // 2026/11/<uuid>.webp | docs/<uuid>.pdf
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  width        Int? // 이미지만
+  height       Int?
+  usages       MediaUsage[]
+  createdAt    DateTime     @default(now())
+}
+
+// 삭제 보호용 참조 추적 (§5.5)
+model MediaUsage {
+  mediaId   String @db.Uuid
+  media     Media  @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  ownerType String // post | post_draft | project | experience | profile
+  ownerId   String
+
+  @@id([mediaId, ownerType, ownerId])
+  @@index([ownerType, ownerId])
+}

@@ -5,6 +5,8 @@ import { LoggerModule } from 'nestjs-pino';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { createLoggerParams } from './common/logging/logger.options';
 import type { AppEnv } from './config/env.validation';
+import { HealthModule } from './modules/health/health.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 export type ModuleImports = NonNullable<ModuleMetadata['imports']>;
 
@@ -28,6 +30,8 @@ export class AppModule {
           load: [() => ({ ...env })],
         }),
         LoggerModule.forRoot(createLoggerParams(env, options.logStream)),
+        PrismaModule,
+        HealthModule,
         ...(options.imports ?? []),
       ],
       providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],

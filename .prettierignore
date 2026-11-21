@@ -8,6 +8,8 @@ dist/
 .next/
 .turbo/
 coverage/
+# Prisma 생성 클라이언트 (생성물, 커밋하지 않음)
+backend/src/generated/
 # 규칙 위반을 일부러 담은 시험용 샘플
 scripts/eslint/fixtures/
 # 에이전트 설정은 오케스트레이터가 관리한다

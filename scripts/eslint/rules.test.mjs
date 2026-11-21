@@ -50,7 +50,7 @@ const VIOLATIONS = [
   ['depth.ts', 'max-depth'],
   ['params.ts', 'max-params'],
   ['explicit-any.ts', '@typescript-eslint/no-explicit-any'],
-  ['denied-id.ts', 'id-denylist'],
+  ['denied-id.ts', 'jblog/denied-names'],
   ['process-env.ts', 'no-restricted-properties'],
   ['process-env-destructure.ts', 'no-restricted-syntax'],
   ['process-env-import.ts', 'no-restricted-syntax'],
@@ -71,6 +71,61 @@ for (const [fixtureName, expectedRuleId] of VIOLATIONS) {
 test('규칙을 지킨 샘플은 오류가 없다', async () => {
   assert.deepEqual(await lintFixture('clean.ts'), []);
 });
+
+// 금지 이름은 선언만 검사한다 (협업 §10-a, 2026-11-21 개발자 승인). [설명, 코드]
+/** @type {Array<[title: string, code: string]>} */
+const DENIED_NAME_DECLARATIONS = [
+  ['변수 선언', 'export const data = 1;'],
+  ['구조 분해 변수', 'const { data } = { data: 1 };\nexport const size = data;'],
+  ['함수 매개변수', 'export function load(data: number) {\n  return data;\n}'],
+  ['구조 분해 매개변수', 'export const load = ({ data }: { data: number }) => data;'],
+  [
+    '기본값·나머지 매개변수',
+    'export const load = (tmp = 1, ...temp: number[]) => tmp + temp.length;',
+  ],
+  ['함수 이름', 'export function data() {\n  return 1;\n}'],
+  ['클래스 이름', 'export const Store = class handle {};'],
+  ['catch 매개변수', 'try {\n  load();\n} catch (obj) {\n  report(obj);\n}'],
+  [
+    '생성자 매개변수 속성',
+    'export class Store {\n  constructor(private readonly val: number) {}\n}',
+  ],
+];
+
+for (const [title, code] of DENIED_NAME_DECLARATIONS) {
+  test(`금지 이름 선언 거부: ${title}`, async () => {
+    const messages = await lintCode(code, REGULAR_PATH);
+    const matched = messages.filter((message) => message.ruleId === 'jblog/denied-names');
+    assert.ok(matched.length > 0, `발견된 규칙: ${ruleIdsOf(messages).join(', ')}`);
+    assert.ok(matched.every((message) => message.severity === ERROR_SEVERITY));
+  });
+}
+
+// 외부 API가 정한 이름(객체 키·멤버 접근·메서드·import)은 허용한다. [설명, 코드]
+/** @type {Array<[title: string, code: string]>} */
+const DENIED_NAME_ALLOWED = [
+  [
+    'Prisma 인자 객체 키',
+    'export const create = () => prisma.post.create({ data: { slug: "a" } });',
+  ],
+  ['멤버 접근', 'export const body = response.data;'],
+  [
+    '다른 이름으로 받는 구조 분해',
+    'const { data: post } = response;\nexport const title = post.title;',
+  ],
+  ['클래스 메서드 이름', 'export class Interceptor {\n  handle() {\n    return 1;\n  }\n}'],
+  ['import 이름', "import { data } from 'external';\nexport const size = data.length;"],
+];
+
+for (const [title, code] of DENIED_NAME_ALLOWED) {
+  test(`금지 이름 허용: ${title}`, async () => {
+    const messages = await lintCode(code, REGULAR_PATH);
+    assert.deepEqual(
+      messages.filter((message) => message.ruleId === 'jblog/denied-names'),
+      [],
+    );
+  });
+}
 
 const PROCESS_ENV_ALLOWED_PATHS = [
   'backend/src/config/env.ts',

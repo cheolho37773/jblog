@@ -24,7 +24,7 @@ model: sonnet
 | 영역 | 내용 |
 |---|---|
 | 모노레포 | pnpm workspace + Turborepo, `frontend/`·`backend/`·`infra/` 구조 (공용 코드 패키지 없음, 개요 §4) |
-| 코드 품질 | ESLint flat config (가독성 규칙: complexity 10, max-depth 3, max-params 3, no-explicit-any, id-denylist, 설정 모듈 밖 `process.env` 금지), Prettier, Husky + lint-staged + commitlint |
+| 코드 품질 | ESLint flat config (가독성 규칙: complexity 10, max-depth 3, max-params 3, no-explicit-any, 금지 이름(선언만, `jblog/denied-names`), 설정 모듈 밖 `process.env` 금지), Prettier, Husky + lint-staged + commitlint |
 | 테스트 환경 | Jest(api)·Vitest(web)·Playwright 공통 설정, `pnpm test:*` 실행 명령, Testcontainers가 동작하는 CI |
 | 로컬 환경 | Docker Compose(PostgreSQL 17), `infra/.env.example`, `infra/README.md` |
 | CI | `ci.yml`: lint · typecheck · test · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사. 시작 시 head·base·검사 SHA 3종을 요약에 출력. `permissions` 최소화, `pull_request` 이벤트 사용 |
