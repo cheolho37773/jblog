@@ -32,7 +32,7 @@
     "@jblog/backend#dev": {
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["NODE_ENV", "API_PORT"]
+      "passThroughEnv": ["NODE_ENV", "API_PORT", "DATABASE_URL"]
     }
   }
 }

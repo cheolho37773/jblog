@@ -23,6 +23,8 @@ export default [
       '**/.turbo/**',
       'docs/**',
       'scripts/eslint/fixtures/**',
+      // Prisma 생성 클라이언트. 생성물이라 검사 대상이 아니다 (.gitignore 대상).
+      'backend/src/generated/**',
     ],
   },
   ...baseConfig,
