@@ -88,7 +88,7 @@
 - [x] pnpm workspace + Turborepo, `frontend/`·`backend/`·`infra/` 구조 (공용 코드 패키지 없음, 개요 D25) — #6 (2026-11-21) · `frontend/`·`backend/`·`infra/` 디렉터리는 M0-03~05에서 생성
 - [x] ESLint(flat) + Prettier + 가독성 규칙(complexity 10, max-depth 3, max-params 3, no-explicit-any 등) + 설정 모듈 밖 `process.env` 금지 규칙 — #6 (2026-11-21)
 - [x] Husky + lint-staged + commitlint (Conventional Commits) — #6 (2026-11-21)
-- [ ] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md`
+- [x] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md` — #9 (2026-11-21)
 - [ ] 테스트 프레임워크 공통 설정: Jest(api), Vitest(web), Playwright, `pnpm test:*` 명령
 - [ ] GitHub Actions CI (**작업 브랜치 push 이벤트 + `dev` 대상 pull_request 이벤트** 모두 실행): lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화
 - [ ] `dev` Ruleset에 CI 잡과 `ownership-check`를 **필수 상태 검사**로 추가 (CI가 생긴 뒤)
