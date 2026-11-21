@@ -814,8 +814,13 @@ class MainGitIntegrationTest(unittest.TestCase):
         self.git("merge", "-q", "--no-edit", "--no-verify", dev_head)
         head = self.git("rev-parse", "HEAD")
         self.base = dev_head  # CI: --base origin/dev
+        # 전제: dev를 merge한 뒤의 merge-base는 dev 끝이다. 그래서 base..head의 모든 커밋을 보더라도
+        # dev 쪽 커밋(다른 작업 ID의 검수 결과 추가 — 이 PR 커밋이었다면 R3 위반)은 범위에서 빠진다.
+        self.assertEqual(self.git("merge-base", self.base, head), dev_head)
+        self.assertNotIn(dev_head, self.git("rev-list", f"{self.base}..{head}").split())
         exit_code, output = self.run_main(head)
         self.assertEqual(exit_code, 0, output)
+        self.assertNotIn(OTHER_TASK_CODEX_RESULT, output)
 
     # ④ 독립 검증에서 발견한 누락의 회귀 테스트: diff-tree 기본 출력은 merge 커밋을 비워 두므로
     # 커밋별 이력에 merge 결과에서 직접 고친 경로가 들어가는지 확인한다(④ 결정 1).
@@ -830,6 +835,37 @@ class MainGitIntegrationTest(unittest.TestCase):
         self.git("commit", "-q", "--no-verify", "--no-edit")
         head = self.git("rev-parse", "HEAD")
         self.base = dev_head
+        exit_code, output = self.run_main(head)
+        self.assertEqual(exit_code, 1, output)
+        self.assertIn(CODEX_RESULT, output)
+        self.assertIn("R3", output)
+
+    def merge_side_branch_changing_review(self, change_on_side) -> str:
+        """Codex r1 지적 재현: 이 작업의 검수 결과를 추가한 뒤, 거기서 갈라진 보조 브랜치에서 고치고 --no-ff merge.
+
+        merge 결과가 두 번째 부모(보조 브랜치)와 같아 --cc에 나오지 않고, 보조 브랜치 커밋은
+        --first-parent 이력에서 빠진다. PR 전체 diff에는 '추가'만 남거나(수정) 아무것도 남지 않는다(삭제).
+        """
+        self.write(CODEX_RESULT, "dummy review\n")
+        self.commit("docs: 검수 결과 추가")
+        self.git("checkout", "-q", "-b", "dummy-side")
+        change_on_side()
+        self.commit("docs: 보조 브랜치에서 검수 결과 변경")
+        self.git("checkout", "-q", "main")
+        self.write("scripts/tests/test_dummy.py", "# dummy\n")
+        self.commit("test: 더미 테스트")
+        self.git("merge", "-q", "--no-ff", "--no-edit", "dummy-side")
+        return self.git("rev-parse", "HEAD")
+
+    def test_보조_브랜치에서_검수_결과를_고쳐_merge하면_위반(self):
+        head = self.merge_side_branch_changing_review(lambda: self.write(CODEX_RESULT, "edited on side\n"))
+        exit_code, output = self.run_main(head)
+        self.assertEqual(exit_code, 1, output)
+        self.assertIn(CODEX_RESULT, output)
+        self.assertIn("R3", output)
+
+    def test_보조_브랜치에서_검수_결과를_지워_merge하면_위반(self):
+        head = self.merge_side_branch_changing_review(lambda: (self.workdir / CODEX_RESULT).unlink())
         exit_code, output = self.run_main(head)
         self.assertEqual(exit_code, 1, output)
         self.assertIn(CODEX_RESULT, output)
