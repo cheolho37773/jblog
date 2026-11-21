@@ -9,7 +9,7 @@ dist/
 .turbo/
 coverage/
 # 규칙 위반을 일부러 담은 시험용 샘플
-packages/eslint-config/test/fixtures/
+scripts/eslint/fixtures/
 # 에이전트 설정은 오케스트레이터가 관리한다
 .claude/
 # 이 작업의 범위 밖 파일(소유권 규칙, GitHub 템플릿)은 기존 서식을 유지한다

@@ -6,12 +6,12 @@
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "//#lint:root": {},
-    "lint": {
-      "dependsOn": ["//#lint:root"]
-    },
+    "lint": {},
+    "//#typecheck:root": {},
     "typecheck": {
       "dependsOn": ["^typecheck"]
     },
+    "//#test:root": {},
     "test": {
       "dependsOn": ["^build"]
     },

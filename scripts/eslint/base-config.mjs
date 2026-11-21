@@ -12,14 +12,14 @@ const MAX_PARAMS = 3;
 const DENIED_IDENTIFIERS = ['data', 'tmp', 'temp', 'foo', 'bar', 'baz', 'obj', 'val', 'handle'];
 
 // 설정 모듈에서만 process.env를 읽는다 (개요 §6-b). 아래 경로는 그 예외다.
-// 앱 안에서 lint를 따로 돌리면 기준 경로가 달라지므로, 앱이 생기면 루트에서 실행한다.
+// 경로는 저장소 루트 기준이다. 앱 안에서 lint를 따로 돌리면 기준 경로가 달라지므로 루트에서 실행한다.
 export const PROCESS_ENV_ALLOWED_FILES = [
-  'apps/api/src/config/**',
-  'apps/web/lib/env.ts',
-  // 도구 설정 파일은 루트·앱·패키지 루트 바로 아래만 허용한다. src/ 같은 하위 폴더는 제외한다.
+  'backend/src/config/**',
+  'frontend/src/lib/env.ts',
+  // 도구 설정 파일은 루트·frontend·backend 바로 아래만 허용한다. src/ 같은 하위 폴더는 제외한다.
   '*.config.{js,mjs,cjs,ts}',
-  'apps/*/*.config.{js,mjs,cjs,ts}',
-  'packages/*/*.config.{js,mjs,cjs,ts}',
+  'frontend/*.config.{js,mjs,cjs,ts}',
+  'backend/*.config.{js,mjs,cjs,ts}',
 ];
 
 const PROCESS_ENV_MESSAGE =
@@ -62,15 +62,7 @@ const readabilityRules = {
 };
 
 /**
- * ESLint가 무시할 경로를 담은 설정 객체를 만든다.
- * @param {string[]} patterns
- */
-export function defineIgnores(patterns) {
-  return { ignores: patterns };
-}
-
-/**
- * 모든 앱·패키지가 공유하는 기본 설정. 앱별(Nest·Next) 설정은 앱이 생길 때 덧붙인다.
+ * 모든 코드가 따르는 기본 설정(가독성·process.env). import 경계와 앱별(Next·Nest) 설정은 따로 덧붙인다.
  * @type {import('eslint').Linter.Config[]}
  */
 export const baseConfig = [

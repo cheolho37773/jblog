@@ -1,6 +1,8 @@
+# 개요 D25: 앱은 frontend·backend 둘뿐이고 공용 코드 패키지는 두지 않는다.
+# 폴더는 M0-04·05에서 만든다. 아직 없어도 install은 실패하지 않는다.
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - 'frontend'
+  - 'backend'
 
 # 개요 §2.1: 의존성은 정확한 버전으로 고정한다. `pnpm add`가 ^·~를 붙이지 않게 한다.
 savePrefix: ''

@@ -1,9 +1,0 @@
-{
-  "name": "@jblog/tsconfig",
-  "version": "0.0.0",
-  "private": true,
-  "description": "공유 tsconfig (base, nestjs, nextjs)",
-  "files": [
-    "*.json"
-  ]
-}
