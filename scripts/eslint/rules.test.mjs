@@ -106,3 +106,64 @@ for (const deniedPath of PROCESS_ENV_DENIED_PATHS) {
     }
   });
 }
+
+// import 경계 (개요 D25·D26). [설명, 파일 경로, import 문]
+/** @type {Array<[title: string, filePath: string, code: string]>} */
+const BOUNDARY_VIOLATIONS = [
+  ['frontend → backend (상대 경로)', 'frontend/src/lib/a.ts', "import '../../../backend/src/a';"],
+  ['frontend → backend (패키지 이름)', 'frontend/src/lib/a.ts', "import '@jblog/backend';"],
+  ['backend → frontend (상대 경로)', 'backend/src/a/a.ts', "import '../../../frontend/src/lib/b';"],
+  ['backend → frontend (패키지 이름)', 'backend/src/a/a.ts', "import '@jblog/frontend/x';"],
+  ['기능 간 (상대 경로)', 'frontend/src/features/posts/api.ts', "import '../projects/api';"],
+  [
+    '기능 간 (@/ 별칭)',
+    'frontend/src/features/posts/components/a.tsx',
+    "import { x } from '@/features/projects/api';",
+  ],
+  ['components → features', 'frontend/src/components/ui/a.tsx', "import '@/features/posts/api';"],
+  ['lib → features (상대 경로)', 'frontend/src/lib/a.ts', "import '../features/posts/api';"],
+  ['components → app', 'frontend/src/components/ui/a.tsx', "import '@/app/layout';"],
+  ['lib → app', 'frontend/src/lib/a.ts', "import '../app/layout';"],
+  ['features → app (@/ 별칭)', 'frontend/src/features/posts/api.ts', "import '@/app/layout';"],
+  [
+    'features → app (상대 경로)',
+    'frontend/src/features/posts/api.ts',
+    "import '../../app/layout';",
+  ],
+  ['export from 경유', 'frontend/src/lib/a.ts', "export { x } from '@/features/posts/api';"],
+  ['동적 import', 'frontend/src/lib/a.ts', "const load = () => import('@/features/posts/api');"],
+];
+
+for (const [title, filePath, code] of BOUNDARY_VIOLATIONS) {
+  test(`import 경계 위반: ${title}`, async () => {
+    const messages = await lintCode(code, filePath);
+    const matched = messages.filter((message) => message.ruleId === 'jblog/import-boundaries');
+    assert.ok(matched.length > 0, `발견된 규칙: ${ruleIdsOf(messages).join(', ')}`);
+    assert.ok(matched.every((message) => message.severity === ERROR_SEVERITY));
+  });
+}
+
+/** @type {Array<[title: string, filePath: string, code: string]>} */
+const BOUNDARY_ALLOWED = [
+  ['같은 기능 내부 (상대 경로)', 'frontend/src/features/posts/api.ts', "import './schemas';"],
+  [
+    '같은 기능 내부 (@/ 별칭)',
+    'frontend/src/features/posts/components/a.tsx',
+    "import '@/features/posts/api';",
+  ],
+  ['app → features', 'frontend/src/app/blog/page.tsx', "import '@/features/posts/api';"],
+  ['app → components·lib', 'frontend/src/app/blog/page.tsx', "import '@/components/ui/a';"],
+  ['features → components', 'frontend/src/features/posts/api.ts', "import '@/components/ui/a';"],
+  ['features → lib', 'frontend/src/features/posts/api.ts', "import '../../lib/format';"],
+  ['features → generated', 'frontend/src/features/posts/api.ts', "import '@/generated/api-types';"],
+  ['components → lib', 'frontend/src/components/ui/a.tsx', "import '@/lib/format';"],
+  ['lib → generated', 'frontend/src/lib/api/client.ts', "import '../../generated/api-types';"],
+  ['외부 패키지', 'frontend/src/lib/a.ts', "import 'zod';"],
+  ['backend 내부', 'backend/src/posts/a.ts', "import '../common/b';"],
+];
+
+for (const [title, filePath, code] of BOUNDARY_ALLOWED) {
+  test(`import 경계 정상: ${title}`, async () => {
+    assert.deepEqual(await lintCode(code, filePath), []);
+  });
+}
