@@ -57,8 +57,14 @@ FEEDBACK_FILE = "docs/plan/feedback/2026-11-21_M0-08.md"
 CODEX_RESULT_EXISTING = "docs/reviews/M0-08/r0.codex.md"
 # 지시서가 없는 계약 브랜치: 작업 ID가 없어도 R6은 참여 역할과 무관하게 판정된다
 BRIEFLESS_CONTRACT_BRANCH = "contract/M9-99-dummy"
+# main 시험용 더미 지시서: `브랜치:` 줄 정확 일치(R1-①)로만 찾을 수 있는 브랜치
+EXACT_BRANCH = "feat/dummy-exact-branch"
+EXACT_BRANCH_BRIEF = "docs/work/M9/tasks/M9-01.md"
+DUPLICATED_BRANCH = "feat/dummy-duplicated-branch"
+DUPLICATED_BRANCH_BRIEFS = ["docs/work/M9/tasks/M9-02.md", "docs/work/M9/tasks/M9-03.md"]
+TRIAL_BRANCH = "chore/M0-08-ci-trial"
 
-KNOWN_TASK_IDS = ["M0-01", "M0-04", "M0-04-fix", "M0-07", "M0-08"]
+KNOWN_TASK_IDS = ["M0-01", "M0-04", "M0-04-fix", "M0-07", "M0-08"]  # 접두사 규칙(R1-②) 시험용
 
 
 def load_rules() -> dict:
@@ -108,42 +114,106 @@ class ViolationAssertions(unittest.TestCase):
         self.assertTrue(matching, f"{rule} 위반({path})이 보고되어야 함. 실제: {violations}")
 
 
-class FindTaskIdTest(unittest.TestCase):
-    """R1 작업 ID: 브랜치 <유형>/<나머지>에서 가장 긴 일치 ID."""
+def dummy_brief(branch=None) -> str:
+    """실제 지시서 머리말 형식(`- 마일스톤: ... · 브랜치: `<이름>` (...)`)의 더미 본문."""
+    branch_part = f" · 브랜치: `{branch}` (`dev`에서 생성)" if branch else ""
+    return f"# 더미 작업\n\n- 마일스톤: M9 · 이슈: #0{branch_part}\n- 참여 역할: test-engineer\n"
+
+
+def briefs_without_branch_line(task_ids) -> dict:
+    """R1-②(접두사 규칙)만 시험하려고 `브랜치:` 줄이 없는 지시서들."""
+    return {task_id: dummy_brief() for task_id in task_ids}
+
+
+def real_briefs() -> dict:
+    """저장소의 실제 지시서 전부 (작업 ID → 본문)."""
+    return {
+        path.stem: path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / "docs" / "work").glob("*/tasks/*.md")
+    }
+
+
+BRANCH_LINE_BRIEFS = {
+    "M0-04": dummy_brief("feat/M0-04-nest-foundation"),
+    "M0-04-fix": dummy_brief("fix/M0-04-backend-env-file"),
+    "M0-08": dummy_brief("chore/M0-08-ci"),
+}
+
+
+class FindTaskIdByBranchLineTest(unittest.TestCase):
+    """R1-①: 지시서의 `브랜치:` 줄에 브랜치 이름이 정확히 적힌 지시서."""
+
+    def test_브랜치_줄이_정확히_일치하면_접두사_규칙보다_우선(self):
+        # 접두사 규칙만으로는 M0-04가 되는 브랜치
+        self.assertEqual(checker.find_task_id("fix/M0-04-backend-env-file", BRANCH_LINE_BRIEFS), "M0-04-fix")
+
+    def test_브랜치_줄_일치가_여러_개면_ValueError(self):
+        briefs = {
+            "M9-01": dummy_brief("feat/M9-shared-branch"),
+            "M9-02": dummy_brief("feat/M9-shared-branch"),
+        }
+        with self.assertRaises(ValueError):
+            checker.find_task_id("feat/M9-shared-branch", briefs)
+
+    def test_브랜치_줄과_일치하지_않으면_접두사_규칙으로_판정(self):
+        # 시험용 브랜치: 지시서의 chore/M0-08-ci 와 정확히 같지 않다
+        self.assertEqual(checker.find_task_id("chore/M0-08-ci-trial", BRANCH_LINE_BRIEFS), "M0-08")
+
+    def test_브랜치_줄의_일부와만_같으면_정확한_일치가_아님(self):
+        # 'fix/M0-04-backend'는 'fix/M0-04-backend-env-file'의 앞부분일 뿐 -> 접두사 규칙으로 M0-04
+        self.assertEqual(checker.find_task_id("fix/M0-04-backend", BRANCH_LINE_BRIEFS), "M0-04")
+
+    def test_실제_지시서_형식에서_브랜치_이름을_읽음(self):
+        # M0-04-fix.md 실제 본문만으로 판정 (접두사 규칙으로는 찾을 수 없는 ID)
+        briefs = {"M0-04-fix": (REPO_ROOT / "docs/work/M0/tasks/M0-04-fix.md").read_text(encoding="utf-8")}
+        self.assertEqual(checker.find_task_id("fix/M0-04-backend-env-file", briefs), "M0-04-fix")
+
+    def test_실제_저장소_지시서_전체로_판정(self):
+        # 본문 다른 곳(규칙 표, 인계 노트)에 브랜치 이름이 언급돼도 머리말의 `브랜치:` 줄만 기준
+        briefs = real_briefs()
+        expected = {
+            "fix/M0-04-backend-env-file": "M0-04-fix",
+            "feat/M0-04-nest-foundation": "M0-04",
+            "chore/M0-08-ci": "M0-08",
+            "chore/M0-08-ci-trial": "M0-08",
+            "contract/M0-07-api-types": "M0-07",
+        }
+        for branch, task_id in expected.items():
+            with self.subTest(branch=branch):
+                self.assertEqual(checker.find_task_id(branch, briefs), task_id)
+
+
+class FindTaskIdByPrefixTest(unittest.TestCase):
+    """R1-②: 브랜치 <유형>/<나머지>에서 가장 긴 일치 ID."""
 
     def test_브랜치_나머지가_ID와_하이픈으로_시작하면_그_작업_ID(self):
-        self.assertEqual(checker.find_task_id("feat/M0-04-nest-foundation", KNOWN_TASK_IDS), "M0-04")
+        briefs = briefs_without_branch_line(KNOWN_TASK_IDS)
+        self.assertEqual(checker.find_task_id("feat/M0-04-nest-foundation", briefs), "M0-04")
 
     def test_브랜치_나머지가_ID와_같으면_그_작업_ID(self):
-        self.assertEqual(checker.find_task_id("chore/M0-08", KNOWN_TASK_IDS), "M0-08")
+        self.assertEqual(checker.find_task_id("chore/M0-08", briefs_without_branch_line(KNOWN_TASK_IDS)), "M0-08")
 
     def test_여러_ID가_맞으면_가장_긴_ID(self):
         # M0-04와 M0-04-fix가 모두 접두사로 맞는 브랜치
-        self.assertEqual(checker.find_task_id("fix/M0-04-fix-backend-env", KNOWN_TASK_IDS), "M0-04-fix")
-
-    @unittest.skip(
-        "오케스트레이터 판정 대기: R1 문언으로는 'M0-04-backend-env-file'이 'M0-04-fix-'로 시작하지 않아 "
-        "M0-04가 된다. 작업 지시 기대값(M0-04-fix)과 충돌"
-    )
-    def test_실제_M0_04_fix_브랜치는_M0_04_fix(self):
-        self.assertEqual(checker.find_task_id("fix/M0-04-backend-env-file", KNOWN_TASK_IDS), "M0-04-fix")
+        briefs = briefs_without_branch_line(KNOWN_TASK_IDS)
+        self.assertEqual(checker.find_task_id("fix/M0-04-fix-backend-env", briefs), "M0-04-fix")
 
     def test_지시서가_없는_브랜치는_작업_ID_없음(self):
-        self.assertIsNone(checker.find_task_id("docs/M0-structure", KNOWN_TASK_IDS))
+        self.assertIsNone(checker.find_task_id("docs/M0-structure", briefs_without_branch_line(KNOWN_TASK_IDS)))
 
     def test_유형이_없는_브랜치는_작업_ID_없음(self):
-        self.assertIsNone(checker.find_task_id("M0-04-nest-foundation", KNOWN_TASK_IDS))
+        self.assertIsNone(checker.find_task_id("M0-04-nest-foundation", briefs_without_branch_line(KNOWN_TASK_IDS)))
 
     def test_비슷한_접두사의_ID를_혼동하지_않음(self):
-        ids = ["M0-1", "M0-10"]
-        self.assertEqual(checker.find_task_id("feat/M0-10-search", ids), "M0-10")
-        self.assertEqual(checker.find_task_id("feat/M0-1-search", ids), "M0-1")
-        self.assertEqual(checker.find_task_id("feat/M0-10", ids), "M0-10")
-        self.assertIsNone(checker.find_task_id("feat/M0-100-search", ids))
-        self.assertIsNone(checker.find_task_id("feat/M0-1search", ids))
+        briefs = briefs_without_branch_line(["M0-1", "M0-10"])
+        self.assertEqual(checker.find_task_id("feat/M0-10-search", briefs), "M0-10")
+        self.assertEqual(checker.find_task_id("feat/M0-1-search", briefs), "M0-1")
+        self.assertEqual(checker.find_task_id("feat/M0-10", briefs), "M0-10")
+        self.assertIsNone(checker.find_task_id("feat/M0-100-search", briefs))
+        self.assertIsNone(checker.find_task_id("feat/M0-1search", briefs))
 
-    def test_작업_ID_목록이_비어_있으면_작업_ID_없음(self):
-        self.assertIsNone(checker.find_task_id("feat/M0-04-nest-foundation", []))
+    def test_지시서가_하나도_없으면_작업_ID_없음(self):
+        self.assertIsNone(checker.find_task_id("feat/M0-04-nest-foundation", {}))
 
 
 class ParseParticipatingRolesTest(unittest.TestCase):
@@ -255,6 +325,13 @@ class LockFileRuleTest(ViolationAssertions):
 
     def test_루트_package_json과_함께면_통과(self):
         self.assertPasses(run_check([("M", "package.json"), ("M", LOCK_FILE)], roles=("devops-engineer",)))
+
+    def test_package_json과_짝이면_잠금_파일은_R5에서_판정이_끝남(self):
+        # test-engineer는 pnpm-lock.yaml도 backend/package.json도 허용하지 않는다.
+        # package.json은 R9 위반이지만, 잠금 파일은 R9를 다시 적용하지 않으므로 위반 목록에 없어야 한다
+        violations = run_check([("M", "backend/package.json"), ("M", LOCK_FILE)], roles=("test-engineer",))
+        self.assertViolation(violations, "backend/package.json", "R9")
+        self.assertFalse(any(LOCK_FILE in message for message in violations), violations)
 
     def test_지시서_없는_PR에서도_잠금_파일만_바뀌면_위반(self):
         self.assertViolation(run_check_without_brief([("M", LOCK_FILE)]), LOCK_FILE, "R5")
@@ -407,9 +484,8 @@ class ReportShapeTest(ViolationAssertions):
 class MainGitIntegrationTest(unittest.TestCase):
     """main: 임시 git 저장소의 커밋으로 실제 입력 수집과 종료 코드를 확인한다.
 
-    git·지시서·roles.json은 현재 작업 디렉터리(저장소 루트) 기준으로 읽는다고 가정한다.
-    임시 저장소에는 실제 M0-08 지시서와 roles.json을 복사하므로, 구현이 지시서·규칙을
-    스크립트 위치 기준으로 읽어도 같은 결과가 나온다.
+    git과 지시서(docs/work/*/tasks/*.md)는 현재 작업 디렉터리(저장소 루트) 기준으로 읽는다.
+    임시 저장소에는 실제 M0-08 지시서·roles.json 복사본과 `브랜치:` 줄 시험용 더미 지시서(M9-*)를 둔다.
     """
 
     GIT_TIMEOUT_SECONDS = 30
@@ -431,6 +507,10 @@ class MainGitIntegrationTest(unittest.TestCase):
         self.write(TASK_BRIEF, brief_text)
         self.write("scripts/ownership/roles.json", json.dumps(RULES, ensure_ascii=False, indent=2))
         self.write("README.md", "dummy\n")
+        # R1-①: 접두사 규칙으로는 찾을 수 없는 브랜치 이름을 `브랜치:` 줄로만 연결한다
+        self.write(EXACT_BRANCH_BRIEF, dummy_brief(EXACT_BRANCH).replace("test-engineer", "backend-dev"))
+        for duplicated_brief in DUPLICATED_BRANCH_BRIEFS:
+            self.write(duplicated_brief, dummy_brief(DUPLICATED_BRANCH))
         self.write(CODEX_RESULT_EXISTING, "dummy review\n")
         self.base = self.commit("base")
 
@@ -518,6 +598,32 @@ class MainGitIntegrationTest(unittest.TestCase):
         exit_code, output = self.run_main(head)
         self.assertEqual(exit_code, 1, output)
         self.assertIn("R5", output)
+
+    def test_브랜치_줄로_찾은_지시서의_참여_역할로_판정(self):
+        # M9-01 지시서(참여 역할 backend-dev)를 `브랜치:` 줄로만 찾을 수 있다
+        self.write(BACKEND_SOURCE, "export const dummy = 1;\n")
+        head = self.commit("feat: 백엔드 더미")
+        exit_code, output = self.run_main(head, branch=EXACT_BRANCH)
+        self.assertEqual(exit_code, 0, output)
+
+    def test_시험용_브랜치는_접두사_규칙으로_작업_지시서를_찾음(self):
+        # chore/M0-08-ci-trial -> M0-08 (참여 역할에 backend-dev 없음)
+        self.write("scripts/tests/test_dummy.py", "# dummy\n")
+        allowed_head = self.commit("test: 더미 테스트")
+        allowed_code, allowed_output = self.run_main(allowed_head, branch=TRIAL_BRANCH)
+        self.assertEqual(allowed_code, 0, allowed_output)
+        self.write(BACKEND_SOURCE, "export const dummy = 1;\n")
+        rejected_head = self.commit("feat: 범위 밖 변경")
+        rejected_code, rejected_output = self.run_main(rejected_head, branch=TRIAL_BRANCH)
+        self.assertEqual(rejected_code, 1, rejected_output)
+        self.assertIn("R9", rejected_output)
+
+    def test_브랜치_줄_일치가_여러_지시서면_종료_코드_1(self):
+        self.write("README.md", "changed\n")
+        head = self.commit("docs: README")
+        exit_code, output = self.run_main(head, branch=DUPLICATED_BRANCH)
+        self.assertEqual(exit_code, 1, output)
+        self.assertIn("R1", output)
 
     def test_contract_브랜치_생성물은_생성_검사_통과_옵션이_있을_때만_종료_코드_0(self):
         self.write(GENERATED_FILE, "export type Dummy = never;\n")
