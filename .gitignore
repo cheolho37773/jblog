@@ -43,3 +43,6 @@ docs/ui_design/references/
 
 # Next.js가 build·dev 때마다 재생성하는 파일
 frontend/next-env.d.ts
+
+# next dev가 자동 생성하는 AI 에이전트 안내. 루트 AGENTS.md(Codex 검수 지침)와 섞이지 않게 커밋하지 않는다.
+frontend/AGENTS.md
