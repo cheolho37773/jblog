@@ -1,6 +1,6 @@
 # jblog 개발 기획 – 개요 & 공통 결정사항
 
-> 버전 v0.8 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
+> 버전 v0.10 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
 > 관련 문서: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · [백엔드 기획서](./01_backend_plan.md) · [프론트엔드 기획서](./02_frontend_plan.md) · [AI 자동 작성](./03_ai_authoring_mcp_plan.md) · [접근 통제 & 복사 방지](./04_access_control_and_content_protection.md) · [협업 아키텍처](./05_collaboration_architecture.md)
 
 ---
@@ -45,6 +45,8 @@
 | D22 | 개발 협업 체계 | Claude Code 오케스트레이터 + 서브에이전트 5종(Backend·Frontend·Test·DevOps·Docs) 구현, **Codex 독립 검수**(로컬 CLI만, push 전 최종 검수), 개발자 승인 관문 G1~G4. 상세: [05](./05_collaboration_architecture.md) | 사용자 |
 | D23 | 저장소 공개 범위 | **공개(Public) GitHub 저장소**. 무료 요금제로 브랜치 보호 사용, 코드가 포트폴리오 역할. 비밀정보는 저장소에 두지 않음 ([05 §5.1-a](./05_collaboration_architecture.md#51-a-공개-저장소-운영-규칙)) | 사용자 |
 | D24 | 에이전트 실행 방식 | 작업마다 단일 실행 / 서브에이전트 조합 중 선택(팀 방식 보류), 난도 기준 모델 배정, 테스트 환경 책임 분리 ([05 §4.0, §4.3-a](./05_collaboration_architecture.md#40-실행-방식-선택)) | 사용자 |
+| D25 | 저장소 구조 (FE·BE 분리) | 루트에 `frontend/`(Next.js)·`backend/`(NestJS)를 두고 **공용 코드 패키지(shared·packages)를 두지 않는다**. 서로의 코드를 import하지 않고(ESLint로 차단), 계약은 `backend/openapi.json` 하나다. Markdown 파이프라인은 프론트엔드 안, API 타입은 프론트엔드가 계약 파일에서 생성. 도구 설정(ESLint·tsconfig·Prettier)만 루트에서 함께 쓴다 (§4, 2026-11-21) | 사용자 |
+| D26 | 프론트엔드 코드 구조 | `frontend/src`는 **기능별 구조**: `app/`(라우팅·조립) → `features/<기능>/`(화면·훅·fetch·스키마) → `components/`·`lib/`(공용). 기능끼리 import하지 않고 하위 계층이 상위 계층을 import하지 않는다(ESLint로 차단). 백엔드는 도메인별 Nest 모듈 구조 유지 ([프론트엔드 §3](./02_frontend_plan.md#3-디렉터리-구조), 2026-11-21) | 사용자 |
 
 ---
 
@@ -124,14 +126,15 @@
 
 ```
 jblog/
-├── apps/
-│   ├── web/                 # Next.js (공개 사이트 + /admin)
-│   └── api/                 # NestJS
-├── packages/
-│   ├── api-types/           # OpenAPI → openapi-typescript 생성 타입 (FE가 import)
-│   ├── markdown/            # remark/rehype 파이프라인 (web 공개 페이지 + 에디터 프리뷰 공용)
-│   ├── eslint-config/
-│   └── tsconfig/
+├── frontend/                # Next.js (공개 사이트 + /admin), 패키지 @jblog/frontend
+│   ├── src/                 # app/, features/, components/, lib/ (기능별 구조 D26, 상세: 프론트엔드 §3)
+│   │   ├── lib/markdown/    # remark/rehype 파이프라인 (공개 페이지 + 에디터 프리뷰)
+│   │   └── generated/       # backend/openapi.json → openapi-typescript 생성 타입 (수동 수정 금지)
+│   ├── e2e/                 # Playwright
+│   └── public/
+├── backend/                 # NestJS, 패키지 @jblog/backend
+│   ├── src/ · test/ · prisma/   # 상세: 백엔드 §2
+│   └── openapi.json         # Swagger에서 생성. FE·BE 사이의 유일한 계약
 ├── infra/
 │   ├── docker-compose.yml           # 로컬 개발 (db만 또는 전체)
 │   ├── docker-compose.prod.yml      # 운영
@@ -141,10 +144,13 @@ jblog/
 │   ├── ui_design/
 │   └── plan/
 ├── .github/workflows/        # ci.yml (deploy.yml은 D6 결정 후)
+├── eslint.config.mjs · tsconfig.base.json · .prettierrc.json · commitlint.config.mjs   # 도구 설정 (코드 공유 아님)
 ├── turbo.json
-├── pnpm-workspace.yaml
+├── pnpm-workspace.yaml       # frontend, backend
 └── .env.example
 ```
+
+**분리 원칙 (D25)**: `frontend`와 `backend`는 각자 `package.json`·의존성·Dockerfile을 갖는 독립 프로젝트다. 서로의 코드를 import하지 않고(ESLint `no-restricted-imports`로 오류 처리), 둘을 잇는 것은 HTTP API와 그 계약 파일 `backend/openapi.json`뿐이다. 공용 코드 패키지는 만들지 않는다.
 
 ---
 
@@ -269,14 +275,14 @@ INTERNAL_API_KEY=
 
 | 파일 | 내용 | git |
 |---|---|---|
-| `apps/api/.env` | API 서버의 실제 값 | **커밋 금지** (`.gitignore`) |
-| `apps/web/.env.local` | 웹 서버의 실제 값 | **커밋 금지** |
+| `backend/.env` | API 서버의 실제 값 | **커밋 금지** (`.gitignore`) |
+| `frontend/.env.local` | 웹 서버의 실제 값 | **커밋 금지** |
 | `infra/.env` | 로컬 Docker Compose(PostgreSQL) 값 | **커밋 금지** |
-| `apps/api/.env.example`, `apps/web/.env.example`, `infra/.env.example` | 변수 이름과 설명만. **값은 비우거나 `change-me` 같은 자리표시자** | 커밋 |
+| `backend/.env.example`, `frontend/.env.example`, `infra/.env.example` | 변수 이름과 설명만. **값은 비우거나 `change-me` 같은 자리표시자** | 커밋 |
 | GitHub Actions Secrets | CI에 필요한 값 | 저장소 밖 |
 
 **코드 작성 규칙**
-1. 비밀값·접속 정보는 코드, 테스트, 시드, 문서 예시, Dockerfile, CI 워크플로 파일 어디에도 실제 값으로 쓰지 않는다. 코드는 **설정 모듈을 통해서만** 읽는다 (백엔드: `@nestjs/config` + 스키마 검증, 프론트엔드: `lib/env.ts` 한 곳).
+1. 비밀값·접속 정보는 코드, 테스트, 시드, 문서 예시, Dockerfile, CI 워크플로 파일 어디에도 실제 값으로 쓰지 않는다. 코드는 **설정 모듈을 통해서만** 읽는다 (백엔드: `@nestjs/config` + 스키마 검증, 프론트엔드: `frontend/src/lib/env.ts` 한 곳).
 2. 앱 시작 시 필수 환경변수를 **스키마로 검증**하고, 없거나 형식이 틀리면 즉시 실패시킨다. 비밀값에 기본값(fallback)을 두지 않는다 (`process.env.JWT_SECRET ?? 'dev-secret'` 금지).
 3. 프론트엔드에서 `NEXT_PUBLIC_`으로 시작하는 변수는 **브라우저 번들에 포함**되므로 비밀값을 절대 넣지 않는다. 비밀값은 서버 컴포넌트·Route Handler·middleware에서만 읽는다.
 4. 로그·에러 응답·Codex 검수 입력·작업 지시서·PR 본문에 비밀값을 출력하지 않는다 (pino redact 대상에 포함, 05 §9 지시서 규칙).
@@ -344,3 +350,5 @@ INTERNAL_API_KEY=
 | v0.6 | 2026-11-21 | [에이전트 팀 가이드 검토](./feedback/2026-11-21_agent_team_guide_review.md) 반영: 에이전트 실행 방식·모델 배정·테스트 환경 책임(D24, 05 v0.4) |
 | v0.7 | 2026-11-21 | [4차 검토 피드백](./feedback/2026-11-21_plan_review_04.md) 반영: 작업본 고유 ID·강제 발행 확인 버전(백엔드 §5.1), refresh 원자적 회전·10초 동시 갱신 유예·탭 간 Web Locks(백엔드 §5.6, 프론트엔드 §7.1), 동시 실행 보장·필수 시나리오(백엔드 §5.8), 상세 조회 스냅샷, slug 복귀 금지(D20), outbox 재시도 횟수 정의, HTTP 캐시 지연 설명, 글별 AI 표기 필드(03), 협업 절차 보완(05 v0.5) |
 | v0.8 | 2026-11-21 | 민감 정보 관리 규칙 추가(§6-b): 하드코딩 금지·`.env`로만 주입, 파일 구성, 코드 규칙, 검사 장치. 05·01·02에 참조 반영 |
+| v0.9 | 2026-11-21 | 저장소 구조를 `frontend/`·`backend/` 분리 구조로 변경하고 공용 코드 패키지 제거(D25, §4). API 타입은 `backend/openapi.json`에서 프론트엔드 안으로 생성, Markdown 파이프라인은 프론트엔드 내부 모듈. 01·02·04·05 경로 반영 |
+| v0.10 | 2026-11-21 | 프론트엔드를 기능별 구조(`features/`)로 전환하고 계층 import 규칙 추가(D26, 프론트엔드 §3). 백엔드 구조는 그대로 |

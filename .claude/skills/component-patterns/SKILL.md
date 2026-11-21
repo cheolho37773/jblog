@@ -1,25 +1,38 @@
 ---
 name: component-patterns
-description: "jblog 프론트엔드(apps/web) 컴포넌트 설계 규칙. 컴포넌트 분리, RSC/클라이언트 경계, 데이터 패칭과 캐시 태그, 디자인 토큰 사용, 복사 방지, 접근성 체크리스트를 다룬다. frontend-dev가 컴포넌트·페이지를 설계하거나 구현할 때 사용한다."
+description: "jblog 프론트엔드(frontend) 컴포넌트 설계 규칙. 컴포넌트 분리, RSC/클라이언트 경계, 데이터 패칭과 캐시 태그, 디자인 토큰 사용, 복사 방지, 접근성 체크리스트를 다룬다. frontend-dev가 컴포넌트·페이지를 설계하거나 구현할 때 사용한다."
 ---
 
 # Component Patterns — jblog 프론트엔드
 
 기준 문서: `docs/plan/02_frontend_plan.md`, `docs/ui_design/ui_design_spec.md`. 충돌하면 문서가 우선한다.
 
-## 1. 폴더 구조 (프론트엔드 §3)
+## 1. 폴더 구조 (프론트엔드 §3, 개요 D26 — 기능별 구조)
 
 ```
-apps/web/
-├── app/(site)/        공개 사이트 (복사 방지 적용)
+frontend/src/
+├── app/(site)/        공개 사이트 (복사 방지 적용). page.tsx는 데이터를 가져와 기능 컴포넌트를 조립만 한다
 ├── app/admin/         관리자 (CSR, TanStack Query)
 ├── app/internal/      web 내부 경로 (revalidate webhook)
-├── components/ui|blog|portfolio|layout|markdown|protection|admin
+├── features/<기능>/   posts|reactions|projects|profile|media|search
+│   ├── components/    공개 화면 조각
+│   ├── admin/         관리자 화면 조각
+│   ├── hooks/         useDraftAutosave, useLike …
+│   ├── api.ts         서버용 fetch 함수 (캐시 태그)
+│   └── schemas.ts     Zod 폼 스키마
+├── components/ui|layout|markdown|protection|admin   여러 기능이 함께 쓰는 것만
 ├── lib/api/server.ts  RSC용 fetch (태그, /internal 호출 시 X-Internal-Key)
 ├── lib/api/client.ts  브라우저용 (credentials, CSRF 헤더, refresh 조정)
 ├── lib/env.ts         환경변수를 읽는 유일한 곳
 └── middleware.ts      /admin JWT 검증
 ```
+
+**계층 규칙 (ESLint로 차단)**
+- 의존 방향: `app/` → `features/` → `components/`·`lib/`·`generated/`. 반대 방향 import 금지
+- **기능끼리 import하지 않는다.** 한 화면에 여러 기능이 필요하면 `app/`에서 조립한다
+- 두 번째 기능이 필요로 하는 것은 `components/`·`lib/`로 옮긴다
+- 배럴 파일(`index.ts`)을 두지 않는다 (서버·클라이언트 컴포넌트가 섞이지 않게). 파일 경로로 직접 import
+- 하위 폴더는 필요한 것만 만든다
 
 ## 2. RSC와 클라이언트 경계
 
@@ -46,7 +59,7 @@ apps/web/
 
 - 한 컴포넌트는 한 가지 책임. 약 200줄을 넘으면 분리 검토, props는 5개 이하(넘으면 객체로)
 - variant는 `class-variance-authority`로 정의 (예: Badge `solid | soft`, Button `primary | outline | icon | pillSolid | pillOutline`)
-- 반복되는 로직은 커스텀 훅으로 추출. 이름은 기획 용어와 맞춘다 (`useLike`, `useDraftAutosave`)
+- 반복되는 로직은 커스텀 훅으로 추출해 해당 기능의 `hooks/`에 둔다. 이름은 기획 용어와 맞춘다 (`useLike`, `useDraftAutosave`)
 - 공개 사이트 컴포넌트는 UI 기획서 기반 자체 구현, shadcn/ui는 관리자 전용
 
 ## 6. 복사 방지 (접근 통제 Part 2)

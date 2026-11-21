@@ -1,6 +1,6 @@
 ---
 name: api-security-checklist
-description: "jblog 백엔드(apps/api, NestJS) 보안 체크리스트. 인증 방식별 가드, GitHub OAuth 허용 목록, JWT·refresh 회전, CSRF, 입력 검증, 내부 API·MCP 토큰, 업로드 검증, 보안 헤더, Rate limit, 민감 정보 관리를 점검한다. backend-dev가 인증·인가·보안 관련 코드를 구현하거나 점검할 때 사용한다."
+description: "jblog 백엔드(backend, NestJS) 보안 체크리스트. 인증 방식별 가드, GitHub OAuth 허용 목록, JWT·refresh 회전, CSRF, 입력 검증, 내부 API·MCP 토큰, 업로드 검증, 보안 헤더, Rate limit, 민감 정보 관리를 점검한다. backend-dev가 인증·인가·보안 관련 코드를 구현하거나 점검할 때 사용한다."
 ---
 
 # API Security Checklist — jblog 백엔드
@@ -59,7 +59,7 @@ description: "jblog 백엔드(apps/api, NestJS) 보안 체크리스트. 인증 �
 - [ ] 비밀값·접속 정보 하드코딩 없음, `ConfigService`로만 읽음
 - [ ] 필수 환경변수는 부팅 시 스키마 검증, 비밀값 기본값 없음
 - [ ] pino redact: 쿠키, Authorization, 비밀번호·토큰 필드
-- [ ] 새 환경변수는 `apps/api/.env.example`에 추가
+- [ ] 새 환경변수는 `backend/.env.example`에 추가
 
 ## 8. OWASP API Top 10 빠른 점검
 

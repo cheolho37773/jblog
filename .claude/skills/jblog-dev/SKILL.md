@@ -41,11 +41,11 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
 7. **Codex 최종 검수 (push 전)**: `scripts/codex-review.sh <ID>` → `docs/reviews/<ID>/r<N>.codex.md`. 지적마다 `r<N>.response.md`에 수정함 / 후속 처리(Issue) / 반박 기록. 높음은 반드시 수정 후 재검수, 반박은 G3. **push 허용 조건(협업 §6.4-a)을 만족할 때까지 push하지 않는다**: 최근 검수가 push할 head SHA 대상, 높음 0건, 중간은 모두 재검수로 해소·후속 Issue·G3 수용 반박 중 하나
 8. **push**: Codex 최종 통과 후 `git push -u origin <브랜치>` (검수 결과·대응 기록 커밋 포함) → push 이벤트로 CI 실행. CI 실패 → 수정 → **재검수** → 다시 push (3회 상한)
 9. **PR 요청 (개발자에게 보고)**: 아래를 한 번에 전달한다
-   - **PR 생성 링크**: `https://github.com/cheolho37773/jblog/compare/dev...<브랜치>?quick_pull=1&title=<URL 인코딩 제목>&body=<URL 인코딩 본문>` — 본문은 `.github/pull_request_template.md`를 채운 내용, 마지막 줄 `Closes #<이슈>`. 인코딩은 `python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.stdin.read()))"`
+   - **브랜치 이름과 연결 이슈 번호** (PR 본문에 `Closes #<이슈>`를 넣으면 Merge 시 이슈 자동 종료). **PR 생성 링크는 보내지 않는다** (2026-11-21 개발자 지시)
    - **head SHA** (개발자가 Merge 전에 PR 최신 커밋과 대조)
    - 완료 기준 체크, 필수 검증 상태(완료·실패·보류), 검수 판정, 에러 수정 횟수, 후속 처리 목록
-10. **개발자 작업**: PR 생성 → PR CI 확인 → Merge (= G4). 수정 요청을 받으면 브랜치에서 수정 → 자체 검사 → Codex 재검수 → push → 새 head SHA로 다시 보고
-11. **정리** (Merge 확인 후): `git fetch origin`, `git worktree remove ../jblog-worktrees/<브랜치>`, `git branch -D <브랜치>`. `dev`의 체크리스트에 항목이 체크돼 있는지 확인 (6단계에서 포함됨)
+10. **개발자 작업**: GitHub에서 PR 생성 → PR CI 확인 → Merge (= G4). 수정 요청을 받으면 브랜치에서 수정 → 자체 검사 → Codex 재검수 → push → 새 head SHA로 다시 보고
+11. **정리** (Merge 확인 후): `git fetch origin`, `git worktree remove ../jblog-worktrees/<브랜치>`, `git branch -D <브랜치>`. `dev`의 체크리스트에 항목이 체크돼 있는지, 이슈가 닫혔는지 확인 (열려 있으면 개발자에게 알림)
 
 ## 3. 검수 후 커밋이 추가되면 (협업 §6.5)
 

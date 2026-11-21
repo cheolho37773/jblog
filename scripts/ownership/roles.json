@@ -24,6 +24,13 @@
       "pnpm-lock.yaml": "같은 PR에서 package.json이 바뀐 경우만"
     }
   },
+  "pr_contract_generated": {
+    "$comment": "PR 단위 검사(CI ownership-check) 전용. 생성물은 어떤 역할도 손으로 고칠 수 없지만(역할 단위 deny), contract/ 브랜치 PR에서는 참여 역할과 무관하게 변경을 허용한다. 조건: 같은 CI에서 생성 결과 일치 검사(pnpm gen:api-types --check)가 통과해야 한다. contract/ 가 아닌 브랜치에서 이 경로가 바뀌면 실패 (협업 §5.2).",
+    "branch_prefix": "contract/",
+    "patterns": [
+      "frontend/src/generated/**"
+    ]
+  },
   "roles": {
     "orchestrator": {
       "allow": [
@@ -33,48 +40,52 @@
     },
     "backend-dev": {
       "allow": [
-        "apps/api/**",
+        "backend/**",
         "pnpm-lock.yaml"
       ],
       "deny": [
-        "apps/api/**/*.spec.ts",
-        "apps/api/test/**",
-        "apps/api/jest.config.*",
-        "apps/api/Dockerfile"
+        "backend/**/*.spec.ts",
+        "backend/test/**",
+        "backend/jest.config.*",
+        "backend/Dockerfile"
       ],
       "allow_after_deny": [
-        "apps/api/test/support/**"
+        "backend/test/support/**"
       ]
     },
     "frontend-dev": {
       "allow": [
-        "apps/web/**",
-        "packages/markdown/**",
+        "frontend/**",
         "pnpm-lock.yaml"
       ],
       "deny": [
-        "apps/web/**/*.spec.ts",
-        "apps/web/**/*.spec.tsx",
-        "apps/web/test/**",
-        "packages/markdown/**/*.spec.ts",
-        "apps/web/vitest.config.*",
-        "apps/web/Dockerfile"
+        "frontend/**/*.spec.ts",
+        "frontend/**/*.spec.tsx",
+        "frontend/test/**",
+        "frontend/e2e/**",
+        "frontend/src/generated/**",
+        "frontend/vitest.config.*",
+        "frontend/playwright.config.*",
+        "frontend/Dockerfile"
       ],
       "allow_after_deny": [
-        "apps/web/test/support/**"
+        "frontend/test/support/**"
       ]
     },
     "test-engineer": {
       "allow": [
         "**/*.spec.ts",
         "**/*.spec.tsx",
-        "apps/*/test/**",
-        "e2e/**",
+        "backend/test/**",
+        "frontend/test/**",
+        "frontend/e2e/**",
         "scripts/tests/**"
       ],
       "deny": [
-        "apps/*/test/support/**",
-        "apps/*/test/setup*.ts"
+        "backend/test/support/**",
+        "frontend/test/support/**",
+        "backend/test/setup*.ts",
+        "frontend/test/setup*.ts"
       ]
     },
     "devops-engineer": {
@@ -95,14 +106,15 @@
         "eslint.config.*",
         "commitlint.config.*",
         "tsconfig*.json",
-        "packages/eslint-config/**",
-        "packages/tsconfig/**",
-        "apps/*/jest.config.*",
-        "apps/*/vitest.config.*",
-        "playwright.config.*",
-        "apps/*/test/setup*.ts",
-        "apps/*/Dockerfile",
-        "apps/*/.env.example"
+        "backend/jest.config.*",
+        "frontend/vitest.config.*",
+        "frontend/playwright.config.*",
+        "backend/test/setup*.ts",
+        "frontend/test/setup*.ts",
+        "backend/Dockerfile",
+        "frontend/Dockerfile",
+        "backend/.env.example",
+        "frontend/.env.example"
       ],
       "deny": [
         "scripts/tests/**"

@@ -1,6 +1,6 @@
 # jblog 협업 아키텍처 기획서 (AI 에이전트 개발 체계)
 
-> 버전 v0.7 · 작성일 2026-11-21
+> 버전 v0.8 · 작성일 2026-11-21
 > 관련: [개요](./00_overview.md) · [백엔드](./01_backend_plan.md) · [프론트엔드](./02_frontend_plan.md) · [AI 자동 작성](./03_ai_authoring_mcp_plan.md) · [접근 통제](./04_access_control_and_content_protection.md) · [UI 기획서](../ui_design/ui_design_spec.md)
 > 참고 자료: 개발자가 제시한 협업 구성도, `.claude/` 에이전트 템플릿 5종 + 스킬 3종
 > 이 문서는 **기획**이다. `.claude/` 파일은 이 문서가 검토를 통과한 뒤 §11 명세대로 수정한다.
@@ -34,7 +34,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | C9 | 에러 수정 상한 | 모든 에러 수정 루프(자체 검사, CI, Codex 지적)는 **3회까지만** 에이전트가 시도하고, 그 이상은 **개발자 승인**이 있어야 계속한다 (§8) |
 | C10 | 배포 | **보류** (인프라 미정, 개요 D6). DevOps Agent는 로컬 개발 환경과 CI까지만 맡는다 |
 | C11 | GitHub 자동화 | 이슈 생성 → 브랜치 생성 → 작업·검수 → **브랜치 push**까지 오케스트레이터가 한다. PR 생성과 Merge는 개발자가 GitHub에서 직접 한다. 이슈는 PR의 `Closes #n`으로 자동 종료 (§5.6) |
-| C17 | PR·Merge 담당 | **PR 생성과 Merge는 개발자가 GitHub에서 직접** 한다 (2026-11-21 변경). 오케스트레이터는 검수를 마친 브랜치를 push하고 PR 생성 링크(제목·본문 미리 채움)와 head SHA를 전달한다. **개발자의 Merge가 곧 G4 승인**이다 |
+| C17 | PR·Merge 담당 | **PR 생성과 Merge는 개발자가 GitHub에서 직접** 한다 (2026-11-21 변경). 오케스트레이터는 검수를 마친 브랜치를 push하고 브랜치 이름·head SHA·연결 이슈 번호와 검사 결과를 보고한다 (PR 생성 링크는 보내지 않는다, 2026-11-21 개발자 지시). **개발자의 Merge가 곧 G4 승인**이다 |
 | C12 | 저장소 공개 범위 | **공개(Public) 저장소**. GitHub 무료 요금제에서 브랜치 보호를 쓰기 위해서이며, 코드가 포트폴리오 역할도 한다. 비밀정보는 저장소에 절대 두지 않는다 (§5.1-a) |
 | C13 | 검수·승인의 유효 범위 | CI 결과·Codex 검수·G4 승인은 **특정 커밋(head SHA)에만 유효**하다. 이후 코드가 바뀌면 다시 확인한다 (§6.5) |
 | C14 | 실행 방식 | 작업마다 **단일 실행**(담당 에이전트 1명) 또는 **서브에이전트 조합**(필요한 역할만) 중 선택한다. **팀 방식(에이전트 간 직접 메시지)은 보류**하고, M0 시험 운영 후 필요하면 G2로 도입한다 (§4.0) |
@@ -79,7 +79,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
                 └──────────────────┬───────────────────────┘
                                    ▼ 통과
                 ┌──────────────────────────────────────────┐
-                │ ④ PR 생성 링크 + head SHA 보고               │
+                │ ④ 브랜치·head SHA·이슈 번호 보고             │
                 │ ⑤ 개발자: PR 생성 → SHA 확인 → Merge (G4)    │
                 │    → 이슈 자동 종료                         │
                 └──────────────────────────────────────────┘
@@ -96,9 +96,9 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 |---|---|---|---|
 | **개발자** | 사람 | 요구사항·승인 기준 정의, G1~G4 결정 | 전체 |
 | **오케스트레이터** | Claude Code 메인 세션 | 마일스톤 분해, 작업 계획서, 공유 계약 확정, 에이전트 배정, 결과 통합, 피드백 루프 관리, 보고 | `docs/work/**`, 공유 계약 파일(§5.3) |
-| **Backend Agent** | 서브에이전트 `backend-dev` | NestJS API, Prisma 스키마·마이그레이션, 인증, 비즈니스 로직 | `apps/api/**` |
-| **Frontend Agent** | 서브에이전트 `frontend-dev` | Next.js 공개 사이트·관리자, 디자인 토큰, 컴포넌트, 디자인 검수 수정 | `apps/web/**`, `packages/markdown/**` |
-| **Test Agent** | 서브에이전트 `test-engineer` | 기획 문서 기준 테스트 **설계·선작성**, 완료 기준의 독립 검증, E2E·시각 회귀, 테스트 결과 보고. 환경 장애는 DevOps로 인계 | `**/*.spec.ts(x)`, `apps/*/test/**`, `e2e/**`, 테스트 픽스처 |
+| **Backend Agent** | 서브에이전트 `backend-dev` | NestJS API, Prisma 스키마·마이그레이션, 인증, 비즈니스 로직 | `backend/**` |
+| **Frontend Agent** | 서브에이전트 `frontend-dev` | Next.js 공개 사이트·관리자, 디자인 토큰, 컴포넌트, 디자인 검수 수정 | `frontend/**`, `frontend/src/lib/markdown/**` |
+| **Test Agent** | 서브에이전트 `test-engineer` | 기획 문서 기준 테스트 **설계·선작성**, 완료 기준의 독립 검증, E2E·시각 회귀, 테스트 결과 보고. 환경 장애는 DevOps로 인계 | `**/*.spec.ts(x)`, `{frontend,backend}/test/**`, `frontend/e2e/**`, 테스트 픽스처 |
 | **DevOps Agent** | 서브에이전트 `devops-engineer` | 모노레포·도구 설정, **테스트 프레임워크 공통 설정·실행 명령**, 로컬 개발 환경(Docker Compose), GitHub Actions CI, Dockerfile 빌드 검증, GitHub 자동화 설정. **배포는 보류(C10)** | `infra/**`, `.github/**`, 루트 설정 파일 |
 | **Docs Agent** | 서브에이전트 `docs-writer` | 변경 이력, 구현 결과 기록, API 문서 동기화, 작업 인계 문서 | `docs/work/**`의 기록 파일, 각 기획 문서의 **변경 이력 섹션만** |
 | **Codex 검수자** | Codex CLI / GitHub Codex 리뷰 | 버그·보안·설계 준수·회귀 위험 검수 | **없음 (읽기 전용)**. 검수 결과 파일만 생성 |
@@ -217,7 +217,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | 7. Codex 검수 | Codex | 자체 검사를 통과한 로컬 **head SHA**를 대상으로 로컬 CLI 검수 (§6). 지적 → 4로 돌아가 수정 후 재검수. 대응 기록 커밋은 검수 기록만이라 재검수 없음 (§6.5) | **push 허용 조건** (§6.4-a): 가장 최근 검수가 push할 head SHA를 대상으로 했고, 높음 0건이며, 중간 지적은 모두 "수정 후 재검수" 또는 "후속 처리 Issue" 또는 "G3에서 받아들여진 반박"으로 처리됨. 지적 수정은 3회 상한 / 반박 → G3 |
 | 8. push | 오케스트레이터 | **Codex 최종 검수가 끝난 뒤에만** 작업 브랜치를 push (`git push -u origin <브랜치>`). push 이벤트로 CI가 실행된다 | Codex 최종 통과 |
 | 9. CI | GitHub Actions | lint · typecheck · unit · integration(Testcontainers) · build · (해당 시) E2E · **소유권 검사·잠금 파일 검사(필수)** | 통과. 실패 → 4로 수정 → **Codex 재검수** → 다시 push (3회 상한, §8) |
-| 10. PR 요청 | 오케스트레이터 → 개발자 | **PR 생성 링크**(제목·본문·`Closes #<이슈>` 미리 채움, §5.6), **head SHA**, 완료 기준·필수 검증 상태·검수 판정·에러 수정 횟수·후속 처리 목록을 보고 | |
+| 10. PR 요청 | 오케스트레이터 → 개발자 | **브랜치 이름**, **head SHA**, **연결 이슈 번호**(PR 본문에 `Closes #<이슈>`, §5.6), 완료 기준·필수 검증 상태·검수 판정·에러 수정 횟수·후속 처리 목록을 보고 | |
 | 11. PR · Merge | **개발자** | GitHub에서 PR 생성 → PR CI 확인 → **PR의 최신 커밋이 보고받은 head SHA와 같은지 확인** → `dev`에 squash merge (= **G4**). 수정이 필요하면 오케스트레이터에게 알리고, 수정·재검수 후 새 SHA를 다시 보고받는다 | 검수·CI가 그 SHA에 유효 (§6.5) |
 | 12. 정리 | 오케스트레이터 | Merge 후 `git fetch`, worktree·로컬 브랜치 삭제. 이슈는 `Closes #n`으로 자동 종료(원격 브랜치는 자동 삭제) | |
 
@@ -229,9 +229,9 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 
   | 종류 | 파일 규칙 | 소유 |
   |---|---|---|
-  | 완료 기준 검증 테스트 (API 통합, 계약, 컴포넌트 동작, E2E, 시각 회귀) | `*.spec.ts(x)`, `apps/*/test/**`, `e2e/**` | **Test Agent** |
+  | 완료 기준 검증 테스트 (API 통합, 계약, 컴포넌트 동작, E2E, 시각 회귀) | `*.spec.ts(x)`, `{frontend,backend}/test/**`, `frontend/e2e/**` | **Test Agent** |
   | 내부 구현 세부 단위 테스트 (헬퍼·유틸 함수) | 구현 파일 옆 `*.unit.test.ts(x)` | 구현 에이전트 |
-  | 테스트 픽스처·팩토리 | `apps/*/test/fixtures/**` | Test Agent (구현 에이전트는 변경 요청) |
+  | 테스트 픽스처·팩토리 | `{frontend,backend}/test/fixtures/**` | Test Agent (구현 에이전트는 변경 요청) |
 
   구현 에이전트는 `*.spec.ts(x)`를 수정할 수 없고, `*.unit.test.ts(x)`로 완료 기준을 대신 검증할 수도 없다.
 - 디자인 검수(UI 기획서 §11): Test Agent가 Playwright 스크린샷·컴포넌트 비교를 실행하고 차이 목록을 보고한다. 수정은 Frontend Agent가 한다.
@@ -292,18 +292,19 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 
 | 경로 | 쓰기 담당 | 다른 역할 |
 |---|---|---|
-| `apps/api/src/**` | Backend | 읽기 |
-| `apps/api/prisma/schema.prisma`, `migrations/**` | **Backend (계약 작업으로만)** | 읽기 |
-| `apps/web/**` (테스트 제외) | Frontend | 읽기 |
-| `packages/markdown/**` | Frontend | 읽기 |
-| `packages/api-types/**` | **생성물** (CI·스크립트가 OpenAPI에서 생성, 수동 수정 금지) | 읽기 |
-| `**/*.spec.ts(x)`, `apps/*/test/**`, `e2e/**` | Test | 읽기 |
+| `backend/src/**` | Backend | 읽기 |
+| `backend/prisma/schema.prisma`, `migrations/**` | **Backend (계약 작업으로만)** | 읽기 |
+| `frontend/**` (테스트 제외) | Frontend | 읽기 |
+| `frontend/src/lib/markdown/**` | Frontend | 읽기 |
+| `backend/openapi.json` | **Backend (계약 작업으로만)**. Swagger 데코레이터에서 생성, 수동 수정 금지 | 읽기 |
+| `frontend/src/generated/**` | **생성물** (생성 스크립트가 `backend/openapi.json`에서 생성, 수동 수정 금지) | 읽기 |
+| `**/*.spec.ts(x)`, `{frontend,backend}/test/**`, `frontend/e2e/**` | Test | 읽기 |
 | `**/*.unit.test.ts(x)` | 해당 앱의 구현 에이전트 | 읽기 |
-| `apps/api/package.json` / `apps/web/package.json` / `packages/*/package.json` | 해당 영역 담당 에이전트 (의존성 추가는 지시서에 명시된 경우만) | 변경 요청 |
+| `backend/package.json` / `frontend/package.json` | 해당 영역 담당 에이전트 (의존성 추가는 지시서에 명시된 경우만) | 변경 요청 |
 | `pnpm-lock.yaml` | **`package.json`을 바꾼 쪽이 같은 커밋에서 `pnpm install`로 갱신**. 수동 편집 금지. 충돌 시 rebase 후 `pnpm install`로 재생성 | 읽기 |
-| `infra/**`, `.github/**`, `turbo.json`, `pnpm-workspace.yaml`, 루트 `package.json`, ESLint/Prettier/tsconfig 공용 설정 | DevOps | 변경 요청 |
-| 테스트 프레임워크 설정: `apps/*/jest.config.*`, `apps/*/vitest.config.*`, `playwright.config.*`, `apps/*/test/setup*.ts`(공통 부팅) | DevOps (§4.3-a). 앱 부팅 지원 코드(`apps/*/test/support/**`)는 해당 앱 담당 | 변경 요청 |
-| `packages/api-types/**` 재생성 결과 | 생성 스크립트 (계약 변경 PR에서만 diff 허용) | 읽기 |
+| `infra/**`, `.github/**`, `turbo.json`, `pnpm-workspace.yaml`, 루트 `package.json`, 루트 도구 설정(`eslint.config.mjs`, `tsconfig.base.json`, Prettier, commitlint, `.husky/**`) | DevOps | 변경 요청 |
+| 테스트 프레임워크 설정: `{frontend,backend}/jest.config.*`, `{frontend,backend}/vitest.config.*`, `frontend/playwright.config.*`, `{frontend,backend}/test/setup*.ts`(공통 부팅) | DevOps (§4.3-a). 앱 부팅 지원 코드(`{frontend,backend}/test/support/**`)는 해당 앱 담당 | 변경 요청 |
+| `frontend/src/generated/**` 재생성 결과 | 생성 스크립트 (계약 변경 PR에서만 diff 허용) | 읽기 |
 | `docs/plan/*.md` 본문 | **개발자 승인(G2) 후 오케스트레이터** | 읽기 |
 | `docs/plan/*.md`의 "변경 이력" 섹션, `docs/work/**` 기록 | Docs (지시서는 오케스트레이터) | 읽기 |
 | `docs/reviews/<ID>/r<N>.codex.md`, `docs/plan/feedback/*.md` | **Codex 검수 결과만** (생성 후 수정 금지) | 읽기 |
@@ -316,7 +317,7 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 |---|---|---|
 | Claude Code PreToolUse 훅 (`scripts/hooks/check-ownership.py`, 규칙 `scripts/ownership/roles.json`) | 에이전트의 `Write`/`Edit` 도구 호출 중 범위 밖 경로 | Bash로 실행한 스크립트·포매터·코드 생성기가 바꾸는 파일은 막지 못한다 |
 | 자체 검사의 변경 파일 대조 (§4.2 5단계) | 작업 브랜치에서 실제로 바뀐 모든 파일 (`git diff --name-only <merge-base>`) | 커밋 전 검사라 에이전트가 건너뛰면 무력 |
-| **CI 필수 검사 `ownership-check`** | PR 전체 변경을 **참여 역할들의 쓰기 범위 합집합**과 대조 (아래), `package.json` 없는 `pnpm-lock.yaml` 변경, 계약 PR이 아닌데 `api-types` 변경 검출. **실패하면 Merge 불가** | 지시서 경로 표기가 틀리면 오탐 → 지시서 수정 |
+| **CI 필수 검사 `ownership-check`** | PR 전체 변경을 **참여 역할들의 쓰기 범위 합집합**과 대조 (아래), `package.json` 없는 `pnpm-lock.yaml` 변경, 계약 PR이 아닌데 `backend/openapi.json`·`frontend/src/generated/**` 변경 검출. **실패하면 Merge 불가** | 지시서 경로 표기가 틀리면 오탐 → 지시서 수정 |
 
 **검사 단위를 둘로 나눈다.** 하나의 BE 작업 PR에도 Test Agent의 테스트, Docs 기록, 검수 결과가 함께 들어가기 때문이다.
 
@@ -326,7 +327,8 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | **PR 단위** (CI `ownership-check`) | PR 전체 변경이 **승인된 참여 역할들의 범위 합집합** 안에 있는가? | 지시서의 "실행 방식·참여 역할·쓰기 범위" (CI가 지시서 파일을 읽음) + 공통 허용 경로 |
 
 - **공통 허용 경로** (참여 역할과 무관하게 PR에 포함 가능): 이 작업의 `docs/work/<M>/tasks/<ID>.md`, **이 작업 ID의 검수 기록** — `docs/reviews/<ID>/**`와 기획 문서 검수 결과 `docs/plan/feedback/<날짜>_<ID>.md`·`<날짜>_<ID>_r<N>.md` (§6.5와 같은 기준, 새 파일 추가만 허용·기존 파일 수정 불가), `package.json`과 짝을 이룬 `pnpm-lock.yaml`. 규칙 원본은 `scripts/ownership/roles.json`의 `pr_common_allow.regex`(날짜 `YYYY-MM-DD`·작업 ID·회차 `r<N>`을 정확히 대조하는 정규식), 판정은 `scripts/ownership/pr_common_allow.py`(자체 테스트 `--self-test`)
-- **조건부 허용**: `packages/api-types/**`는 `contract/` 브랜치에서만, 테스트 설정 파일은 DevOps가 참여 역할일 때만
+- **조건부 허용**: `backend/openapi.json`은 `contract/` 브랜치에서만(Backend 참여 시), 테스트 설정 파일은 DevOps가 참여 역할일 때만
+- **계약 생성물**: `frontend/src/generated/**`는 어떤 역할도 손으로 고칠 수 없다(역할 단위 deny). 대신 PR 단위 검사에서는 **`contract/` 브랜치이고 생성 결과 일치 검사(`pnpm gen:api-types --check`)가 통과한 경우에만** 참여 역할과 무관하게 허용하고, 다른 브랜치에서 바뀌면 실패한다. 규칙 원본은 `roles.json`의 `pr_contract_generated`
 - 역할별 커밋 구분은 커밋 trailer로 한다 (`Agent: backend-dev`). PR 단위 검사는 합집합만 보고, 역할을 넘은 수정은 역할 단위 검사와 Codex 검수가 잡는다
 
 **Codex 결과 파일 보호**: `*.codex.md`는 생성 커밋 이후 내용이 바뀌면 CI `ownership-check`가 실패한다 (파일 해시를 대응 기록 첫 줄에 기록해 대조).
@@ -336,11 +338,11 @@ jblog는 개발자 1명이 **AI 에이전트 팀**과 함께 만든다. 이 문�
 | 계약 | 담당 | 계약 작업으로 처리하는 경우 |
 |---|---|---|
 | Prisma 스키마 + 마이그레이션 | Backend | 모델·필드 추가/변경. 마이그레이션은 Merge 순서대로 하나씩 |
-| OpenAPI (Swagger 데코레이터 → `openapi.json` → `api-types`) | Backend | 엔드포인트·DTO 추가/변경. 계약 PR에는 컨트롤러 시그니처와 DTO만 두고, 구현은 빈 메서드(`501`)여도 된다 |
+| OpenAPI (Swagger 데코레이터 → `backend/openapi.json` → 프론트엔드 생성 타입 `frontend/src/generated/**`) | Backend | 엔드포인트·DTO 추가/변경. 계약 PR에는 컨트롤러 시그니처와 DTO만 두고, 구현은 빈 메서드(`501`)여도 된다 |
 | 디자인 토큰 (`globals.css` 토큰, 타이포 유틸) | Frontend | 토큰 추가/변경 (M1에서 일괄 확정) |
 | 환경변수 목록 (`.env.example`) | DevOps | 신규 변수 |
 
-계약 PR이 Merge되면 그 계약을 쓰는 작업들이 병렬로 시작한다. 프론트엔드는 `api-types`와 MSW 모킹으로 백엔드 구현을 기다리지 않는다.
+계약 PR이 Merge되면 그 계약을 쓰는 작업들이 병렬로 시작한다. 프론트엔드는 생성 타입과 MSW 모킹으로 백엔드 구현을 기다리지 않는다.
 
 ### 5.3-a 크로스커팅 변경의 단계별 진행
 
@@ -376,7 +378,7 @@ feat/FE-05-...  ─────────────────────�
 | 기본 브랜치 | **`dev`**. 새 작업 브랜치는 항상 최신 `dev`에서 만든다 |
 | `main` | 릴리스 시점을 위한 브랜치로 남겨 둔다. **`dev` → `main` Merge는 하지 않는다** (배포 보류, C7·C10). 재개 조건과 절차는 배포 결정 시 정한다 |
 | 작업 브랜치 | 작업(이슈) 1개 = 브랜치 1개. `contract/<ID>-<요약>`, `feat/<ID>-<요약>`, `fix/<ID>-<요약>`, `chore/<요약>`, `docs/<요약>` (`<ID>` = WBS ID) |
-| PR | **Codex 최종 검수 → push → CI → PR 요청 → 개발자가 PR 생성·Merge** 순서다. 오케스트레이터는 PR을 만들지 않고, 검수를 마친 브랜치와 PR 생성 링크만 넘긴다 (C17) |
+| PR | **Codex 최종 검수 → push → CI → PR 요청 → 개발자가 PR 생성·Merge** 순서다. 오케스트레이터는 PR을 만들지 않고, 검수를 마친 브랜치와 head SHA만 보고한다 (C17) |
 | worktree 위치 | 저장소 밖 `../jblog-worktrees/<브랜치>` (Claude Code 서브에이전트의 worktree 격리 기능을 쓰면 그 기본 위치) |
 | 커밋 | Conventional Commits (`feat(api): ...`, commitlint로 검사). 커밋 본문에 WBS ID |
 | 동기화 | 작업 브랜치는 `dev`에 rebase. 공유 계약이 바뀌면 오케스트레이터가 영향 받는 브랜치에 rebase 지시 |
@@ -432,15 +434,15 @@ Closes #<이슈 번호>
 | ③ 작업 | §4.2의 3~6단계 | 서브에이전트 |
 | ④ Codex 최종 검수 | 자체 검사 통과 후 `scripts/codex-review.sh <ID>` → 대응 기록 커밋 (push 전) | 오케스트레이터 · Codex |
 | ④-a push · CI | push 허용 조건(§6.4-a)을 만족한 뒤 `git push -u origin <브랜치>` → push 이벤트로 CI 실행 | 오케스트레이터 · GitHub Actions |
-| ④-b PR 요청 | **PR 생성 링크** 전달: `https://github.com/cheolho37773/jblog/compare/dev...<브랜치>?quick_pull=1&title=<인코딩된 제목>&body=<인코딩된 본문>` — 본문은 PR 템플릿을 채운 내용이고 마지막 줄이 `Closes #<이슈번호>`. head SHA도 함께 전달 | 오케스트레이터 |
-| ⑤ PR 생성 · Merge | 링크를 열어 PR 생성 → PR CI 확인 → PR 최신 커밋 = 보고받은 head SHA 확인 → **Squash and merge** | **개발자** |
+| ④-b PR 요청 | 브랜치 이름, head SHA, 연결 이슈 번호, 검사·검수 결과를 보고 (PR 생성 링크는 보내지 않음) | 오케스트레이터 |
+| ⑤ PR 생성 · Merge | GitHub에서 PR 생성(템플릿 작성, 본문에 `Closes #<이슈번호>`) → PR CI 확인 → PR 최신 커밋 = 보고받은 head SHA 확인 → **Squash and merge** | **개발자** |
 | ⑥ 이슈 종료 | PR 본문의 `Closes #n` 키워드로 **Merge 시 GitHub가 자동 종료** | GitHub |
 | ⑦ 정리 | 원격 브랜치는 저장소 설정으로 자동 삭제, 로컬 worktree는 `git worktree remove` | GitHub · 오케스트레이터 |
 
 - **이슈 자동 종료의 조건**: `Closes #n`은 PR이 **기본 브랜치**에 Merge될 때 동작한다. 이 프로젝트는 기본 브랜치가 `dev`(C7)이므로 `dev`에 Merge되는 순간 이슈가 닫힌다. (기본 브랜치가 `main`이었다면 `main`에 들어갈 때까지 열려 있었을 것이다.)
 - **진행 상태 표시 (선택)**: GitHub Projects 보드를 쓰면 기본 제공 워크플로로 "이슈 생성 → Todo", "PR 연결 → In Progress", "이슈 종료 → Done" 이동이 자동으로 된다.
 - **추가 자동화 (선택)**: GitHub Actions로 PR 제목의 WBS ID 형식 검사, 브랜치 접두어와 변경 파일 범위 대조(§5.2), 라벨 자동 부여를 넣을 수 있다.
-- **PR 생성 링크를 쓰는 이유**: 개발자가 PR 양식을 직접 채우지 않아도 되고, `Closes #n`이 빠져 이슈가 안 닫히는 실수를 막는다. 링크로 열린 화면에서 내용을 고쳐서 만들어도 된다.
+- **이슈가 열려 있으면**: PR 본문에 `Closes #n`이 빠져 Merge 후에도 이슈가 열려 있으면, 오케스트레이터가 정리 단계에서 확인해 개발자에게 알린다.
 - **Merge 전 SHA 확인**: GitHub 화면의 Merge 버튼은 특정 커밋을 지정할 수 없으므로, PR의 Commits 탭에서 마지막 커밋이 보고받은 head SHA와 같은지 눈으로 확인한다. 다르면 Merge하지 말고 오케스트레이터에게 알린다.
 
 ---
@@ -549,7 +551,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | **G1 계획 승인** | 마일스톤 시작 시 | `docs/work/<M>/plan.md`: 작업 목록·의존·담당·완료 기준·병렬 계획 | 승인 / 수정 지시 |
 | **G2 기획 변경 승인** | 구현 중 기획과 다르게 가야 할 때, 또는 기획 문서를 고칠 때 | 변경 제안: 현재 기획, 문제, 제안, 영향 범위 | 승인(오케스트레이터가 문서 반영 → Codex ① 검수) / 거절 |
 | **G3 충돌 판정** | Codex 지적에 구현 측이 반박할 때 | Codex 지적 원문 + 반박 근거 + 오케스트레이터 의견 | Codex 쪽 / 구현 쪽 / 제3안 |
-| **G4 Merge** | 오케스트레이터의 PR 요청(모든 검사가 **같은 head SHA에서** 통과) 이후 | PR 생성 링크, head SHA, 완료 기준 체크, 필수 검증 상태, 검수 판정, 후속 처리 목록 | **GitHub에서 PR 생성 후 Merge** (PR 최신 커밋 = 보고 SHA 확인) / 수정 요청 |
+| **G4 Merge** | 오케스트레이터의 PR 요청(모든 검사가 **같은 head SHA에서** 통과) 이후 | 브랜치·head SHA·이슈 번호, 완료 기준 체크, 필수 검증 상태, 검수 판정, 후속 처리 목록 | **GitHub에서 PR 생성 후 Merge** (PR 최신 커밋 = 보고 SHA 확인) / 수정 요청 |
 
 **자동 상향 (개발자에게 바로 올리는 경우)**
 - 에러 수정이 3회 안에 해결되지 않을 때 — **개발자 승인 없이 4회차를 시도하지 않는다** (§8)
@@ -609,11 +611,11 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 - 선택 이유: 새 동작(완료 기준 테스트 필요), 공유 계약 변경 없음(계약은 BE-05a에서 확정), 단일 영역
 - 난도·모델: 높음(버전 규칙·동시성) → backend-dev·test-engineer 모두 Opus
 - 의존 / 선행 준비: contract/BE-05a Merge 완료 · 로컬 PostgreSQL(Docker Compose) · 테스트 DB는 Testcontainers 자동
-- 계약 기준: apps/api/prisma/schema.prisma, apps/api/openapi.json @ `<dev SHA>`
-  (API 응답 구조는 이 OpenAPI·`packages/api-types`를 기준으로 하고 지시서에 복제하지 않는다)
+- 계약 기준: backend/prisma/schema.prisma, backend/openapi.json @ `<dev SHA>`
+  (API 응답 구조는 이 OpenAPI와 그 생성 타입 `frontend/src/generated/**`를 기준으로 하고 지시서에 복제하지 않는다)
 - 참조: 01_backend_plan.md §5.1 (필드별 반영 규칙, 버전 규칙)
-- 쓰기 범위: apps/api/src/modules/posts/** (backend-dev), apps/api/test/posts/** (test-engineer)
-- 실행 명령: pnpm --filter api lint && pnpm --filter api typecheck && pnpm --filter api test -- posts
+- 쓰기 범위: backend/src/modules/posts/** (backend-dev), backend/test/posts/** (test-engineer)
+- 실행 명령: pnpm --filter backend lint && pnpm --filter backend typecheck && pnpm --filter backend test -- posts
 - 필수 검증 (완료 기준):
   - 성공: [ ] 작업본 최초 생성(`expectedPostVersion` 일치) [ ] 재저장 시 version+1
   - 거부: [ ] 공개본 버전 불일치 → 409 POST_CHANGED [ ] 작업본 존재 시 생성 → 409 DRAFT_EXISTS [ ] 재저장 버전 불일치 → 409 VERSION_CONFLICT [ ] 발행 글 PATCH → 409
@@ -720,7 +722,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 
 | 템플릿 내용 | 수정 |
 |---|---|
-| Next.js API Routes 디렉터리 구조 | `apps/api` NestJS 모듈 구조 ([백엔드 §2](./01_backend_plan.md#2-프로젝트-구조)) |
+| Next.js API Routes 디렉터리 구조 | `backend` NestJS 모듈 구조 ([백엔드 §2](./01_backend_plan.md#2-프로젝트-구조)) |
 | Route → Controller → Service → Repository | Controller → Service → PrismaService (Repository 레이어 없음, 백엔드 §2) |
 | Zod 입력 검증 | `class-validator` + `ValidationPipe(whitelist, forbidNonWhitelisted)` |
 | NextAuth / bcrypt / RBAC | GitHub OAuth + 허용 목록, JWT 쿠키 + refresh 회전 + tokenVersion. 비밀번호 없음 (04 Part 1) |
@@ -734,9 +736,9 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 
 | 템플릿 내용 | 수정 |
 |---|---|
-| `src/` 단일 앱 구조, `stores/`(Zustand) | `apps/web` 구조 ([프론트엔드 §3](./02_frontend_plan.md#3-디렉터리-구조)). **Zustand 사용 안 함**: 공개 페이지는 RSC fetch, 관리자는 TanStack Query |
+| `src/` 단일 앱 구조, `stores/`(Zustand) | `frontend` 구조 ([프론트엔드 §3](./02_frontend_plan.md#3-디렉터리-구조)). **Zustand 사용 안 함**: 공개 페이지는 RSC fetch, 관리자는 TanStack Query |
 | "디자인 가이드 미제공 시 Tailwind 기본 + shadcn" | 디자인 기준은 UI 기획서. 공개 사이트는 자체 컴포넌트, shadcn은 관리자 전용. **hex 하드코딩 금지**(토큰만) |
-| "API 명세 미완성 시 목업 데이터" | `packages/api-types` + MSW 모킹 (계약 확정 후) |
+| "API 명세 미완성 시 목업 데이터" | `frontend/src/generated/**`(OpenAPI 생성 타입) + MSW 모킹 (계약 확정 후) |
 | (없음) 추가 | Light/Dark 테마, 반응형 4단계, 복사 방지(04 Part 2), 캐시 태그 규칙(프론트엔드 §4), 디자인 검수 차이 수정 책임 |
 | 테스트 부팅 지원 | 테스트 렌더 헬퍼(테마·QueryClient Provider), MSW 핸들러 기반 (§4.3-a) |
 | 확장 스킬 | `component-patterns` (수정본, §11.8) |
@@ -782,7 +784,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | `skills/component-patterns` | 수정: Zustand 항목 삭제, 폴더 구조를 프론트엔드 §3에 맞춤, 디자인 토큰·복사 방지·RSC/클라이언트 경계 규칙 추가 |
 | `skills/api-security-checklist` | 수정: bcrypt·비밀번호 정책 → GitHub OAuth 허용 목록, Zod → class-validator, CORS 섹션은 "동일 오리진이라 CORS 미사용" 원칙으로, `/internal/` 차단·MCP 토큰·SSRF 금지(03) 추가 |
 | (신규) `skills/codex-review` | 로컬 Codex 검수 실행(`scripts/codex-review.sh`)과 대응 기록 작성 절차 |
-| `.claude/CLAUDE.md` | 재작성: 프로젝트 개요, 문서 지도(단일 기준 문서 목록), 역할·쓰기 범위 요약, 승인 관문, 금지 사항. `_workspace/` 산출물 목록 삭제 |
+| `CLAUDE.md` (루트, v0.8에서 `.claude/`에서 이동) | 재작성: 프로젝트 개요, 문서 지도(단일 기준 문서 목록), 역할·쓰기 범위 요약, 승인 관문, 금지 사항. `_workspace/` 산출물 목록 삭제 |
 | `.claude/settings.json` | 소유권 훅(PreToolUse), 허용 명령(pnpm, git, docker compose 등) |
 | (신규) 루트 `AGENTS.md` | Codex 검수 지침: 검수 관점(버그·보안·설계 준수·회귀), 참조할 기획 문서, 출력 형식(심각도·근거·권고·판정), 코드 수정 금지 |
 
@@ -794,7 +796,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 |---|---|---|
 | P0 | 지금 | 이 문서 작성 → Codex 로컬 검수(수동) → 반영 → 개발자 승인 |
 | P1 | M0 첫 작업 (오케스트레이터 + 개발자) | git 저장소·**공개** GitHub 저장소, Secret scanning·Push protection, `main` → `dev` 생성 및 기본 브랜치 변경, 브랜치 보호, 이슈 라벨·템플릿, `.claude/` 개편(§11), `AGENTS.md`, 소유권 훅, PR 템플릿, `scripts/codex-review.sh`. (저장소가 아직 없으므로 이 단계만 `dev` 직접 커밋을 허용하고, 끝나면 브랜치 보호를 켠다) |
-| P2 | M0 나머지 (DevOps Agent) | 모노레포·CI 셋업(`ownership-check` 포함). **작은 작업 하나로 전체 흐름(이슈 → `dev`에서 브랜치 → 자체 검사 → Codex 최종 검수 @ SHA → push → CI → PR 생성 링크 전달 → 개발자 PR 생성·Merge → 이슈 종료)을 처음 시험**한다. 시험 항목: push 시 CI 실행, 검수 후 코드 커밋 시 재검수 요구, PR 생성 링크의 제목·본문·`Closes #n` 동작, 범위 밖 파일 변경 시 CI 실패 |
+| P2 | M0 나머지 (DevOps Agent) | 모노레포·CI 셋업(`ownership-check` 포함). **작은 작업 하나로 전체 흐름(이슈 → `dev`에서 브랜치 → 자체 검사 → Codex 최종 검수 @ SHA → push → CI → head SHA 보고 → 개발자 PR 생성·Merge → 이슈 종료)을 처음 시험**한다. 시험 항목: push 시 CI 실행, 검수 후 코드 커밋 시 재검수 요구, `Closes #n`으로 이슈 자동 종료, 범위 밖 파일 변경 시 CI 실패 |
 | P3 | M0 종료 시 | 시험 결과로 이 문서와 스킬 보정 (G2) |
 | P4 | M1~ | 정식 운영. 마일스톤마다 report에 "협업 체계 개선점" 항목 기록 |
 
@@ -806,7 +808,7 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 |---|---|
 | 에이전트가 쓰기 범위를 넘음 | PreToolUse 훅 차단 + CI 경고 + Codex 검수 |
 | 테스트를 구현에 맞춰 약화 | 테스트 파일 소유권(Test Agent), 구현 에이전트 수정 차단 |
-| 공유 계약 충돌 (스키마·OpenAPI) | 계약 우선 원칙, 계약 작업 직렬화, `api-types` 생성물화 |
+| 공유 계약 충돌 (스키마·OpenAPI) | 계약 우선 원칙, 계약 작업 직렬화, 프론트엔드 API 타입 생성물화 |
 | Codex 검수 비용·시간 | 로컬 자체 검사(CI와 같은 검사) 통과 후에만 실행, 기획 변경·작업 단위로만 |
 | 검수·에러 수정 무한 반복 | 모든 루프 3회 상한, 초과 시 개발자 승인 (C9) |
 | 개발자 계정으로 PR을 만들어 GitHub 승인 리뷰를 쓸 수 없음 | G4를 명시적 지시로 받음 (§5.4-a). 필요 시 에이전트 전용 계정·GitHub App 도입 |
@@ -836,3 +838,4 @@ CI 검사 SHA는 head SHA와 **값이 다른 것이 정상**이다. 그래서 �
 | v0.7.2 | 2026-11-21 | Codex 검수 r2 반영: 기획 검수 결과 파일을 검수 기록 예외에 포함(작업 ID 기준), rebase 재검수 생략을 push 허용 조건의 명시적 예외로(SHA·근거 기록), 구성도·체크리스트 판정 표기 통일 |
 | v0.7.3 | 2026-11-21 | Codex 검수 r3 반영: PR 단위 공통 허용 경로에 작업 ID의 기획 검수 결과 포함(§5.2, roles.json `pr_common_allow`), §6.1의 삭제된 ② 단계 설명 제거 |
 | v0.7.4 | 2026-11-21 | Codex 검수 r4 반영(개발자 승인 추가 수정): 공통 허용 경로를 작업 ID 경계를 정확히 검사하는 정규식으로 변경, 판정 스크립트·자체 테스트 추가 |
+| v0.8 | 2026-11-21 | 저장소 구조 변경(개요 D25), 계약 생성물의 PR 단위 허용 규칙(`pr_contract_generated`, §5.2): `apps/web`·`apps/api`·`packages/*` → `frontend/`·`backend/`, 공용 패키지 없음. 소유권 표·계약 규칙(`backend/openapi.json` + `frontend/src/generated/**`)·테스트 경로 갱신. PR 생성 링크 전달 중단(C17·§4.2·§5.6·G4, 개발자 지시) |

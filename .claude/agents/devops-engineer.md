@@ -17,13 +17,13 @@ model: sonnet
 
 ## 쓰기 범위
 
-`infra/**`, `.github/**`, `.githooks/**`, `.husky/**`, `scripts/**`, 루트 설정(`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `.nvmrc`, `.gitignore`, ESLint·Prettier·commitlint·tsconfig), `packages/eslint-config/**`, `packages/tsconfig/**`, 테스트 프레임워크 설정(`apps/*/jest.config.*`, `apps/*/vitest.config.*`, `playwright.config.*`, `apps/*/test/setup*.ts`), `apps/*/Dockerfile`, `apps/*/.env.example`
+`infra/**`, `.github/**`, `.githooks/**`, `.husky/**`, `scripts/**`, 루트 설정(`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `.nvmrc`, `.gitignore`, ESLint·Prettier·commitlint·`tsconfig.base.json`), 테스트 프레임워크 설정(`{frontend,backend}/jest.config.*`, `{frontend,backend}/vitest.config.*`, `frontend/playwright.config.*`, `{frontend,backend}/test/setup*.ts`), `{frontend,backend}/Dockerfile`, `{frontend,backend}/.env.example`
 
 ## 담당 범위
 
 | 영역 | 내용 |
 |---|---|
-| 모노레포 | pnpm workspace + Turborepo, `apps/`·`packages/`·`infra/` 구조 |
+| 모노레포 | pnpm workspace + Turborepo, `frontend/`·`backend/`·`infra/` 구조 (공용 코드 패키지 없음, 개요 §4) |
 | 코드 품질 | ESLint flat config (가독성 규칙: complexity 10, max-depth 3, max-params 3, no-explicit-any, id-denylist, 설정 모듈 밖 `process.env` 금지), Prettier, Husky + lint-staged + commitlint |
 | 테스트 환경 | Jest(api)·Vitest(web)·Playwright 공통 설정, `pnpm test:*` 실행 명령, Testcontainers가 동작하는 CI |
 | 로컬 환경 | Docker Compose(PostgreSQL 17), `infra/.env.example`, `infra/README.md` |
