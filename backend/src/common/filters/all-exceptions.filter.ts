@@ -23,7 +23,13 @@ interface ErrorBody {
 
 function resolveCode(exception: HttpException): string {
   if (exception instanceof AppException) return exception.code;
-  return HttpStatus[exception.getStatus()] ?? 'ERROR';
+  const status = exception.getStatus();
+  if (status === HttpStatus.INTERNAL_SERVER_ERROR) return INTERNAL_ERROR_CODE;
+  return HttpStatus[status] ?? 'ERROR';
+}
+
+function isServerError(status: number): boolean {
+  return status >= HttpStatus.INTERNAL_SERVER_ERROR;
 }
 
 function requestPath(request: Request): string {
@@ -45,9 +51,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private buildBody(exception: unknown, path: string): ErrorBody {
     const timestamp = new Date().toISOString();
-    if (exception instanceof HttpException) {
+    if (exception instanceof HttpException && !isServerError(exception.getStatus())) {
+      const statusCode = exception.getStatus();
       return {
-        statusCode: exception.getStatus(),
+        statusCode,
         code: resolveCode(exception),
         message: exception.message,
         path,
@@ -55,10 +62,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
+    // 5xx는 예외 종류와 관계없이 내부 사정을 응답에 싣지 않고 서버 로그에만 남긴다.
     this.logger.error({ err: exception }, 'Unhandled exception');
+    const isHttp = exception instanceof HttpException;
     return {
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      code: INTERNAL_ERROR_CODE,
+      statusCode: isHttp ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR,
+      code: isHttp ? resolveCode(exception) : INTERNAL_ERROR_CODE,
       message: INTERNAL_ERROR_MESSAGE,
       path,
       timestamp,

@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppModule, type AppModuleOptions } from './app.module';
+import { requestIdMiddleware } from './common/logging/logger.options';
 import { createValidationFailedException } from './common/errors/validation-failed';
 import { type AppEnv, validateEnv } from './config/env.validation';
 
@@ -18,6 +19,7 @@ function setupSwagger(app: INestApplication): void {
 }
 
 function applyHttpSettings(app: INestApplication, env: AppEnv): void {
+  app.use(requestIdMiddleware);
   app.use(helmet());
   app.setGlobalPrefix(GLOBAL_PREFIX);
   app.useGlobalPipes(
