@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# 로컬 git 훅. 설치: git config core.hooksPath .githooks
-# M0에서 Husky를 도입하면 Husky의 pre-commit이 같은 스크립트를 호출하도록 옮긴다.
-set -euo pipefail
-"$(git rev-parse --show-toplevel)/scripts/hooks/check-secrets.sh"

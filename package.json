@@ -1,0 +1,44 @@
+{
+  "name": "jblog",
+  "private": true,
+  "description": "jblog 모노레포 루트 (개요 §4)",
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run //#lint:root lint",
+    "lint:root": "eslint .",
+    "typecheck:root": "tsc -p tsconfig.json",
+    "test:root": "node --test \"scripts/eslint/*.test.mjs\"",
+    "typecheck": "turbo run //#typecheck:root typecheck",
+    "test": "turbo run //#test:root test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,yaml,yml,css}": "prettier --write"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.2",
+    "eslint": "10.15.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.14.0",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.1",
+    "prettier": "3.10.1",
+    "turbo": "2.11.13",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0"
+  }
+}
