@@ -46,3 +46,10 @@
 - 프로세스 값은 인자 객체로만 넘긴다(실제 `process.env` 미사용)
 - 실패 확인: 신규 9건 실패, 기존 19건 통과. 원인은 `TypeError: (0 , env_source_1.mergeEnvSources) is not a function`(`readEnvFile`도 동일) 즉 두 함수가 아직 내보내지지 않아서이며 테스트 오류가 아님
 - backend-dev 참고: 따옴표 제거·주석 처리는 `node:util` `parseEnv`의 동작에 기대고 있다
+
+### ② 수정 (backend-dev)
+
+- 변경 요약: `backend/src/config/env.source.ts`에 `readEnvFile`(없으면 `{}`, `node:util` `parseEnv`)·`mergeEnvSources`(프로세스 우선, `undefined`면 파일 값 유지, 입력 불변)를 추가하고 `readProcessEnv()`가 `backend/.env`와 `process.env`를 병합한다. `ConfigModule`의 `ignoreEnvFile: true`는 그대로, `createApp(rawEnv)` 계약 변경 없음
+- 경로 기준: **모듈 위치**(`__dirname/../../.env`). 작업 폴더 기준이면 루트에서 `node backend/dist/main.js`로 실행할 때 다른 파일을 찾는다. `src/config`와 `dist/config`는 깊이가 같아 `nest start`·빌드 결과 모두 `backend/.env`를 가리키고, 패키지 폴더에서 실행하는 pnpm·turbo 경우도 같다
+- 출력: ENOENT는 조용히 `{}`, 그 밖의 읽기 오류는 경로·오류 코드(cause)만 남긴 일반 메시지로 바꿔 던진다
+- 검사: backend test 28건, test:e2e, build, 루트 lint·format:check·typecheck·test 결과는 아래 커밋 기준 통과(`.env`는 만들지 않음)
