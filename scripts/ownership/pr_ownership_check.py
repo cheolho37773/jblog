@@ -352,13 +352,14 @@ def _collect_changes(merge_base: str, head: str) -> list[tuple[str, str]]:
 def _collect_commits(merge_base: str, head: str) -> list[list[tuple[str, str]]]:
     """커밋별 변경 (R3 커밋별 이력).
 
-    --first-parent: 브랜치에 dev를 merge한 경우 dev 쪽 커밋(다른 작업의 검수 결과 추가 등)을 이 PR의
-    이력으로 오인하지 않는다.
+    범위: <merge-base>..<head>의 **모든** 커밋. 보조 브랜치에서 보호 파일을 고친 뒤 merge하면 그 커밋은
+    첫 부모 이력에 없고 merge 결과가 한 부모와 같아 --cc에도 안 나온다. 그래서 --first-parent를 쓰지 않는다
+    (Codex r1). 브랜치에 dev를 merge해 들어온 dev 커밋은 merge-base(= base 쪽)의 조상이라 이 범위에 들지 않는다.
     --cc: merge 커밋은 기본 diff-tree가 아무것도 출력하지 않는다. --cc는 모든 부모와 다른 경로, 즉 merge
     결과에서 직접 고친 경로(evil merge)만 보여 준다(④ 결정 1). 상태는 부모별 글자('MA' 등)이고 첫 글자가
     첫 번째 부모(이 브랜치) 대비 상태라 그대로 쓴다. 일반 커밋에서는 --cc가 보통 diff와 같다.
     """
-    revisions = _git("rev-list", "--reverse", "--first-parent", f"{merge_base}..{head}").split()
+    revisions = _git("rev-list", "--reverse", f"{merge_base}..{head}").split()
     return [
         _parse_name_status(
             _git("diff-tree", "--cc", "--no-commit-id", "-r", "-z", "--name-status", "--no-renames", revision)
