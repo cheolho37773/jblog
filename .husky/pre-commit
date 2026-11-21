@@ -1,0 +1,2 @@
+scripts/hooks/check-secrets.sh
+pnpm exec lint-staged

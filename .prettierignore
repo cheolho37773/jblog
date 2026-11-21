@@ -1,0 +1,17 @@
+# Markdown과 docs/는 대상이 아니다: 한글 표가 재배치되고,
+# 보호 파일(docs/reviews/**/*.codex.md, docs/plan/feedback/**)이 바뀌면 안 된다.
+*.md
+docs/
+pnpm-lock.yaml
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+# 규칙 위반을 일부러 담은 시험용 샘플
+packages/eslint-config/test/fixtures/
+# 에이전트 설정은 오케스트레이터가 관리한다
+.claude/
+# 이 작업의 범위 밖 파일(소유권 규칙, GitHub 템플릿)은 기존 서식을 유지한다
+scripts/ownership/roles.json
+.github/
