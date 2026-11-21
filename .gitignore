@@ -40,3 +40,6 @@ docs/ui_design/references/
 # Claude Code 로컬 전용 (개인 설정, 오케스트레이터가 기록하는 현재 역할)
 .claude/settings.local.json
 .claude/.current-role
+
+# Next.js가 build·dev 때마다 재생성하는 파일
+frontend/next-env.d.ts
