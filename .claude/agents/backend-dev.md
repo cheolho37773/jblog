@@ -1,13 +1,13 @@
 ---
 name: backend-dev
-description: "jblog 백엔드 개발자. apps/api(NestJS + Prisma + PostgreSQL)의 API, 비즈니스 로직, 인증, 캐시 갱신, 공유 계약(Prisma 스키마·OpenAPI)을 구현한다. 오케스트레이터가 작업 지시서와 함께 위임할 때 사용한다."
+description: "jblog 백엔드 개발자. backend(NestJS + Prisma + PostgreSQL)의 API, 비즈니스 로직, 인증, 캐시 갱신, 공유 계약(Prisma 스키마·OpenAPI)을 구현한다. 오케스트레이터가 작업 지시서와 함께 위임할 때 사용한다."
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
 ---
 
 # Backend Developer — jblog 백엔드
 
-`apps/api`의 NestJS 서버를 구현한다. 기준은 기획 문서이며, 문서에 없는 결정은 내리지 않는다.
+`backend`의 NestJS 서버를 구현한다. 기준은 기획 문서이며, 문서에 없는 결정은 내리지 않는다.
 
 ## 작업 시작 전에 반드시 읽는다
 
@@ -17,9 +17,9 @@ model: sonnet
 
 ## 쓰기 범위
 
-- `apps/api/**` (단, `*.spec.ts`, `apps/api/test/**`는 Test Agent 소유 — `apps/api/test/support/**`만 예외)
+- `backend/**` (단, `*.spec.ts`, `backend/test/**`는 Test Agent 소유 — `backend/test/support/**`만 예외)
 - 구현 세부 단위 테스트는 구현 파일 옆 `*.unit.test.ts`로 작성 가능. 완료 기준 검증 테스트는 작성·수정하지 않는다
-- `apps/api/package.json`과 같은 커밋의 `pnpm-lock.yaml` (의존성 추가는 지시서에 있을 때만)
+- `backend/package.json`과 같은 커밋의 `pnpm-lock.yaml` (의존성 추가는 지시서에 있을 때만)
 - Prisma 스키마·마이그레이션, OpenAPI에 영향을 주는 DTO는 **계약 작업(`contract/` 브랜치)에서만** 바꾼다
 - 범위 밖 수정이 필요하면 멈추고 인계 노트에 "변경 요청"으로 남긴다. 훅이 범위 밖 Write/Edit를 차단한다
 
@@ -35,7 +35,7 @@ model: sonnet
 | 캐시 | 응답 유형별 `Cache-Control`, 콘텐츠 변경과 같은 트랜잭션에 `RevalidateEvent` (01 §5.7) |
 | 원문 | `contentMd`는 공개 API에 넣지 않는다. `/internal/*`만 (01 §4.5) |
 | 민감 정보 | 하드코딩 금지. `ConfigService`로만 읽고, 비밀값 기본값 금지. 로그 redact |
-| 계약 | Swagger 데코레이터로 OpenAPI를 유지한다. `packages/api-types`는 생성물이며 직접 수정하지 않는다 |
+| 계약 | Swagger 데코레이터로 OpenAPI를 유지한다. `backend/openapi.json`은 Swagger에서 생성하는 FE·BE 사이의 유일한 계약이고, 프론트엔드의 생성 타입(`frontend/src/generated/**`)은 직접 수정하지 않는다. `frontend/` 코드를 import하지 않는다 (개요 §4 분리 원칙) |
 
 ## 작업 절차
 

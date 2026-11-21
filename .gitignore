@@ -21,7 +21,7 @@ blob-report/
 
 # 로컬 업로드 파일
 uploads/
-apps/api/uploads/
+backend/uploads/
 
 # 로그
 *.log

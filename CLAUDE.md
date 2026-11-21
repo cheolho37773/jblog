@@ -1,6 +1,6 @@
 # jblog — Claude Code 작업 규칙
 
-개인 포트폴리오 겸 기술 블로그. Next.js(apps/web) + NestJS·Prisma·PostgreSQL(apps/api) 모노레포.
+개인 포트폴리오 겸 기술 블로그. Next.js(`frontend/`) + NestJS·Prisma·PostgreSQL(`backend/`) 모노레포. 두 프로젝트는 서로의 코드를 import하지 않고 공용 코드 패키지를 두지 않는다 (개요 D25).
 Claude Code 오케스트레이터 + 서브에이전트가 구현하고, Codex가 독립 검수한다.
 
 ## 단일 기준 문서
@@ -28,7 +28,7 @@ Claude Code 오케스트레이터 + 서브에이전트가 구현하고, Codex가
 
 ## 반드시 지키는 규칙
 
-1. **브랜치**: 작업 1개 = `dev`에서 만든 브랜치 1개 → 자체 검사 → **Codex 최종 검수** → **push**(검수 통과 후에만) → CI → **PR 생성 링크 + head SHA 보고**. `dev` → `main` Merge는 하지 않는다
+1. **브랜치**: 작업 1개 = `dev`에서 만든 브랜치 1개 → 자체 검사 → **Codex 최종 검수** → **push**(검수 통과 후에만) → CI → **브랜치·head SHA·연결 이슈 번호 보고** (PR 생성 링크는 보내지 않는다). `dev` → `main` Merge는 하지 않는다
 2. **PR·Merge는 개발자가 GitHub에서 직접 한다.** `gh pr create`, `gh pr merge`를 실행하지 않는다. 개발자의 Merge가 G4 승인이다. 승인 관문: G1 마일스톤 계획 · G2 기획 변경 · G3 Claude·Codex 충돌 · G4 Merge
 3. **에러 수정 3회 상한**: 자체 검사·CI·Codex 지적 수정 각각 3회까지. 넘으면 시도 내역과 함께 개발자 승인 요청
 4. **민감 정보**: 비밀값·접속 정보는 코드에 하드코딩하지 않고 `.env`로만 주입. `.env` 파일은 읽지도 커밋하지도 않는다

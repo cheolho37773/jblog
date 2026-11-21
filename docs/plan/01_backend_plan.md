@@ -23,7 +23,7 @@
 ## 2. 프로젝트 구조
 
 ```
-apps/api/
+backend/
 ├── prisma/
 │   ├── schema.prisma
 │   ├── migrations/
@@ -749,7 +749,7 @@ COMMIT
 
 | 항목 | 기준 |
 |---|---|
-| 민감 정보 | 비밀값·접속 정보는 `apps/api/.env`로만 주입하고 코드에 하드코딩하지 않는다. `ConfigModule`의 스키마 검증으로 누락 시 부팅 실패, 비밀값 기본값 금지, `ConfigService` 밖에서 `process.env` 접근 금지. 상세: [개요 §6-b](./00_overview.md#6-b-민감-정보-관리-규칙-필수) |
+| 민감 정보 | 비밀값·접속 정보는 `backend/.env`로만 주입하고 코드에 하드코딩하지 않는다. `ConfigModule`의 스키마 검증으로 누락 시 부팅 실패, 비밀값 기본값 금지, `ConfigService` 밖에서 `process.env` 접근 금지. 상세: [개요 §6-b](./00_overview.md#6-b-민감-정보-관리-규칙-필수) |
 | 보안 | helmet, ValidationPipe(`whitelist`, `forbidNonWhitelisted`, `transform`), Prisma 파라미터 바인딩, 업로드 매직바이트 검사, 에러 응답에 스택 미노출, `.env` 미커밋. 상세는 `api-security-checklist` 스킬 기준으로 점검한다 |
 | 성능 | 공개 목록 API p95 < 100ms (로컬 기준). 목록 쿼리는 `select`로 `contentMd`를 제외한다 |
 | 캐시 | 응답 유형별 정책과 무효화 규칙은 §5.7. 방문자별·관리자·내부 응답은 공유 캐시에서 제외 |
@@ -769,7 +769,7 @@ COMMIT
 | 캐시/outbox | Jest + Testcontainers | 콘텐츠 변경과 `RevalidateEvent`가 같은 트랜잭션(롤백 시 이벤트 없음), 작업자 재시작 후 `PENDING` 이어서 처리, 실패 시 재시도 일정·5회 후 `FAILED`, 예약 cron의 `JobState`·이벤트 동시 커밋, 이벤트별 태그 표(태그·기술스택·프로젝트 slug 변경 포함), 응답 유형별 `Cache-Control` 헤더 스냅샷 |
 | 인증 | Jest + Supertest | "모든 기기 로그아웃" 직후 기존 access 토큰으로 `/api/admin` 요청 시 401, refresh 동시 2건·응답 유실 재시도·유예 후 재사용 (§5.8) |
 | 동시 실행 | Jest + Testcontainers (실제 PostgreSQL, 병렬 요청) | §5.8 표의 필수 동시 실행 시나리오 전부 |
-| 계약 | OpenAPI 스냅샷 | CI에서 `openapi.json`을 생성해 diff를 확인하고, `packages/api-types`를 재생성한다 |
+| 계약 | OpenAPI 스냅샷 | CI에서 `backend/openapi.json`을 생성해 커밋된 파일과 diff를 확인하고, 프론트엔드 생성 타입(`frontend/src/generated/**`)도 재생성해 diff를 확인한다 |
 
 커버리지 목표: Service 레이어 80% 이상.
 

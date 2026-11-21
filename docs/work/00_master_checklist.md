@@ -85,7 +85,7 @@
 - [x] M0-01 `codex-review.sh` 보완: `--plan` 회차 날짜 무관 증가, Codex 실행 시간 제한, 실제 Codex 실행 파일 사용 (Issue #2) — #2 (2026-11-21)
 
 **모노레포·도구** (DevOps)
-- [ ] pnpm workspace + Turborepo, `apps/`·`packages/`·`infra/` 구조
+- [ ] pnpm workspace + Turborepo, `frontend/`·`backend/`·`infra/` 구조 (공용 코드 패키지 없음, 개요 D25)
 - [ ] ESLint(flat) + Prettier + 가독성 규칙(complexity 10, max-depth 3, max-params 3, no-explicit-any 등) + 설정 모듈 밖 `process.env` 금지 규칙
 - [ ] Husky + lint-staged + commitlint (Conventional Commits)
 - [ ] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md`
@@ -97,18 +97,18 @@
 **백엔드 기반**
 - [ ] BE-01 Nest 프로젝트, config(스키마 검증)/logging(pino redact)/helmet/ValidationPipe/Swagger(운영 비활성)/에러 필터
 - [ ] BE-02 Prisma 스키마, 마이그레이션, `pg_trgm`·부분 unique 인덱스 수동 SQL, seed(더미 데이터)
-- [ ] `apps/api/.env.example`
+- [ ] `backend/.env.example`
 
 **프론트엔드 기반**
 - [ ] FE-01 Next.js 앱, Tailwind v4, 폰트, next-themes, `lib/env.ts`, api-types 연동
-- [ ] `apps/web/.env.example`
-- [ ] M0-07 api-types 파이프라인 (Swagger → `openapi.json` → `packages/api-types`)
+- [ ] `frontend/.env.example`
+- [ ] M0-07 API 타입 파이프라인 (Swagger → `backend/openapi.json` → `frontend/src/generated/api-types.ts`)
 - [ ] Next.js 버전 고정 + `revalidateTag` 시그니처·즉시 만료 옵션 확인 (개요 Q5)
 
 **협업 흐름 시험** (협업 §12 P2)
-- [ ] 이슈 → `dev`에서 브랜치 → 자체 검사 → Codex 최종 검수 @ SHA → push → CI → PR 생성 링크 전달 → 개발자 PR 생성·Merge → 이슈 자동 종료
+- [ ] 이슈 → `dev`에서 브랜치 → 자체 검사 → Codex 최종 검수 @ SHA → push → CI → head SHA 보고 → 개발자 PR 생성·Merge → 이슈 자동 종료
 - [ ] push 이벤트로 CI가 실행되는지
-- [ ] PR 생성 링크의 제목·본문·`Closes #n`이 채워지고 Merge 시 이슈가 닫히는지
+- [x] PR 본문의 `Closes #n`으로 Merge 시 이슈가 닫히는지 — #2 (2026-11-21, PR #5)
 - [ ] 검수 후 코드 커밋(CI 실패 수정 포함) 시 재검수 후 push되는지
 - [ ] 범위 밖 파일 변경 시 CI `ownership-check`가 실패하는지
 - [ ] CI 요약에 head·base·검사 SHA가 나오는지
@@ -140,7 +140,7 @@
 - [ ] BE-04a / SEC-05 내부 API `/internal/posts/:slug`·`/internal/projects/:slug`(메타+원문 단일 응답, 스냅샷 조회) + `InternalKeyGuard`, 응답 유형별 `Cache-Control`
 
 **프론트엔드**
-- [ ] FE-04 `packages/markdown` 파이프라인 + `.prose-jblog` + 한글 본문 폰트(Noto Serif KR)
+- [ ] FE-04 `frontend/src/lib/markdown` 파이프라인 + `.prose-jblog` + 한글 본문 폰트(Noto Serif KR)
 - [ ] FE-05 Blog 목록/상세/검색, 태그 필터, PostCard 3종, LoadMore, TOC, slug 301 처리, SEO(메타/OG/JSON-LD)
 - [ ] FE-05a / SEC-06 복사 방지(CopyGuard, 입력 요소·연락처 예외, 코드 복사 버튼, 인쇄 차단, 링크 복사)
 - [ ] Home의 블로그 섹션 (Featured 조건부, Latest Post)
@@ -278,7 +278,7 @@
 - [ ] Codex 최종 검수 @ head SHA → push 허용 조건(협업 §6.4-a) 충족, 대응 기록 작성 (push 전)
 - [ ] 브랜치 push → CI 통과 (실패 시 수정 → 재검수 → 재push)
 - [ ] 필수 검증 항목 전부 "완료" (실패·보류 따로 보고)
-- [ ] 개발자에게 PR 생성 링크 + head SHA 전달
+- [ ] 개발자에게 브랜치·head SHA·연결 이슈 번호 보고
 - [ ] (개발자) PR 생성 → PR CI 확인 → 최신 커밋 = 보고 SHA 확인 → Squash and merge
 - [ ] 이슈 자동 종료 확인 → worktree·로컬 브랜치 정리
 ```

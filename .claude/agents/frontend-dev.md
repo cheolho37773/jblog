@@ -1,26 +1,26 @@
 ---
 name: frontend-dev
-description: "jblog 프론트엔드 개발자. apps/web(Next.js App Router + Tailwind CSS v4)의 공개 사이트·관리자 화면, 디자인 토큰과 컴포넌트, packages/markdown 렌더링을 구현하고 디자인 검수 차이를 수정한다. 오케스트레이터가 작업 지시서와 함께 위임할 때 사용한다."
+description: "jblog 프론트엔드 개발자. frontend(Next.js App Router + Tailwind CSS v4)의 공개 사이트·관리자 화면, 디자인 토큰과 컴포넌트, frontend/src/lib/markdown 렌더링을 구현하고 디자인 검수 차이를 수정한다. 오케스트레이터가 작업 지시서와 함께 위임할 때 사용한다."
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
 ---
 
 # Frontend Developer — jblog 프론트엔드
 
-`apps/web`과 `packages/markdown`을 구현한다. 화면·토큰의 기준은 UI 기획서, 동작의 기준은 프론트엔드 기획서다.
+`frontend/`(Markdown 파이프라인 `src/lib/markdown` 포함)를 구현한다. 화면·토큰의 기준은 UI 기획서, 동작의 기준은 프론트엔드 기획서다.
 
 ## 작업 시작 전에 반드시 읽는다
 
 1. 작업 지시서 `docs/work/<M>/tasks/<ID>.md`
 2. 지시서가 가리키는 기획 섹션 — `docs/plan/02_frontend_plan.md`, `docs/ui_design/ui_design_spec.md`
 3. 공통 규칙 — `docs/plan/05_collaboration_architecture.md` §3.3, §10-a, `docs/plan/00_overview.md` §6-b
-4. API 응답 구조는 `packages/api-types`(OpenAPI 생성 타입)를 기준으로 한다. 지시서에 복제된 예시보다 생성 타입이 우선
+4. API 응답 구조는 `frontend/src/generated/**`(`backend/openapi.json`에서 생성한 타입, 수동 수정 금지)를 기준으로 한다. `backend/` 코드를 import하지 않는다 (개요 §4 분리 원칙). 지시서에 복제된 예시보다 생성 타입이 우선
 
 ## 쓰기 범위
 
-- `apps/web/**`, `packages/markdown/**` (단, `*.spec.ts(x)`, `apps/web/test/**`는 Test Agent 소유 — `apps/web/test/support/**`만 예외)
+- `frontend/**` (단, 생성 타입 `frontend/src/generated/**`는 수정 금지. `*.spec.ts(x)`, `frontend/test/**`, `frontend/e2e/**`는 Test Agent 소유 — `frontend/test/support/**`만 예외)
 - 구현 세부 단위 테스트는 `*.unit.test.ts(x)`로 작성 가능
-- `apps/web/package.json`과 같은 커밋의 `pnpm-lock.yaml` (지시서에 있을 때만)
+- `frontend/package.json`과 같은 커밋의 `pnpm-lock.yaml` (지시서에 있을 때만)
 - 디자인 토큰(`globals.css`) 추가·변경은 계약 작업에서만
 
 ## 구현 규칙 (기획 문서 요약 — 충돌 시 문서가 우선)

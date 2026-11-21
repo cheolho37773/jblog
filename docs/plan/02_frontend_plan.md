@@ -29,8 +29,8 @@
 | 관리자 UI | shadcn/ui (Button, Input, Dialog, Table, Select, Toast(sonner), Tabs, DropdownMenu) | 관리자 전용. 공개 사이트는 디자인 기획서 기반 자체 컴포넌트 |
 | 서버 상태 | TanStack Query (관리자, 좋아요/조회수 클라이언트 부분) | 공개 페이지 데이터는 RSC `fetch` |
 | 폼 | React Hook Form + Zod (+ `@hookform/resolvers`) | |
-| API 타입 | `openapi-typescript` + `openapi-fetch` | `packages/api-types`. 타입 안전한 fetch 클라이언트 |
-| Markdown | `unified`, `remark-parse`, `remark-gfm`, `remark-rehype`, `rehype-slug`, `rehype-autolink-headings`, `@shikijs/rehype`(듀얼 테마), `rehype-sanitize`, `rehype-react` | `packages/markdown` 공용 패키지 |
+| API 타입 | `openapi-typescript` + `openapi-fetch` | `backend/openapi.json`에서 생성한 `frontend/src/generated/api-types.ts` (수동 수정 금지). 타입 안전한 fetch 클라이언트 |
+| Markdown | `unified`, `remark-parse`, `remark-gfm`, `remark-rehype`, `rehype-slug`, `rehype-autolink-headings`, `@shikijs/rehype`(듀얼 테마), `rehype-sanitize`, `rehype-react` | `frontend/src/lib/markdown` (공개 페이지·에디터 프리뷰가 함께 쓰는 프론트엔드 내부 모듈) |
 | 에디터 | `@uiw/react-codemirror` + `@codemirror/lang-markdown` | |
 | 날짜 | `date-fns` (+ `ko` locale) | |
 | 테스트 | Vitest, @testing-library/react, MSW(API 모킹), Playwright | |
@@ -40,7 +40,7 @@
 ## 3. 디렉터리 구조
 
 ```
-apps/web/
+frontend/src/                         # frontend/ 루트에는 public/, e2e/, package.json, next.config.ts 등
 ├── app/
 │   ├── (site)/                       # 공개 사이트 레이아웃 그룹 (Navbar + Footer)
 │   │   ├── layout.tsx
@@ -86,10 +86,14 @@ apps/web/
 │   │   ├── server.ts                 # RSC용: API_INTERNAL_URL + next: { tags } (+ /internal/* 원문 조회 시 X-Internal-Key)
 │   │   └── client.ts                 # 브라우저용: /api + credentials + X-Requested-With 헤더 + 401 시 refresh 재시도
 │   ├── queries/                      # TanStack Query 훅 (useAdminPosts, useLike ...)
+│   ├── markdown/                     # remark/rehype 파이프라인 (§5.3)
 │   ├── seo.ts                        # generateMetadata 헬퍼
+│   ├── env.ts                        # 환경변수 스키마 검증, process.env를 읽는 유일한 곳 (개요 §6-b)
 │   └── format.ts                     # 날짜, 읽는시간
-├── middleware.ts                     # /admin/** 진입 시 jb_at JWT 검증(jose), 실패 시 /admin/login?next=
-└── next.config.ts                    # rewrites(/api → localhost:4000, dev), images.remotePatterns
+├── generated/                        # api-types.ts (backend/openapi.json에서 생성, 수동 수정 금지)
+└── middleware.ts                     # /admin/** 진입 시 jb_at JWT 검증(jose), 실패 시 /admin/login?next=
+
+# frontend/next.config.ts: rewrites(/api → localhost:4000, dev), images.remotePatterns
 ```
 
 ---
@@ -226,7 +230,7 @@ UI 기획서 §3.3 시맨틱 토큰을 CSS 변수로 정의하고, Tailwind `@th
 | `Toc` | UI §7.3 | Client | `headings[]` (IntersectionObserver로 현재 섹션 하이라이트) |
 | `LoadMoreGrid` | UI §7.2 | Client | `initial`, `query` |
 
-### 5.3 Markdown 렌더링 (`packages/markdown`)
+### 5.3 Markdown 렌더링 (`frontend/src/lib/markdown`)
 
 ```
 contentMd
@@ -416,7 +420,7 @@ lib/api/client.ts: 모든 요청 credentials:'include', 'X-Requested-With: jblog
 | OG 이미지 | `opengraph-image.tsx` (`next/og`): 글 제목 + 카테고리 + 사이트 로고, 디자인 토큰 색상 |
 | 구조화 데이터 | `Person`(About), `BlogPosting`(상세), `BreadcrumbList` |
 | 사이트맵/RSS | `sitemap.ts`(글, 프로젝트), `/feed.xml` (최근 20개, 전문 대신 요약) |
-| 민감 정보 | 비밀값(`REVALIDATE_SECRET`, `INTERNAL_API_KEY`, `JWT_ACCESS_SECRET`)은 `apps/web/.env.local`로만 주입하고 하드코딩하지 않는다. 환경변수는 `lib/env.ts` 한 곳에서 스키마 검증 후 읽는다. **`NEXT_PUBLIC_` 변수에는 비밀값을 넣지 않는다** (브라우저 번들에 포함됨). 비밀값은 서버 컴포넌트·Route Handler·middleware에서만 사용. 상세: [개요 §6-b](./00_overview.md#6-b-민감-정보-관리-규칙-필수) |
+| 민감 정보 | 비밀값(`REVALIDATE_SECRET`, `INTERNAL_API_KEY`, `JWT_ACCESS_SECRET`)은 `frontend/.env.local`로만 주입하고 하드코딩하지 않는다. 환경변수는 `frontend/src/lib/env.ts` 한 곳에서 스키마 검증 후 읽는다. **`NEXT_PUBLIC_` 변수에는 비밀값을 넣지 않는다** (브라우저 번들에 포함됨). 비밀값은 서버 컴포넌트·Route Handler·middleware에서만 사용. 상세: [개요 §6-b](./00_overview.md#6-b-민감-정보-관리-규칙-필수) |
 | 성능 목표 | Lighthouse(모바일) Performance ≥ 90, LCP < 2.5s, CLS < 0.1. Hero/커버 이미지는 `priority`, 폰트 `display: swap` + subset |
 | 번들 | 에디터, Shiki(클라이언트), Recharts는 `/admin`에서만 `dynamic import` |
 | 접근성 | UI 기획서 §9 준수. 키보드 내비게이션, 포커스 링, `aria-*`, 이미지 alt 필수(관리자 업로드 시 alt 입력 유도). axe 자동 검사(Playwright) |
@@ -456,7 +460,7 @@ next.config.ts images.remotePatterns: 자기 도메인 /uploads/** (또는 local
 | FE-01 | Next.js 앱 생성, Tailwind v4, ESLint/Prettier, 폰트, next-themes, api-types 연동 | M0 |
 | FE-02 | 디자인 토큰(globals.css), 타이포 유틸, Atom 컴포넌트, `/dev/components` 확인 페이지 | M1 |
 | FE-03 | Navbar(+모바일 메뉴, 검색, 토글), Footer, Container/Section, PageInfo | M1 |
-| FE-04 | `packages/markdown` 파이프라인 + `.prose-jblog` 스타일 | M2 |
+| FE-04 | `frontend/src/lib/markdown` 파이프라인 + `.prose-jblog` 스타일 | M2 |
 | FE-05 | Blog 목록/상세/검색, 태그 필터(`?tag=`), PostCard 3종, LoadMore, TOC, 원문 내부 API 연동, slug 301 처리, SEO(메타/OG/JSON-LD) | M2 |
 | FE-05a | 복사 방지: `.content-protected`, `CopyGuard`, 연락처 `.allow-select` 예외, 코드블록 복사 버튼, 인쇄 차단, 링크 복사 버튼 (SEC-06) | M2 |
 | FE-06 | Admin 인증: middleware(JWT 검증), GitHub 로그인 페이지, AdminShell, API 클라이언트(refresh 재시도), 보안 설정 화면 (SEC-03·04) | M3 |

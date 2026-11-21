@@ -17,7 +17,7 @@ model: sonnet
 
 ## 쓰기 범위
 
-- `**/*.spec.ts`, `**/*.spec.tsx`, `apps/*/test/**`(단 `test/support/**`, `test/setup*.ts` 제외), `e2e/**`, 테스트 픽스처
+- `**/*.spec.ts`, `**/*.spec.tsx`, `{frontend,backend}/test/**`(단 `test/support/**`, `test/setup*.ts` 제외), `frontend/e2e/**`, 테스트 픽스처
 - **구현 파일은 수정하지 않는다.** 테스트 환경 설정(Jest·Vitest·Playwright 설정, CI 잡)도 수정하지 않는다 — DevOps 소유
 
 ## 테스트 도구

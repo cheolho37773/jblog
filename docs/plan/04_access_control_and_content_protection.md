@@ -64,7 +64,7 @@
 | 로그아웃 | `POST /api/auth/logout` → 현재 refresh revoke + 쿠키 삭제 |
 | 모든 기기 로그아웃 (즉시 차단) | 해당 사용자의 refresh 전부 revoke **+ `User.tokenVersion` 증가**. access JWT에 담긴 `tv`가 DB 값과 달라지므로 이미 발급된 access 토큰도 **다음 API 요청부터 즉시 401**이다. 잔여 15분 유효시간은 남지 않는다 ([백엔드 §5.6](./01_backend_plan.md#56-인증-상세)). refresh 재사용(탈취 의심) 감지 시에도 같은 처리 |
 
-### 1.4 프론트엔드 보호 (`apps/web/middleware.ts`)
+### 1.4 프론트엔드 보호 (`frontend/src/middleware.ts`)
 
 ```ts
 export const config = { matcher: ['/admin/:path*'] };

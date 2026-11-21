@@ -1,6 +1,6 @@
 ---
 name: component-patterns
-description: "jblog 프론트엔드(apps/web) 컴포넌트 설계 규칙. 컴포넌트 분리, RSC/클라이언트 경계, 데이터 패칭과 캐시 태그, 디자인 토큰 사용, 복사 방지, 접근성 체크리스트를 다룬다. frontend-dev가 컴포넌트·페이지를 설계하거나 구현할 때 사용한다."
+description: "jblog 프론트엔드(frontend) 컴포넌트 설계 규칙. 컴포넌트 분리, RSC/클라이언트 경계, 데이터 패칭과 캐시 태그, 디자인 토큰 사용, 복사 방지, 접근성 체크리스트를 다룬다. frontend-dev가 컴포넌트·페이지를 설계하거나 구현할 때 사용한다."
 ---
 
 # Component Patterns — jblog 프론트엔드
@@ -10,7 +10,7 @@ description: "jblog 프론트엔드(apps/web) 컴포넌트 설계 규칙. 컴포
 ## 1. 폴더 구조 (프론트엔드 §3)
 
 ```
-apps/web/
+frontend/src/
 ├── app/(site)/        공개 사이트 (복사 방지 적용)
 ├── app/admin/         관리자 (CSR, TanStack Query)
 ├── app/internal/      web 내부 경로 (revalidate webhook)
