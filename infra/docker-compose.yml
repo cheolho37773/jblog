@@ -17,7 +17,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      # -h 127.0.0.1: 빈 볼륨 최초 기동 시 초기화용 임시 서버는 TCP를 열지 않는다.
+      # 소켓으로 확인하면 임시 서버를 healthy로 오판하므로 TCP로 정식 서버를 확인한다.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       # 기동 직후 초기화(initdb) 동안의 실패는 재시도 횟수에 세지 않는다.
       start_period: 10s
       # 5초마다 확인하면 `up --wait`가 빠르게 끝나고 부하는 무시할 수준이다.
