@@ -24,6 +24,13 @@
       "pnpm-lock.yaml": "같은 PR에서 package.json이 바뀐 경우만"
     }
   },
+  "pr_contract_generated": {
+    "$comment": "PR 단위 검사(CI ownership-check) 전용. 생성물은 어떤 역할도 손으로 고칠 수 없지만(역할 단위 deny), contract/ 브랜치 PR에서는 참여 역할과 무관하게 변경을 허용한다. 조건: 같은 CI에서 생성 결과 일치 검사(pnpm gen:api-types --check)가 통과해야 한다. contract/ 가 아닌 브랜치에서 이 경로가 바뀌면 실패 (협업 §5.2).",
+    "branch_prefix": "contract/",
+    "patterns": [
+      "frontend/src/generated/**"
+    ]
+  },
   "roles": {
     "orchestrator": {
       "allow": [

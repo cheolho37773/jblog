@@ -53,7 +53,7 @@
 | M0-05 | `pnpm --filter frontend build`·`test` 통과, `pnpm test:e2e`가 frontend를 띄워 스모크 1건 통과, Light/Dark 전환 골격 동작 | 필수 환경변수 누락 시 빌드 실패 / `NEXT_PUBLIC_`에 비밀값 없음 |
 | M0-06 | 마이그레이션 적용, seed 실행, `/api/health` DB ping 200 | 같은 slug 두 번 예약 시 DB 제약 위반 / 한 글에 `isCurrent=true` 2개 불가 / M7 관계(`McpToken`) 미포함 |
 | M0-07 | `pnpm gen:api-types` 실행 → `frontend/src/generated/api-types.ts` 생성, frontend에서 사용 후 typecheck 통과 / (로컬 임시 시험) DTO 필드 추가 시 생성 타입에 반영 | `pnpm gen:api-types --check`가 커밋된 결과와 다르면 실패 (M0-08 CI에서 사용) |
-| M0-08 | push·PR에서 CI 전체 통과, SHA 3종 출력, `pnpm verify`가 CI와 같은 검사 | 범위 밖 파일 변경 시 `ownership-check` 실패 / `package.json` 없는 잠금 파일 변경 실패 / 다른 작업 ID의 검수 결과 파일 실패 |
+| M0-08 | push·PR에서 CI 전체 통과, SHA 3종 출력, `pnpm verify`가 CI와 같은 검사 | 범위 밖 파일 변경 시 `ownership-check` 실패 / `package.json` 없는 잠금 파일 변경 실패 / 다른 작업 ID의 검수 결과 파일 실패 / `contract/` 브랜치의 생성 타입 변경(`--check` 통과)은 허용, 일반 브랜치의 `frontend/src/generated/**`·`backend/openapi.json` 변경은 실패 |
 | M0-09 | 체크리스트 M0 전 항목 상태 확정, report 작성 | 실패·보류 항목을 완료와 섞지 않음 |
 
 ## 5. 협업 흐름 시험 항목 (체크리스트 M0 "협업 흐름 시험")
