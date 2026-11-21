@@ -26,55 +26,50 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        TerminusHealthCheckResult: {
+        ErrorResponseDto: {
+            /** @example SERVICE_UNAVAILABLE */
+            code: string;
+            message: string;
+            /** @example /api/health */
+            path: string;
+            /** @example 503 */
+            statusCode: number;
+            /** Format: date-time */
+            timestamp: string;
+        };
+        HealthResponseDto: {
             /**
              * @example {
              *       "database": {
-             *         "responseTime": 12,
              *         "status": "up"
              *       }
              *     }
              */
             details: {
-                [key: string]: components["schemas"]["TerminusHealthIndicatorResult"] & {
+                [key: string]: {
                     [key: string]: unknown;
                 };
             };
             /** @example {} */
-            error?: {
-                [key: string]: components["schemas"]["TerminusHealthIndicatorResult"] & {
+            error: {
+                [key: string]: {
                     [key: string]: unknown;
                 };
-            } | null;
+            };
             /**
              * @example {
              *       "database": {
-             *         "responseTime": 12,
              *         "status": "up"
              *       }
              *     }
              */
-            info?: {
-                [key: string]: components["schemas"]["TerminusHealthIndicatorResult"] & {
+            info: {
+                [key: string]: {
                     [key: string]: unknown;
                 };
-            } | null;
-            /**
-             * @example ok
-             * @enum {string}
-             */
-            status: "error" | "ok" | "degraded" | "shutting_down";
-        };
-        TerminusHealthIndicatorResult: {
-            /** @description Whether this result was served from the cache */
-            cachedResponse?: boolean;
-            /** @description Time the health indicator took to respond, in ms */
-            responseTime?: number;
-            /**
-             * @description The status of this health indicator
-             * @enum {string}
-             */
-            status: "up" | "degraded" | "down";
+            };
+            /** @example ok */
+            status: string;
         };
     };
     responses: never;
@@ -94,69 +89,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The Health Check is successful */
+            /** @description DB 연결 정상 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "responseTime": 12,
-                         *         "status": "up"
-                         *       }
-                         *     }
-                         */
-                        details?: unknown;
-                        /** @example {} */
-                        error?: unknown;
-                        /**
-                         * @example ok
-                         * @enum {unknown}
-                         */
-                        status?: "ok" | "degraded";
-                    } & components["schemas"]["TerminusHealthCheckResult"];
+                    "application/json": components["schemas"]["HealthResponseDto"];
                 };
             };
-            /** @description The Health Check is not successful */
+            /** @description DB 연결 실패 */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /**
-                         * @example {
-                         *       "database": {
-                         *         "responseTime": 12,
-                         *         "status": "up"
-                         *       },
-                         *       "redis": {
-                         *         "message": "Could not connect",
-                         *         "responseTime": 3005,
-                         *         "status": "down"
-                         *       }
-                         *     }
-                         */
-                        details?: unknown;
-                        /**
-                         * @example {
-                         *       "redis": {
-                         *         "message": "Could not connect",
-                         *         "responseTime": 3005,
-                         *         "status": "down"
-                         *       }
-                         *     }
-                         */
-                        error?: unknown;
-                        /**
-                         * @example error
-                         * @enum {unknown}
-                         */
-                        status?: "error" | "shutting_down";
-                    } & components["schemas"]["TerminusHealthCheckResult"];
+                    "application/json": components["schemas"]["ErrorResponseDto"];
                 };
             };
         };

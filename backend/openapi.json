@@ -1,23 +1,46 @@
 {
   "components": {
     "schemas": {
-      "TerminusHealthCheckResult": {
+      "ErrorResponseDto": {
+        "properties": {
+          "code": {
+            "example": "SERVICE_UNAVAILABLE",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "example": "/api/health",
+            "type": "string"
+          },
+          "statusCode": {
+            "example": 503,
+            "type": "number"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ],
+        "type": "object"
+      },
+      "HealthResponseDto": {
         "properties": {
           "details": {
             "additionalProperties": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/TerminusHealthIndicatorResult"
-                },
-                {
-                  "additionalProperties": true,
-                  "type": "object"
-                }
-              ]
+              "additionalProperties": true,
+              "type": "object"
             },
             "example": {
               "database": {
-                "responseTime": 12,
                 "status": "up"
               }
             },
@@ -25,80 +48,34 @@
           },
           "error": {
             "additionalProperties": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/TerminusHealthIndicatorResult"
-                },
-                {
-                  "additionalProperties": true,
-                  "type": "object"
-                }
-              ]
+              "additionalProperties": true,
+              "type": "object"
             },
             "example": {},
-            "nullable": true,
             "type": "object"
           },
           "info": {
             "additionalProperties": {
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/TerminusHealthIndicatorResult"
-                },
-                {
-                  "additionalProperties": true,
-                  "type": "object"
-                }
-              ]
+              "additionalProperties": true,
+              "type": "object"
             },
             "example": {
               "database": {
-                "responseTime": 12,
                 "status": "up"
               }
             },
-            "nullable": true,
             "type": "object"
           },
           "status": {
-            "enum": [
-              "error",
-              "ok",
-              "degraded",
-              "shutting_down"
-            ],
             "example": "ok",
             "type": "string"
           }
         },
         "required": [
           "status",
+          "info",
+          "error",
           "details"
-        ],
-        "type": "object"
-      },
-      "TerminusHealthIndicatorResult": {
-        "properties": {
-          "cachedResponse": {
-            "description": "Whether this result was served from the cache",
-            "type": "boolean"
-          },
-          "responseTime": {
-            "description": "Time the health indicator took to respond, in ms",
-            "type": "number"
-          },
-          "status": {
-            "description": "The status of this health indicator",
-            "enum": [
-              "up",
-              "degraded",
-              "down"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
         ],
         "type": "object"
       }
@@ -121,80 +98,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/TerminusHealthCheckResult"
-                    }
-                  ],
-                  "properties": {
-                    "details": {
-                      "example": {
-                        "database": {
-                          "responseTime": 12,
-                          "status": "up"
-                        }
-                      }
-                    },
-                    "error": {
-                      "example": {}
-                    },
-                    "status": {
-                      "enum": [
-                        "ok",
-                        "degraded"
-                      ],
-                      "example": "ok"
-                    }
-                  }
+                  "$ref": "#/components/schemas/HealthResponseDto"
                 }
               }
             },
-            "description": "The Health Check is successful"
+            "description": "DB 연결 정상"
           },
           "503": {
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/TerminusHealthCheckResult"
-                    }
-                  ],
-                  "properties": {
-                    "details": {
-                      "example": {
-                        "database": {
-                          "responseTime": 12,
-                          "status": "up"
-                        },
-                        "redis": {
-                          "message": "Could not connect",
-                          "responseTime": 3005,
-                          "status": "down"
-                        }
-                      }
-                    },
-                    "error": {
-                      "example": {
-                        "redis": {
-                          "message": "Could not connect",
-                          "responseTime": 3005,
-                          "status": "down"
-                        }
-                      }
-                    },
-                    "status": {
-                      "enum": [
-                        "error",
-                        "shutting_down"
-                      ],
-                      "example": "error"
-                    }
-                  }
+                  "$ref": "#/components/schemas/ErrorResponseDto"
                 }
               }
             },
-            "description": "The Health Check is not successful"
+            "description": "DB 연결 실패"
           }
         },
         "tags": [
