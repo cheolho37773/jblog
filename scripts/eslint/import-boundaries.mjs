@@ -74,7 +74,8 @@ export function resolveTargetPath(importSource, importerRepoPath) {
     return path.posix.join(path.posix.dirname(importerRepoPath), importSource);
   }
   if (importSource.startsWith(SRC_ALIAS_PREFIX)) {
-    return `${FRONTEND_SRC}/${importSource.slice(SRC_ALIAS_PREFIX.length)}`;
+    // `..`가 섞인 별칭(`@/features/posts/../projects/x`)을 상대 경로와 같은 기준으로 판정하려고 정규화한다.
+    return path.posix.normalize(`${FRONTEND_SRC}/${importSource.slice(SRC_ALIAS_PREFIX.length)}`);
   }
   const packageName = importSource.split('/').slice(0, 2).join('/');
   return PACKAGE_NAME_TO_PROJECT[packageName] ?? null;

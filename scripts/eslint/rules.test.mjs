@@ -130,6 +130,21 @@ const BOUNDARY_VIOLATIONS = [
     'frontend/src/features/posts/api.ts',
     "import '../../app/layout';",
   ],
+  [
+    '기능 간 (.. 섞인 @/ 별칭)',
+    'frontend/src/features/posts/api.ts',
+    "import '@/features/posts/../projects/api';",
+  ],
+  [
+    'lib → features (.. 섞인 @/ 별칭)',
+    'frontend/src/lib/a.ts',
+    "import '@/components/../features/posts/api';",
+  ],
+  [
+    'frontend → backend (src 밖으로 나가는 @/ 별칭)',
+    'frontend/src/lib/a.ts',
+    "import '@/../../backend/x';",
+  ],
   ['export from 경유', 'frontend/src/lib/a.ts', "export { x } from '@/features/posts/api';"],
   ['동적 import', 'frontend/src/lib/a.ts', "const load = () => import('@/features/posts/api');"],
 ];
@@ -158,6 +173,11 @@ const BOUNDARY_ALLOWED = [
   ['features → generated', 'frontend/src/features/posts/api.ts', "import '@/generated/api-types';"],
   ['components → lib', 'frontend/src/components/ui/a.tsx', "import '@/lib/format';"],
   ['lib → generated', 'frontend/src/lib/api/client.ts', "import '../../generated/api-types';"],
+  [
+    '같은 기능 내부 (.. 섞인 @/ 별칭)',
+    'frontend/src/features/posts/api.ts',
+    "import '@/features/projects/../posts/api';",
+  ],
   ['외부 패키지', 'frontend/src/lib/a.ts', "import 'zod';"],
   ['backend 내부', 'backend/src/posts/a.ts', "import '../common/b';"],
 ];
