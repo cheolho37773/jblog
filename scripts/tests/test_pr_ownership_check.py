@@ -460,6 +460,44 @@ class RoleScopeRuleTest(ViolationAssertions):
         self.assertViolation(run_check_without_brief([("M", BACKEND_SOURCE)]), BACKEND_SOURCE, "R9")
 
 
+class DevopsOnlyPathsTest(ViolationAssertions):
+    """R9 회귀(④ 독립 검증 보강): CI·루트 도구 설정은 devops-engineer가 참여할 때만."""
+
+    DEVOPS_ONLY_FILES = [
+        ".github/workflows/ci.yml",
+        ".github/actions/setup-workspace/action.yml",
+        "package.json",
+        "turbo.json",
+        "pnpm-workspace.yaml",
+        ".gitignore",
+        ".dockerignore",
+        "tsconfig.base.json",
+        "backend/Dockerfile",
+        "frontend/Dockerfile",
+        "frontend/playwright.config.ts",
+        "scripts/ownership/pr_ownership_check.py",
+        "scripts/hooks/check-ownership.py",
+    ]
+    APP_ROLES = ("backend-dev", "frontend-dev", "test-engineer", "docs-writer")
+
+    def test_앱_역할만_참여하면_위반(self):
+        for path in self.DEVOPS_ONLY_FILES:
+            with self.subTest(path=path):
+                self.assertViolation(run_check([("M", path)], roles=self.APP_ROLES), path, "R9")
+
+    def test_devops_engineer가_참여하면_통과(self):
+        for path in self.DEVOPS_ONLY_FILES:
+            with self.subTest(path=path):
+                self.assertPasses(run_check([("M", path)], roles=("devops-engineer",)))
+
+    def test_지시서_없는_PR에서_CI_설정_변경은_위반(self):
+        self.assertViolation(run_check_without_brief([("M", ".github/workflows/ci.yml")]), ".github/workflows/ci.yml", "R9")
+
+    def test_devops_engineer도_테스트_코드는_못_바꿈(self):
+        path = "scripts/tests/test_dummy.py"
+        self.assertViolation(run_check([("A", path)], roles=("devops-engineer",)), path, "R9")
+
+
 class ReportShapeTest(ViolationAssertions):
     """판정 결과 형식: 경로 + 규칙 번호, 여러 위반 동시 보고, 빈 PR 통과."""
 
@@ -530,6 +568,12 @@ class MainGitIntegrationTest(unittest.TestCase):
         target = self.workdir / relative_path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
+
+    def move(self, source: str, target: str):
+        """이름 변경 (대상 폴더가 없어도 되도록 파일 시스템에서 옮긴 뒤 git add -A)."""
+        destination = self.workdir / target
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        (self.workdir / source).rename(destination)
 
     def commit(self, message: str) -> str:
         self.git("add", "-A")
@@ -624,6 +668,68 @@ class MainGitIntegrationTest(unittest.TestCase):
         exit_code, output = self.run_main(head, branch=DUPLICATED_BRANCH)
         self.assertEqual(exit_code, 1, output)
         self.assertIn("R1", output)
+
+    def test_범위_밖_경로로_이름_변경하면_새_경로가_위반(self):
+        self.write(FRONTEND_PAGE, "export default function Page() { return null; }\n")
+        self.commit("feat: 페이지")
+        base_for_rename = self.git("rev-parse", "HEAD")
+        self.move(FRONTEND_PAGE, BACKEND_SOURCE)
+        head = self.commit("refactor: 이름 변경")
+        self.base = base_for_rename
+        exit_code, output = self.run_main(head, branch=TRIAL_BRANCH)
+        self.assertEqual(exit_code, 1, output)
+        self.assertIn(BACKEND_SOURCE, output)
+        self.assertIn("R9", output)
+
+    def test_범위_밖_경로에서_이름_변경하면_삭제된_원래_경로가_위반(self):
+        self.write(BACKEND_SOURCE, "export const dummy = 1;\n")
+        self.commit("feat: 백엔드 더미")
+        base_for_rename = self.git("rev-parse", "HEAD")
+        self.move(BACKEND_SOURCE, "frontend/src/dummy.ts")
+        head = self.commit("refactor: 이름 변경")
+        self.base = base_for_rename
+        exit_code, output = self.run_main(head)
+        self.assertEqual(exit_code, 1, output)
+        self.assertIn(BACKEND_SOURCE, output)
+        self.assertIn("R9", output)
+
+    def make_dev_with_other_review(self) -> str:
+        """base에서 갈라진 dev 쪽 커밋: 다른 작업의 검수 결과 추가 (브랜치에 merge해 들여올 대상)."""
+        self.git("checkout", "-q", "-b", "dummy-dev", self.base)
+        self.write(OTHER_TASK_CODEX_RESULT, "other review\n")
+        dev_head = self.commit("docs: 다른 작업 검수 결과")
+        self.git("checkout", "-q", "main")
+        return dev_head
+
+    def test_dev를_merge해_들어온_다른_작업_검수_결과는_위반이_아님(self):
+        dev_head = self.make_dev_with_other_review()
+        self.write("scripts/tests/test_dummy.py", "# dummy\n")
+        self.commit("test: 더미 테스트")
+        self.git("merge", "-q", "--no-edit", "--no-verify", dev_head)
+        head = self.git("rev-parse", "HEAD")
+        self.base = dev_head  # CI: --base origin/dev
+        exit_code, output = self.run_main(head)
+        self.assertEqual(exit_code, 0, output)
+
+    # ④ 독립 검증에서 발견한 구현 누락: _collect_commits가 merge 커밋의 변경을 보지 않는다
+    # (diff-tree는 merge 커밋을 출력하지 않고, PR 전체 diff에는 '추가'로만 남는다).
+    # 오케스트레이터 판정 전까지 expectedFailure로 둔다. 구현이 고쳐지면 '예상 밖 성공'으로 실패하므로 이 표시를 지운다.
+    @unittest.expectedFailure
+    def test_merge_커밋_안에서_이_작업_검수_결과를_고치면_위반(self):
+        # 커밋별 이력에는 merge 커밋도 포함된다: merge 결과에서 직접 고친 내용(evil merge)도 '수정'이다
+        dev_head = self.make_dev_with_other_review()
+        self.write(CODEX_RESULT, "dummy review\n")
+        self.commit("docs: 검수 결과 추가")
+        self.git("merge", "-q", "--no-commit", "--no-ff", dev_head)
+        self.write(CODEX_RESULT, "edited in merge\n")
+        self.git("add", CODEX_RESULT)
+        self.git("commit", "-q", "--no-verify", "--no-edit")
+        head = self.git("rev-parse", "HEAD")
+        self.base = dev_head
+        exit_code, output = self.run_main(head)
+        self.assertEqual(exit_code, 1, output)
+        self.assertIn(CODEX_RESULT, output)
+        self.assertIn("R3", output)
 
     def test_contract_브랜치_생성물은_생성_검사_통과_옵션이_있을_때만_종료_코드_0(self):
         self.write(GENERATED_FILE, "export type Dummy = never;\n")
