@@ -28,6 +28,8 @@ pnpm install                     # Husky 훅 설치: 커밋 전 비밀정보 검
 pnpm lint && pnpm format:check && pnpm typecheck && pnpm test
 ```
 
+프론트엔드 E2E(`pnpm test:e2e`)는 필요한 환경변수를 테스트 설정이 직접 넣습니다. 다만 Next.js가 `frontend/.env.local`도 함께 읽으므로, 그 파일의 다른 변수가 E2E 서버에 들어갈 수 있습니다(CI에는 파일이 없음). 단위·컴포넌트 테스트(Vitest)는 환경파일을 읽지 않습니다.
+
 로컬 DB(PostgreSQL 17, Docker Compose): `cp infra/.env.example infra/.env` 후 `pnpm db:up` — 자세한 내용은 [infra/README.md](infra/README.md).
 
 비밀값은 `.env` 파일로만 주입하고 커밋하지 않습니다 ([개요 §6-b](docs/plan/00_overview.md)).
