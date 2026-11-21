@@ -26,13 +26,13 @@
 ## 필수 검증
 
 - 재현(① 작성, 수정 전 실패)
-  - [ ] `readEnvFile`이 임시 폴더의 더미 `.env`(예: `API_PORT=4123`, 따옴표·주석 줄 포함)를 객체로 읽는다, 없는 경로는 `{}`
-  - [ ] `mergeEnvSources`: 파일에만 있는 값이 들어가고, 같은 키는 프로세스 값이 이긴다, 프로세스 값이 `undefined`인 키는 파일 값이 남는다
+  - [x] `readEnvFile`이 임시 폴더의 더미 `.env`(예: `API_PORT=4123`, 따옴표·주석 줄 포함)를 객체로 읽는다, 없는 경로는 `{}`
+  - [x] `mergeEnvSources`: 파일에만 있는 값이 들어가고, 같은 키는 프로세스 값이 이긴다, 프로세스 값이 `undefined`인 키는 파일 값이 남는다
 - 성공(② 후, 오케스트레이터가 실행 확인)
-  - [ ] 스크래치 클론에서 `backend/.env`(자리표시자 값)만으로 `pnpm --filter @jblog/backend start` 기동, 셸 `API_PORT`를 주면 그 포트로 뜬다
-  - [ ] 파일 없이 셸 환경변수만으로 기동, 둘 다 없으면 기존처럼 변수 이름을 담아 실패
+  - [x] 스크래치 클론에서 `backend/.env`(자리표시자 값)만으로 `pnpm --filter @jblog/backend start` 기동, 셸 `API_PORT`를 주면 그 포트로 뜬다
+  - [x] 파일 없이 셸 환경변수만으로 기동, 둘 다 없으면 기존처럼 변수 이름을 담아 실패
 - 회귀
-  - [ ] backend 단위·e2e, 루트 lint·format:check·typecheck·test 통과
+  - [x] backend 단위·e2e, 루트 lint·format:check·typecheck·test 통과
 
 ## 인계 노트
 
@@ -53,3 +53,18 @@
 - 경로 기준: **모듈 위치**(`__dirname/../../.env`). 작업 폴더 기준이면 루트에서 `node backend/dist/main.js`로 실행할 때 다른 파일을 찾는다. `src/config`와 `dist/config`는 깊이가 같아 `nest start`·빌드 결과 모두 `backend/.env`를 가리키고, 패키지 폴더에서 실행하는 pnpm·turbo 경우도 같다
 - 출력: ENOENT는 조용히 `{}`, 그 밖의 읽기 오류는 경로·오류 코드(cause)만 남긴 일반 메시지로 바꿔 던진다
 - 검사: backend test 28건, test:e2e, build, 루트 lint·format:check·typecheck·test 결과는 아래 커밋 기준 통과(`.env`는 만들지 않음)
+
+### 오케스트레이터 독립 확인 (실제 기동, Codex r1 대응)
+
+- 대상: `f3719a5`, 스크래치 클론(`git clone --branch fix/M0-04-backend-env-file`) → `corepack pnpm install --frozen-lockfile` → `pnpm --filter @jblog/backend build`
+- 실행: `backend/`에서 `env -i PATH=... node dist/main.js`(셸 환경변수를 비운 상태에서 지정한 값만 전달). `backend/.env`는 클론 안에만 자리표시자 값(`NODE_ENV=development`, 테스트용 포트)으로 만들고 확인 후 삭제했다
+
+| 시나리오 | 결과 |
+|---|---|
+| 파일만(`.env`에 포트 A) | 포트 A에서 `/api/x` → 404 에러 형식 응답(기동 성공) |
+| 파일 + 셸 `API_PORT`=B | 포트 B에서 응답, 포트 A는 응답 없음 → 셸 값 우선 |
+| 파일 없음 + 셸 값만 | 셸 포트에서 응답(기동 성공) |
+| 파일·셸 모두 없음 | 기동 실패, `환경변수가 올바르지 않습니다` 오류(종료) |
+
+- 같은 클론에서 루트 `lint`·`format:check`·`typecheck`·`test`, backend `build` 통과
+- 필수 검증: 재현·성공·회귀 전 항목 완료, 실패·보류 없음
