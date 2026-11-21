@@ -120,6 +120,7 @@
         "turbo.json",
         ".nvmrc",
         ".gitignore",
+        ".dockerignore",
         ".prettierrc*",
         ".prettierignore",
         "eslint.config.*",
