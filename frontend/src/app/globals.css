@@ -1,1 +1,32 @@
 @import 'tailwindcss';
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* 토큰 일부만 둔다. 나머지는 FE-02에서 프론트엔드 기획서 §5.1대로 채운다. */
+:root {
+  --bg: #ffffff;
+  --text-strong: #181a2a;
+  --border-strong: #dcdddf;
+}
+
+[data-theme='dark'] {
+  --bg: #181a2a;
+  --text-strong: #ffffff;
+  --border-strong: #3b3c4a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-strong: var(--text-strong);
+  --color-border-strong: var(--border-strong);
+  --font-sans: var(--font-work-sans), sans-serif;
+  --font-serif: var(--font-source-serif), serif;
+  --font-jakarta: var(--font-plus-jakarta), sans-serif;
+  --font-display: var(--font-poppins), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-strong);
+  font-family: var(--font-sans);
+}
