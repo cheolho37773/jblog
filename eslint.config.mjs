@@ -1,7 +1,7 @@
 import nextPlugin from '@next/eslint-plugin-next';
 import reactHooks from 'eslint-plugin-react-hooks';
 import { baseConfig } from './scripts/eslint/base-config.mjs';
-import { importBoundariesPlugin } from './scripts/eslint/import-boundaries.mjs';
+import { jblogPlugin } from './scripts/eslint/plugin.mjs';
 
 // frontend·backend 코드에만 import 경계를 적용한다 (개요 D25·D26).
 const APP_SOURCE_FILES = ['frontend/**/*.{js,mjs,cjs,ts,tsx}', 'backend/**/*.{js,mjs,cjs,ts,tsx}'];
@@ -36,7 +36,7 @@ export default [
   },
   {
     files: APP_SOURCE_FILES,
-    plugins: { jblog: importBoundariesPlugin },
+    plugins: { jblog: jblogPlugin },
     rules: { 'jblog/import-boundaries': 'error' },
   },
 ];

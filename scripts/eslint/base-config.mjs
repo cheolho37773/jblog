@@ -2,13 +2,14 @@ import js from '@eslint/js';
 import prettierConfig from 'eslint-config-prettier';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import { jblogPlugin } from './plugin.mjs';
 
 // 가독성 규칙 수치 (협업 §10-a). 바꾸려면 G2(개발자 승인)가 필요하다.
 const MAX_COMPLEXITY = 10;
 const MAX_NESTING_DEPTH = 3;
 const MAX_PARAMS = 3;
 
-// 무엇을 하는지 드러나지 않는 이름 (협업 §10-a "이름").
+// 무엇을 하는지 드러나지 않는 이름 (협업 §10-a "이름"). 선언만 검사한다(jblog/denied-names).
 const DENIED_IDENTIFIERS = ['data', 'tmp', 'temp', 'foo', 'bar', 'baz', 'obj', 'val', 'handle'];
 
 // 설정 모듈에서만 process.env를 읽는다 (개요 §6-b). 아래 경로는 그 예외다.
@@ -53,7 +54,7 @@ const readabilityRules = {
   'max-depth': ['error', MAX_NESTING_DEPTH],
   'max-params': ['error', MAX_PARAMS],
   '@typescript-eslint/no-explicit-any': 'error',
-  'id-denylist': ['error', ...DENIED_IDENTIFIERS],
+  'jblog/denied-names': ['error', ...DENIED_IDENTIFIERS],
   'no-restricted-properties': [
     'error',
     { object: 'process', property: 'env', message: PROCESS_ENV_MESSAGE },
@@ -71,6 +72,7 @@ export const baseConfig = [
   {
     files: SOURCE_FILES,
     languageOptions: { globals: globals.node },
+    plugins: { jblog: jblogPlugin },
     rules: readabilityRules,
   },
   {
