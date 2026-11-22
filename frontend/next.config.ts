@@ -12,8 +12,16 @@ const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '..');
 export default function createNextConfig(phase: string): NextConfig {
   const { server } = parseEnv(process.env);
 
-  // Docker 이미지용 최소 서버(.next/standalone/**/server.js)를 만든다 (프론트엔드 §2).
+  // 빌드 전용 스위치(개요 §6, 앱 런타임 설정이 아니라 env.schema에 넣지 않는다).
+  // 1이면 *.dev.tsx를 페이지로 인식해 /dev/components를 빌드한다. 운영 빌드에는 그 코드가 들어가지 않는다.
+  const devPages = process.env.JBLOG_DEV_PAGES === '1';
+
+  // Docker 이미지용 최소 서버(<distDir>/standalone/**/server.js)를 만든다 (프론트엔드 §2).
   const baseConfig: NextConfig = {
+    // E2E가 운영 빌드와 개발 페이지 빌드를 동시에 돌리므로 산출물이 섞이지 않게 분리한다.
+    distDir: devPages ? '.next-components' : '.next',
+    // 기본 확장자를 유지하고 dev.tsx만 더한다.
+    pageExtensions: devPages ? ['tsx', 'ts', 'jsx', 'js', 'dev.tsx'] : ['tsx', 'ts', 'jsx', 'js'],
     output: 'standalone',
     outputFileTracingRoot: REPOSITORY_ROOT,
   };

@@ -2,6 +2,8 @@
 
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore } from 'react';
+import { cn } from '@/lib/cn';
+import { Icon } from './Icon';
 
 const subscribeNothing = () => () => {};
 
@@ -21,15 +23,23 @@ export function ThemeToggle() {
   const isDark = isMounted && resolvedTheme === 'dark';
 
   return (
+    // 트랙 48x28, 노브 24x24 (UI §5.1). after로 클릭 영역을 44px 높이까지 넓힌다 (UI §4.2).
     <button
       type="button"
       role="switch"
       aria-checked={isDark}
       aria-label="다크 모드"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="border-border-strong rounded-md border px-3 py-1"
+      className="bg-toggle-track relative h-7 w-12 shrink-0 rounded-full after:absolute after:-inset-2 after:content-['']"
     >
-      {isDark ? '다크' : '라이트'}
+      <span
+        className={cn(
+          'shadow-toggle absolute top-0.5 left-0.5 flex size-6 items-center justify-center rounded-full bg-toggle-knob text-toggle-knob-icon transition-transform duration-200 ease-in-out',
+          isDark && 'translate-x-5',
+        )}
+      >
+        <Icon name={isDark ? 'moon' : 'sun'} size={14} />
+      </span>
     </button>
   );
 }

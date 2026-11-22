@@ -9,6 +9,7 @@ node_modules/
 dist/
 build/
 .next/
+.next-components/
 out/
 .turbo/
 coverage/

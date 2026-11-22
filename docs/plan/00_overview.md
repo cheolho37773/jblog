@@ -1,6 +1,6 @@
 # jblog 개발 기획 – 개요 & 공통 결정사항
 
-> 버전 v0.11 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
+> 버전 v0.12 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
 > 관련 문서: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · [백엔드 기획서](./01_backend_plan.md) · [프론트엔드 기획서](./02_frontend_plan.md) · [AI 자동 작성](./03_ai_authoring_mcp_plan.md) · [접근 통제 & 복사 방지](./04_access_control_and_content_protection.md) · [협업 아키텍처](./05_collaboration_architecture.md)
 
 ---
@@ -236,6 +236,9 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 REVALIDATE_SECRET=
 JWT_ACCESS_SECRET=               # middleware에서 jb_at 검증 (api와 동일 값)
 INTERNAL_API_KEY=
+
+# web 빌드 전용 (런타임 설정 아님, 비밀값 아님)
+# JBLOG_DEV_PAGES=1              # 개발·검수 빌드에서만 /dev/* 페이지 포함. 운영 빌드에서는 넣지 않음 (M1-03)
 ```
 
 ### 6-a. 배포 보류 범위
@@ -353,3 +356,4 @@ INTERNAL_API_KEY=
 | v0.9 | 2026-11-21 | 저장소 구조를 `frontend/`·`backend/` 분리 구조로 변경하고 공용 코드 패키지 제거(D25, §4). API 타입은 `backend/openapi.json`에서 프론트엔드 안으로 생성, Markdown 파이프라인은 프론트엔드 내부 모듈. 01·02·04·05 경로 반영 |
 | v0.10 | 2026-11-21 | 프론트엔드를 기능별 구조(`features/`)로 전환하고 계층 import 규칙 추가(D26, 프론트엔드 §3). 백엔드 구조는 그대로 |
 | v0.11 | 2026-11-22 | §6-b 검사 장치에 접속 URL 예시 표기 규칙 추가 (M0 report §8 제안 10) |
+| v0.12 | 2026-11-22 | §6 환경변수 목록에 web 빌드 전용 `JBLOG_DEV_PAGES` 추가 (M1-03, `/dev/components` 운영 404 — M1 G1 승인) |
