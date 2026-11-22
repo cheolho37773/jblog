@@ -12,7 +12,8 @@ export function SearchInput({
   ...props
 }: SearchInputProps) {
   return (
-    <div className="relative">
+    // label로 감싸 입력 상자 위아래 4px도 눌러서 포커스되게 한다 (히트 영역 44px, 시각 36px 유지. UI §4.2)
+    <label className="relative -my-1 block py-1">
       <input
         type="search"
         role="searchbox"
@@ -27,6 +28,6 @@ export function SearchInput({
         name="search"
         className="text-muted pointer-events-none absolute top-1/2 right-2 -translate-y-1/2"
       />
-    </div>
+    </label>
   );
 }

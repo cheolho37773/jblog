@@ -16,6 +16,27 @@ export const metadata: Metadata = {
 
 // hover·focus는 마우스·키보드 없이 눈으로 볼 수 있게 같은 스타일을 고정해 보여준다.
 const FIXED_FOCUS_RING = 'outline-2 outline-offset-2 outline-primary';
+// 컴포넌트에 hover 스타일이 아직 없어 hover 예제는 기본과 같다. 스타일이 생기면 여기서 고정 클래스를 준다.
+const FIXED_HOVER = '';
+
+const BUTTON_VARIANTS = ['primary', 'outline', 'icon', 'pillSolid', 'pillOutline'] as const;
+const BUTTON_STATES = ['default', 'hover', 'focus', 'disabled'] as const;
+const STATE_CLASS: Record<(typeof BUTTON_STATES)[number], string> = {
+  default: '',
+  hover: FIXED_HOVER,
+  focus: FIXED_FOCUS_RING,
+  disabled: '',
+};
+// 대비 E2E가 기본 예제를 이름(GitHub)으로 찾는다.
+const ICON_BUTTON_LABEL = {
+  default: 'GitHub',
+  hover: 'icon hover',
+  focus: 'icon focus',
+  disabled: 'icon disabled',
+} as const;
+const AVATAR_SIZES = [28, 40, 80];
+// 외부 URL·실제 인물 사진을 쓰지 않는 단색 더미 이미지
+const AVATAR_IMAGE = '/dev/avatar-dummy.png';
 
 const COLOR_SWATCHES = [
   'bg-bg',
@@ -94,66 +115,98 @@ export default function ComponentsPage() {
 
       <Section id="dev-badge" title="Badge">
         <Row>
-          <Badge variant="solid">solid md</Badge>
-          <Badge variant="solid" size="lg">
+          <Badge variant="solid" data-example="solid-md">
+            solid md
+          </Badge>
+          <Badge variant="solid" size="lg" data-example="solid-lg">
             solid lg
           </Badge>
-          <Badge variant="soft">soft md</Badge>
-          <Badge variant="soft" size="lg">
+          <Badge variant="soft" data-example="soft-md">
+            soft md
+          </Badge>
+          <Badge variant="soft" size="lg" data-example="soft-lg">
             soft lg
           </Badge>
-          <Badge href="#badge-link">link</Badge>
+          <Badge href="#badge-link" data-example="link">
+            link
+          </Badge>
         </Row>
       </Section>
 
       <Section id="dev-button" title="Button">
+        {BUTTON_VARIANTS.map((variant) => (
+          <Row key={variant}>
+            {BUTTON_STATES.map((state) => (
+              <Button
+                key={state}
+                variant={variant}
+                data-example={`${variant}-${state}`}
+                disabled={state === 'disabled'}
+                aria-label={variant === 'icon' ? ICON_BUTTON_LABEL[state] : undefined}
+                className={STATE_CLASS[state]}
+              >
+                {variant === 'icon' ? (
+                  <Icon name="github" />
+                ) : state === 'default' ? (
+                  variant
+                ) : (
+                  state
+                )}
+              </Button>
+            ))}
+          </Row>
+        ))}
         <Row>
-          <Button variant="primary">primary</Button>
-          <Button variant="outline">outline</Button>
-          <Button variant="icon" aria-label="GitHub">
-            <Icon name="github" />
-          </Button>
-          <Button variant="pillSolid">pillSolid</Button>
-          <Button variant="pillOutline">pillOutline</Button>
-        </Row>
-        <Row>
-          <Button variant="primary" className={FIXED_FOCUS_RING}>
-            focus (고정)
-          </Button>
-          <Button variant="primary" disabled>
-            disabled
-          </Button>
-          <Button variant="outline" disabled>
-            disabled
-          </Button>
           <Button asChild variant="pillOutline">
             <a href="#button-link">asChild 링크</a>
+          </Button>
+          <Button asChild variant="outline" disabled>
+            <a href="#button-link-disabled">asChild 비활성</a>
           </Button>
         </Row>
       </Section>
 
       <Section id="dev-avatar" title="Avatar">
         <Row>
-          <Avatar alt="Jason" size={28} />
-          <Avatar alt="Jason" size={36} />
+          {AVATAR_SIZES.map((size) => (
+            <Avatar
+              key={`i${size}`}
+              src={AVATAR_IMAGE}
+              alt="더미 이미지"
+              size={size}
+              data-example={`image-${size}`}
+            />
+          ))}
+          {AVATAR_SIZES.map((size) => (
+            <Avatar key={`t${size}`} alt="Jason" size={size} data-example={`initials-${size}`} />
+          ))}
           <Avatar alt="홍길동" size={48} />
-          <Avatar alt="Jason" size={80} />
         </Row>
       </Section>
 
       <Section id="dev-input" title="Input">
         <div className="flex max-w-80 flex-col gap-4">
-          <Input label="이메일" placeholder="you@example.com" />
-          <Input label="포커스 (고정)" className={FIXED_FOCUS_RING} placeholder="focus" />
-          <Input label="오류" defaultValue="abc" error="올바른 이메일을 입력하세요" />
-          <Input label="비활성" disabled placeholder="disabled" />
+          <Input label="기본" placeholder="you@example.com" data-example="default" />
+          <Input label="포커스 (고정)" className={FIXED_FOCUS_RING} data-example="focus" />
+          <Input
+            label="오류"
+            defaultValue="abc"
+            error="올바른 이메일을 입력하세요"
+            data-example="error"
+          />
+          <Input label="비활성" disabled placeholder="disabled" data-example="disabled" />
         </div>
       </Section>
 
       <Section id="dev-searchinput" title="SearchInput">
         <div className="flex max-w-80 flex-col gap-4">
-          <SearchInput placeholder="Search" />
-          <SearchInput placeholder="포커스 (고정)" className={FIXED_FOCUS_RING} />
+          <SearchInput placeholder="Search" data-example="default" />
+          <SearchInput
+            placeholder="포커스 (고정)"
+            className={FIXED_FOCUS_RING}
+            data-example="focus"
+          />
+          <SearchInput placeholder="disabled" disabled data-example="disabled" />
         </div>
       </Section>
 
@@ -163,11 +216,17 @@ export default function ComponentsPage() {
 
       <Section id="dev-icon" title="Icon">
         <Row>
-          <Icon name="search" label="검색" size={24} />
-          <Icon name="mail" size={24} />
+          <span data-example="lucide">
+            <Icon name="search" size={24} />
+          </span>
+          <span data-example="simple">
+            <Icon name="github" size={24} />
+          </span>
+          <span data-example="labelled">
+            <Icon name="mail" label="메일" size={24} />
+          </span>
           <Icon name="sun" size={24} />
           <Icon name="moon" size={24} />
-          <Icon name="github" label="GitHub" size={24} />
           <Icon name="x" size={24} />
           <Icon name="youtube" size={24} />
         </Row>
