@@ -69,7 +69,9 @@ function hasComponentsTests(): boolean {
 // 시각 회귀 허용 오차 초기값. 같은 컨테이너 이미지라 렌더 결과가 거의 같으므로 작게 잡는다.
 // - threshold 0: 픽셀 색 차이 판정(YIQ). 같은 컨테이너에서는 3회 반복(24장)해도 흔들림이 없었고(M1-05 ②), 0.1에서는
 //   토큰 색을 4단계(#E8E8EA→#E4E4E8)만 바꿔도 통과해 버려 0으로 내렸다. 0에서는 같은 변경이 12장에서 검출된다.
-// - maxDiffPixels 0: 다른 픽셀을 하나도 허용하지 않는다. 비율(maxDiffPixelRatio)은 전체 페이지(수백만 픽셀)에서
+// - maxDiffPixels 15: 로컬 amd64 에뮬레이션(Apple Silicon)과 CI 네이티브 amd64의 안티앨리어싱 차이가 최대 12픽셀
+//   관측되어(CI run 45028268322, home 1024 dark, 테마 토글 트랙 가장자리, 채널 차이 1~4) 여유를 둬 15로 잡았다.
+//   시험용 변경(색 4단계, 간격 4px)은 이보다 훨씬 많은 픽셀을 바꾸므로 검출된다(M1-05 CI 수정 2). 비율(maxDiffPixelRatio)은 전체 페이지(수백만 픽셀)에서
 //   수천 픽셀을 눈감아 4px 간격 변경을 놓칠 수 있어 쓰지 않는다. 같은 컨테이너·고정 폰트라 결과가 같다는 전제이며,
 //   흔들림이 확인되면 test-engineer가 작은 절대값으로 올린다.
 // 값은 test-engineer가 반복 실행·시험용 변경으로 검증해 조정한다(M1-05 규약 7).
@@ -80,7 +82,7 @@ const VISUAL_EXPECT = {
   caret: 'hide',
   scale: 'css',
   threshold: 0,
-  maxDiffPixels: 0,
+  maxDiffPixels: 15,
 } as const;
 
 const visualProjects = [
