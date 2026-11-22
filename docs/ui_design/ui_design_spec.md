@@ -1,6 +1,6 @@
 # jblog UI 디자인 기획서 (Portfolio + Blog)
 
-> 버전 v0.3 · 작성일 2026-11-20 · 개정 2026-11-22: §11 M1 한시 대체 비교(개발자 결정) · 개정 2026-11-20 ([기획 검토 피드백](../plan/feedback/2026-11-20_plan_review.md) 반영: 메타 텍스트 대비, Hero CTA, 프로젝트 카드 정보 보강, Featured 조건부, 프로젝트 목록 열 수, 태그 필터, 연락처 복사 예외, 검수 기준 분리)
+> 버전 v0.4 · 작성일 2026-11-20 · 개정 2026-11-22: §3.3·§9·§11 강조색 글자 대비 토큰과 추가 토큰(M1-08, 개발자 결정) · 개정 2026-11-22: §11 M1 한시 대체 비교(개발자 결정) · 개정 2026-11-20 ([기획 검토 피드백](../plan/feedback/2026-11-20_plan_review.md) 반영: 메타 텍스트 대비, Hero CTA, 프로젝트 카드 정보 보강, Featured 조건부, 프로젝트 목록 열 수, 태그 필터, 연락처 복사 예외, 검수 기준 분리)
 > 목적: 개인 포트폴리오 겸 기술 블로그 웹서비스의 UI 기준 문서. 프론트엔드 구현과 디자인 QA의 단일 기준(Single Source of Truth)으로 사용한다.
 
 ---
@@ -134,6 +134,12 @@ CSS 변수로 정의하고, `<html data-theme="light|dark">`로 전환한다.
 | `--color-footer-link` | `#3B3C4A` | `#BABABF` | Light (추정) / Dark 확정 |
 | `--color-toggle-track` | `#E8E8EA` | `#4B6BFB` | Light 확정 / Dark (추정, 스크린샷) |
 | `--color-overlay` | `rgba(20,22,36,0.4)` | `rgba(20,22,36,0.4)` | (확정) |
+| `--color-primary-strong` | `#4361EE` | `#4361EE` | **추가 (M1-08, §9)**: 채운 배경(Button primary, Badge solid, Avatar 이니셜) — 흰 글자 5.0:1 |
+| `--color-primary-text` | `#4361EE` | `#7B93FF` | **추가 (M1-08, §9)**: 강조색 글자(링크, soft 배지 글자) |
+| `--color-on-primary` | `#FFFFFF` | `#FFFFFF` | 추가 (M1-08): `primary-strong` 위 글자·아이콘 |
+| `--color-danger` | `#C81E1E` | `#F87171` | 추가 (M1-08): 입력 오류 글자·테두리 |
+| `--color-icon-button-bg` | `#696A75` | `#696A75` | 추가 (M1-08): Button `icon` 배경(§5.8 원본 값을 토큰화, 흰 아이콘 5.4:1) |
+| `--color-toggle-knob` · `--color-toggle-knob-icon` | `#FFFFFF` · `#181A2A` | 같음 | 추가 (M1-08): 테마 토글 노브와 해·달 아이콘 |
 
 ### 3.4 그라디언트 (포트폴리오 액센트) — (추정)
 
@@ -502,7 +508,8 @@ Page Info(“Search: {q}”, 결과 개수) + 카드 그리드. 결과 없음 �
   - **결정**: Light 모드의 `--color-text-muted`를 원본 `#97989F`(on `#FFFFFF` ≈2.9:1, 미달)에서 **`#696A75`(≈5.4:1)** 로 바꾼다. §11 디자인 검수에서 허용 차이로 취급한다.
   - Dark 모드는 원본 `#97989F` on `#181A2A`(≈5.9:1)로 기준을 충족하므로 그대로 둔다.
   - **placeholder도 텍스트이므로 대비 기준(4.5:1) 대상이다.** 원본 Light 검색 placeholder `#A1A1AA` on `#F4F4F5`는 ≈2.3:1로 미달이라 **`#696A75`(≈4.9:1)** 로 바꾼다. Dark는 `#97989F` on `#242535`(≈5.3:1)로 충족한다. `aria-label`은 접근 가능한 이름을 위한 것이며 시각적 대비 요구를 대신하지 않는다.
-  - 원본 대비 색상 변경은 이 두 가지(메타 텍스트, placeholder)뿐이다.
+  - **강조색 글자 대비 (2026-11-22 개발자 결정, M1-08)**: 원본 `#4B6BFB`는 흰 글자를 올리면 4.38:1, 흰 배경 위 글자로 4.38:1, Dark 배경 위 글자로 3.93:1로 미달이다. 그래서 `#4B6BFB`(`--color-primary`)는 **글자가 아닌 용도**(테두리·포커스 링·토글 트랙·큰 장식, 비텍스트 기준 3:1)에만 쓰고, 채운 배경 위 흰 글자는 `--color-primary-strong`(`#4361EE`), 강조색 글자는 `--color-primary-text`(Light `#4361EE` / Dark `#7B93FF`)를 쓴다.
+  - 원본 대비 색상 변경은 이 세 가지(메타 텍스트, placeholder, 강조색 글자·채운 배경)뿐이다.
 - 그라디언트 텍스트는 Light 배경에서 대비가 낮아질 수 있다. Display 사이즈(≥24px 굵게, 기준 3:1)로만 쓴다.
 - 포커스 링: `outline: 2px solid var(--color-primary); outline-offset: 2px` (모든 인터랙티브 요소).
 - 테마 토글: `role="switch"`, `aria-checked`, `aria-label="다크 모드 전환"`.
@@ -552,7 +559,7 @@ Figma MCP 호출 한도(Starter 플랜) 때문에 다음 값은 추정치다. �
    |---|---|---|
    | **A. 원본에 그대로 있는 컴포넌트** | Navbar, PostCardGrid, FeaturedHeroCard, PostCardOverlay, Article 본문, AuthorInfoBox, Footer, ProfileHero(문구 제외), TechLogoRow, ExperienceItem | 같은 뷰포트(1920 또는 1440)에서 **컴포넌트 단위로 잘라** Figma 원본과 비교. 위치/크기 **±2px**, 색상 정확히 일치. 폰트 렌더링 차이는 제외 |
    | **B. 재구성·변경한 부분** | Home 섹션 조합, `/projects` 3열, ProjectCard 정보 바 확장, Hero 보조 링크, 카테고리/태그 칩, 코드블록, TOC, 관리자 화면 | 픽셀 비교 대신 **규칙 준수** 확인: 사용한 색·폰트·간격·radius가 모두 §3 토큰인지, 섹션 간격(80)·그리드 gap·컨테이너 폭이 §4를 따르는지. 확인 후 승인한 스크린샷을 **기준 이미지**로 확정하고, 이후 변경은 시각 회귀(Playwright)로 검사 |
-   | **의도된 차이 목록** | Light `--color-text-muted` `#97989F`→`#696A75`, Light 검색 placeholder `#A1A1AA`→`#696A75`, Hero CTA 문구, ProjectCard 정보 바 확장, 광고 영역 제거 | 차이로 보고하지 않는다. 목록에 없는 차이만 수정 대상이다 |
+   | **의도된 차이 목록** | Light `--color-text-muted` `#97989F`→`#696A75`, Light 검색 placeholder `#A1A1AA`→`#696A75`, 강조색 채운 배경·글자 `#4B6BFB`→`#4361EE`(Dark 글자 `#7B93FF`, §9), Hero CTA 문구, ProjectCard 정보 바 확장, 광고 영역 제거 | 차이로 보고하지 않는다. 목록에 없는 차이만 수정 대상이다 |
 
 5. **수정 → 재캡처 → 재비교**를 A는 허용 오차 이내가 될 때까지, B는 규칙 위반이 없을 때까지 반복한다.
 
