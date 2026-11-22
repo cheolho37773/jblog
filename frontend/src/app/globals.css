@@ -82,9 +82,10 @@
   --shadow-toggle: 0 1px 1px rgba(0, 0, 0, 0.12);
 
   /* 포트폴리오 액센트 (UI §3.4, 양 테마 동일) */
-  --gradient-primary: linear-gradient(90deg, #ff8660 0%, #d53aff 100%);
-  --gradient-orange: linear-gradient(90deg, #ff8660 0%, #f23d4c 100%);
-  --gradient-blue: linear-gradient(90deg, #4b6bfb 0%, #3db8ff 100%);
+  /* 참고 스크린샷 추출값(M1-02 ③), Figma 확인 시 #27에서 확정. orange·blue는 세로 */
+  --gradient-primary: linear-gradient(90deg, #ff8660 0%, #b348d8 100%);
+  --gradient-orange: linear-gradient(180deg, #f77b53 0%, #e0582e 100%);
+  --gradient-blue: linear-gradient(180deg, #4ca2f6 0%, #2581dc 100%);
 
   /* UI §4.2 */
   --breakpoint-tablet: 768px;
