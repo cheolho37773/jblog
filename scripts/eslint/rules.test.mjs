@@ -260,6 +260,18 @@ const HEX_COLOR_VIOLATIONS = [
   ['border 숫자 hex', "export const style = { border: '1px solid #000' };"],
   ['boxShadow 숫자 hex', "export const style = { boxShadow: '0 2px 4px #000000' };"],
   ['outline', "export const style = { outline: '2px solid #4B6BFB' };"],
+  [
+    'Tailwind 임의 값 그림자(_ 구분)',
+    'export const a = <p className="shadow-[0_2px_4px_#000000]">x</p>;',
+  ],
+  [
+    'Tailwind 임의 값 border(_ 구분)',
+    'export const a = <p className="border-[1px_solid_#000]">x</p>;',
+  ],
+  [
+    'Tailwind 임의 값 그라디언트(쉼표·괄호 경계)',
+    'export const a = <p className="bg-[linear-gradient(90deg,#fff,#000)]">x</p>;',
+  ],
   ['inset 그림자', "export const style = { boxShadow: 'inset #123456' };"],
 ];
 
@@ -285,6 +297,7 @@ const HEX_COLOR_ALLOWED = [
   ['템플릿 href 객체 키', 'export const link = { href: `#bad` };'],
   ['마침표 붙은 번호 표기', "export const note = 'No. #1234';"],
   ['한국어 번호', "export const note = '#123번 글';"],
+  ['밑줄 단어 뒤 붙은 조각', "export const path = 'snake_case#add';"],
   ['한 자리 번호', "export const note = 'Step #1';"],
   ['# 들어간 일반 단어', "export const tag = '#Issue';"],
   ['길이가 맞지 않는 토큰', "export const id = '#12345';"],

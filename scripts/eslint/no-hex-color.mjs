@@ -14,8 +14,10 @@
 //       href가 아닌 곳의 `"#main"` 같은 단독 앵커 문자열도 hex 글자 3자라면 색으로 본다.
 
 const HEX_COLOR_LENGTHS = new Set([3, 4, 6, 8]);
+// `_`는 Tailwind 임의 값의 공백 표기(`shadow-[0_2px_4px_#000]`)라 공백과 같은 경계로 본다.
+//   `#` 바로 앞이 `_`일 때만이다: `snake_case#add`처럼 단어 뒤에 붙은 `#`는 여전히 URL 조각이다.
 // `#` 앞이 공백이 아닌 글자(단어·`/`·`&` 등)면 URL 조각이다. 문자열 시작·공백·기호 `[ ( : , ; = '` 뒤만 후보.
-const CANDIDATE = /(^|[\s[(:,;='"`{])#([0-9a-fA-F]+)(?![\w-])/g;
+const CANDIDATE = /(^|[\s_[(:,;='"`{])#([0-9a-fA-F]+)(?![\w-])/g;
 // 앞 단어: 글자로만 되고(숫자·단위 섞이면 `4px`처럼 CSS 값이다) 끝에 마침표 하나까지 허용(`No.`)
 const ISSUE_REFERENCE_PREFIX = /(?:^|\s)([A-Za-z]+)\.?\s$/;
 const KOREAN_NUMBER_SUFFIX = /^[번호]/;
