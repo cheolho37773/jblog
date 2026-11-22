@@ -14,7 +14,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.spec.{ts,tsx}', 'test/**/*.spec.{ts,tsx}'],
+    // *.unit.test.*는 구현 에이전트가 쓰는 단위 테스트 이름(협업 §4.3)이다.
+    include: ['src/**/*.{spec,unit.test}.{ts,tsx}', 'test/**/*.spec.{ts,tsx}'],
     setupFiles: ['./test/setup.ts'],
     // 테스트가 아직 없는 단계에서도 `pnpm test`가 실패하지 않게 한다.
     passWithNoTests: true,
