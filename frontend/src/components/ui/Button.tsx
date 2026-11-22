@@ -35,21 +35,29 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     asChild?: boolean;
   };
 
-type ChildProps = {
-  className?: string;
-  onClick?: (event: MouseEvent<HTMLElement>) => void;
-  onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
-};
+type ChildProps = { className?: string } & Record<string, unknown>;
+type Handler = (event: never) => void;
 
-/** 자식 핸들러를 먼저, 부모 핸들러를 다음에 호출한다. */
-function composeHandlers<E>(
-  childHandler: ((event: E) => void) | undefined,
-  parentHandler: ((event: E) => void) | undefined,
-) {
-  return (event: E) => {
-    childHandler?.(event);
-    parentHandler?.(event);
-  };
+const EVENT_PROP = /^on[A-Z]/;
+
+/**
+ * 부모(Button)와 자식 요소의 속성을 합친다. `onXxx` 이벤트는 자식 -> 부모 순으로 둘 다 호출한다.
+ * cloneElement는 같은 이름의 prop을 덮어써서, 합성하지 않으면 자식 링크의 onFocus 같은 핸들러가 사라진다.
+ */
+function mergeSlotProps(parentProps: ChildProps, childProps: ChildProps): ChildProps {
+  const merged: ChildProps = { ...parentProps };
+  for (const [name, childHandler] of Object.entries(childProps)) {
+    const parentHandler = parentProps[name];
+    if (!EVENT_PROP.test(name) || typeof childHandler !== 'function') continue;
+    merged[name] =
+      typeof parentHandler === 'function'
+        ? (event: unknown) => {
+            (childHandler as (e: unknown) => void)(event);
+            (parentHandler as (e: unknown) => void)(event);
+          }
+        : childHandler;
+  }
+  return merged;
 }
 
 export function Button({
@@ -65,26 +73,25 @@ export function Button({
 
   if (asChild && isValidElement<ChildProps>(children)) {
     const child = children as ReactElement<ChildProps>;
-    const { onClick, onKeyDown, ...passThrough } = props as ChildProps & Record<string, unknown>;
+    const merged = mergeSlotProps(props as ChildProps, child.props);
     // <a>에는 disabled 속성이 없다. aria-disabled와 탭 순서 제외, 클릭·Enter 기본 동작 차단으로 대신한다.
-    const blockWhenDisabled = (event: { preventDefault: () => void }) => event.preventDefault();
+    // 그 밖의 이벤트(포커스 등)는 비활성이어도 그대로 합성한다.
+    const disabledProps = disabled
+      ? {
+          'aria-disabled': true,
+          tabIndex: -1,
+          onClick: (event: MouseEvent<HTMLElement>) => event.preventDefault(),
+          onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+            if (event.key === 'Enter') event.preventDefault();
+            else (merged.onKeyDown as Handler | undefined)?.(event as never);
+          },
+        }
+      : {};
 
     return cloneElement(child, {
-      ...passThrough,
+      ...merged,
       className: cn(classes, child.props.className),
-      ...(disabled
-        ? {
-            'aria-disabled': true,
-            tabIndex: -1,
-            onClick: blockWhenDisabled,
-            onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
-              if (event.key === 'Enter') event.preventDefault();
-            },
-          }
-        : {
-            onClick: composeHandlers(child.props.onClick, onClick),
-            onKeyDown: composeHandlers(child.props.onKeyDown, onKeyDown),
-          }),
+      ...disabledProps,
     });
   }
 
