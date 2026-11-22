@@ -32,6 +32,8 @@
   --icon-button-bg: #696a75;
   --toggle-knob: #ffffff;
   --toggle-knob-icon: #181a2a;
+  /* Footer 카드. Light에서는 surface-2가 footer-bg와 같아 분리했다 */
+  --footer-card: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -58,6 +60,7 @@
   --icon-button-bg: #696a75;
   --toggle-knob: #ffffff;
   --toggle-knob-icon: #181a2a;
+  --footer-card: #242535;
 }
 
 @theme inline {
@@ -84,6 +87,7 @@
   --color-icon-button-bg: var(--icon-button-bg);
   --color-toggle-knob: var(--toggle-knob);
   --color-toggle-knob-icon: var(--toggle-knob-icon);
+  --color-footer-card: var(--footer-card);
 }
 
 /* 양 테마에서 값이 같은 색 */

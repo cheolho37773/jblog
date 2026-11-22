@@ -226,6 +226,15 @@ const COLOR_TOKENS: ColorExpectation[] = [
     lightFixed: true,
     darkFixed: true,
   },
+  // M1-10 추가 토큰 (Footer 오른쪽 카드 배경)
+  {
+    raw: 'footer-card',
+    tailwind: 'color-footer-card',
+    light: '#FFFFFF',
+    dark: '#242535',
+    lightFixed: true,
+    darkFixed: true,
+  },
 ];
 
 // 양 테마 동일한 토큰: 원시 변수 없이 Tailwind 변수에 값을 둔다 (원시 변수를 거쳐도 해석되면 통과).
@@ -332,6 +341,11 @@ const PAIRED_CONTRASTS: [text: string, background: string][] = [
   ['danger', 'surface'],
   ['danger', 'input-bg'],
   ['toggle-knob-icon', 'toggle-knob'],
+  // M1-10: Footer 카드 위 글자
+  ['text-strong', 'footer-card'],
+  ['text-body', 'footer-card'],
+  ['text-muted', 'footer-card'],
+  ['primary-text', 'footer-card'],
 ];
 const WHITE = '#FFFFFF'; // Button icon의 아이콘 색 (UI §5.8)
 const AA_NON_TEXT_CONTRAST = 3; // WCAG 1.4.11 비텍스트 (UI §9)
