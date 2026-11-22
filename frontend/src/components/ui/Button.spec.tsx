@@ -180,4 +180,78 @@ describe('Button asChild 합성', () => {
 
     expect(enter.defaultPrevented).toBe(true);
   });
+
+  // Codex M1-03 r2: 클릭·키보드뿐 아니라 모든 이벤트에서 자식 핸들러가 덮어써지지 않아야 한다.
+  describe('클릭 외 이벤트 합성 (자식 -> 부모 순서)', () => {
+    const SHARED_EVENTS = [
+      { prop: 'onFocus', fire: fireEvent.focus },
+      { prop: 'onBlur', fire: fireEvent.blur },
+      { prop: 'onMouseEnter', fire: fireEvent.mouseEnter },
+      { prop: 'onPointerDown', fire: fireEvent.pointerDown },
+    ] as const;
+
+    for (const { prop, fire } of SHARED_EVENTS) {
+      it(`${prop}: 부모와 자식 핸들러가 모두 호출되고 자식이 먼저이다`, () => {
+        const calls: string[] = [];
+        const parentProps = { [prop]: () => calls.push('parent') };
+        const childProps = { [prop]: () => calls.push('child') };
+        render(
+          <Button asChild {...parentProps}>
+            <a href="/x" {...childProps}>
+              이동
+            </a>
+          </Button>,
+        );
+
+        fire(screen.getByRole('link', { name: '이동' }));
+
+        expect(calls).toEqual(['child', 'parent']);
+      });
+    }
+
+    it('자식에만 있는 이벤트 핸들러도 호출된다', () => {
+      const childOnly = vi.fn();
+      render(
+        <Button asChild>
+          <a href="/x" onFocus={childOnly}>
+            이동
+          </a>
+        </Button>,
+      );
+
+      fireEvent.focus(screen.getByRole('link', { name: '이동' }));
+
+      expect(childOnly).toHaveBeenCalledTimes(1);
+    });
+
+    it('부모에만 있는 이벤트 핸들러도 호출된다', () => {
+      const parentOnly = vi.fn();
+      render(
+        <Button asChild onMouseEnter={parentOnly}>
+          <a href="/x">이동</a>
+        </Button>,
+      );
+
+      fireEvent.mouseEnter(screen.getByRole('link', { name: '이동' }));
+
+      expect(parentOnly).toHaveBeenCalledTimes(1);
+    });
+
+    it('disabled 링크도 클릭·Enter 외 이벤트(포커스 등)는 막지 않고 양쪽 핸들러를 호출한다', () => {
+      const calls: string[] = [];
+      render(
+        <Button asChild disabled onFocus={() => calls.push('parent')}>
+          <a href="/x" onFocus={() => calls.push('child')}>
+            이동
+          </a>
+        </Button>,
+      );
+
+      const link = screen.getByRole('link', { name: '이동' });
+      fireEvent.focus(link);
+
+      expect(calls).toEqual(['child', 'parent']);
+      expect(link).toHaveAttribute('tabindex', '-1');
+    });
+  });
 });
