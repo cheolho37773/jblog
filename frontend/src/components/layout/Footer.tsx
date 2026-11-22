@@ -97,6 +97,7 @@ function QuickLinkColumn() {
 }
 
 // >= 1280은 원본 3덩어리 폭(Info 289 · Links 495 · 카드 392)과 칸 사이 20px(UI §5.9). 칸이 없으면 나머지가 왼쪽부터 이어진다.
+// Links 안에서는 Category 칸이 (495 - 80) / 2 = 207.5px로 고정이고, Quick Link는 글자 폭만큼만 차지해 그 칸 80px 앞에 붙는다(오른쪽 정렬).
 
 /**
  * 사이트 Footer (UI §5.9). 값을 받지 못한 칸은 통째로 숨긴다. 값은 API가 붙는 M2~M3에서 넘긴다.
@@ -113,7 +114,7 @@ export function Footer({ about, contact, categories }: FooterProps) {
               <p className="text-footer-body text-muted font-jakarta max-w-70">{about}</p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-6 laptop:gap-20 desktop:w-[495px] desktop:shrink-0">
+          <div className="grid grid-cols-2 gap-6 laptop:gap-20 desktop:w-[495px] desktop:shrink-0 desktop:grid-cols-[1fr_207.5px] desktop:[&>:first-child]:justify-self-end">
             <QuickLinkColumn />
             <CategoryColumn categories={categories} />
           </div>
@@ -121,11 +122,15 @@ export function Footer({ about, contact, categories }: FooterProps) {
             <ContactCard email={contact?.email} githubUrl={contact?.githubUrl} />
           </div>
         </div>
-        <div className="border-border mt-16 flex flex-col items-center gap-2 border-t pt-8 tablet:flex-row tablet:justify-between">
-          <Logo />
-          <p className="text-footer-body text-muted font-jakarta text-center">
-            © {new Date().getFullYear()} jblog. All rights reserved.
-          </p>
+        <div className="border-border mt-16 border-t pt-8">
+          {/* UI §5.9: 로고 + 저작권 문구를 gap 2로 붙인 묶음. 모바일은 가운데, tablet 이상은 왼쪽 */}
+          <div className="flex flex-col items-center gap-0.5 tablet:items-start">
+            {/* 원본 묶음 높이(로고 30 + 문구)에 맞추되, 터치 영역은 ::after로 44px를 유지한다(UI §4.2) */}
+            <Logo className="relative h-7.5 after:absolute after:-inset-y-1.75 after:inset-x-0 after:content-['']" />
+            <p className="text-footer-body text-muted font-jakarta text-center tablet:text-left">
+              © {new Date().getFullYear()} jblog. All rights reserved.
+            </p>
+          </div>
         </div>
       </Container>
     </footer>
