@@ -308,3 +308,129 @@ test.describe('데스크톱 Navbar 높이와 세로 정렬 (UI §5.1)', () => {
     });
   }
 });
+
+// Codex M1-04 r3 #1: 데스크톱(>= 1024)에서도 주 메뉴 링크 5개는 각각 히트 영역 44x44 이상이다.
+// 시각 간격(gap 40)과 글자 위치는 그대로 두고 의사 요소·패딩으로 히트 영역만 넓힌다.
+test.describe('데스크톱 주 메뉴 히트 영역 44x44 (UI §4.2)', () => {
+  const MIN_TARGET = 44;
+  const REACH = MIN_TARGET / 2 - 1; // 44x44 영역의 가장자리에서 1px 안쪽
+  const OUTSIDE = 30; // 44px 영역 바깥 대조 지점
+
+  for (const width of [1280, 1024]) {
+    test(`${width}px: 메뉴 링크 5개가 가로·세로 44x44 영역 가장자리에서도 자기 자신으로 잡힌다`, async ({
+      page,
+    }) => {
+      await open(page, width);
+
+      for (const name of MENU_NAMES) {
+        const link = menuLink(page, name);
+        await expect(link, name).toBeVisible();
+
+        const misses = await link.evaluate(
+          (element, { half, reach }) => {
+            const box = element.getBoundingClientRect();
+            const cx = box.left + box.width / 2;
+            const cy = box.top + box.height / 2;
+            const probes: [string, number, number][] = [
+              ['위', cx, cy - reach],
+              ['아래', cx, cy + reach],
+              ['왼쪽', cx - reach, cy],
+              ['오른쪽', cx + reach, cy],
+            ];
+            // 44px을 넘는 축은 시각 크기가 이미 충분하므로 44px 경계까지만 본다.
+            return probes
+              .filter(([side]) => {
+                const vertical = side === '위' || side === '아래';
+                return (vertical ? box.height : box.width) < half * 2;
+              })
+              .filter(([, x, y]) => {
+                const hit = document.elementFromPoint(x, y);
+                return !hit || !element.contains(hit);
+              })
+              .map(([side]) => side);
+          },
+          { half: MIN_TARGET / 2, reach: REACH },
+        );
+
+        expect(misses, `${name} 링크에서 영역이 모자란 방향`).toEqual([]);
+      }
+    });
+
+    test(`${width}px: 영역 밖(위로 ${OUTSIDE}px)은 링크가 아니다 (대조)`, async ({ page }) => {
+      await open(page, width);
+      const link = menuLink(page, 'Blog');
+      await expect(link).toBeVisible();
+
+      const inside = await link.evaluate((element, offset) => {
+        const box = element.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          box.left + box.width / 2,
+          box.top + box.height / 2 - offset,
+        );
+        return hit !== null && element.contains(hit);
+      }, OUTSIDE);
+      expect(inside).toBe(false);
+    });
+
+    test(`${width}px: 메뉴 링크의 히트 영역이 이웃 링크와 겹쳐 가려지지 않는다 (좌우 끝 지점이 각자에게 잡힌다)`, async ({
+      page,
+    }) => {
+      await open(page, width);
+      for (const name of MENU_NAMES) {
+        const link = menuLink(page, name);
+        const result = await link.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const y = box.top + box.height / 2;
+          // 링크 상자의 가장자리 1px 안쪽은 반드시 자기 자신이어야 한다(이웃이 위에 덮이면 실패).
+          const left = document.elementFromPoint(box.left + 1, y);
+          const right = document.elementFromPoint(box.right - 1, y);
+          return [left, right].map((hit) => hit !== null && element.contains(hit));
+        });
+        expect(result, `${name} 링크의 좌우 끝`).toEqual([true, true]);
+      }
+    });
+  }
+});
+
+// Codex M1-04 r3 #2: 데스크톱(>= 768) Footer 간격은 UI §5.9대로 칸 제목 ↔ 목록 24px, 목록 항목 사이 8px이다.
+// 측정 대상: 칸 제목은 <h2>의 상자, 링크는 <a>의 상자(= line box, line-height 24px). 데스크톱에는 히트 영역 확장이
+// 없어(확장은 max-tablet 전용) 링크 상자가 곧 글자 줄 상자다. 모바일 44px 규칙은 위 375px 테스트가 지킨다.
+test.describe('Footer 목록 간격 (UI §5.9, 1280px)', () => {
+  const TITLE_TO_FIRST_LINK = 24;
+  const BETWEEN_LINKS = 8;
+  const TOLERANCE = 0.5;
+
+  test(`Quick Link 제목 하단 ↔ 첫 링크 상단 ${TITLE_TO_FIRST_LINK}px, 인접 링크 사이 ${BETWEEN_LINKS}px`, async ({
+    page,
+  }) => {
+    await open(page, 1280);
+    const footer = page.getByRole('contentinfo');
+    await expect(footer.getByRole('heading', { name: 'Quick Link' })).toBeVisible();
+
+    const gaps = await footer.evaluate((root) => {
+      const title = Array.from(root.querySelectorAll('h2')).find(
+        (h) => h.textContent?.trim() === 'Quick Link',
+      );
+      const list = title?.parentElement?.querySelector('ul');
+      if (!title || !list) throw new Error('Quick Link 칸을 찾을 수 없다');
+      const links = Array.from(list.querySelectorAll('a')).map((a) => a.getBoundingClientRect());
+      return {
+        titleToFirst: links[0]!.top - title.getBoundingClientRect().bottom,
+        between: links.slice(1).map((box, index) => box.top - links[index]!.bottom),
+        count: links.length,
+      };
+    });
+
+    expect(gaps.count).toBe(6);
+    expect(
+      Math.abs(gaps.titleToFirst - TITLE_TO_FIRST_LINK),
+      `제목 ↔ 첫 링크 ${gaps.titleToFirst}px`,
+    ).toBeLessThanOrEqual(TOLERANCE);
+    for (const [index, gap] of gaps.between.entries()) {
+      expect(
+        Math.abs(gap - BETWEEN_LINKS),
+        `${index + 1}번째와 ${index + 2}번째 링크 사이 ${gap}px`,
+      ).toBeLessThanOrEqual(TOLERANCE);
+    }
+  });
+});
