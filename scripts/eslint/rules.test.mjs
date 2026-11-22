@@ -257,6 +257,10 @@ const HEX_COLOR_VIOLATIONS = [
   ['JSX 속성 값', 'export const a = <svg fill="#4B6BFB" />;'],
   ['href가 아닌 단독 값', "export const color = '#ABC';"],
   ['숫자만인 색', "export const black = '#000000';"],
+  ['border 숫자 hex', "export const style = { border: '1px solid #000' };"],
+  ['boxShadow 숫자 hex', "export const style = { boxShadow: '0 2px 4px #000000' };"],
+  ['outline', "export const style = { outline: '2px solid #4B6BFB' };"],
+  ['inset 그림자', "export const style = { boxShadow: 'inset #123456' };"],
 ];
 
 for (const [title, code] of HEX_COLOR_VIOLATIONS) {
@@ -277,6 +281,10 @@ const HEX_COLOR_ALLOWED = [
   ['경로 뒤 조각', "export const path = '/blog#section';"],
   ['경로 뒤 hex 글자 조각', "export const path = '/blog#add';"],
   ['번호 표기', "export const note = 'Issue #123';"],
+  ['템플릿 href', 'export const a = <a href={`#add`}>m</a>;'],
+  ['템플릿 href 객체 키', 'export const link = { href: `#bad` };'],
+  ['마침표 붙은 번호 표기', "export const note = 'No. #1234';"],
+  ['한국어 번호', "export const note = '#123번 글';"],
   ['한 자리 번호', "export const note = 'Step #1';"],
   ['# 들어간 일반 단어', "export const tag = '#Issue';"],
   ['길이가 맞지 않는 토큰', "export const id = '#12345';"],
