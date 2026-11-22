@@ -242,3 +242,98 @@ for (const [title, filePath, code] of BOUNDARY_ALLOWED) {
     assert.deepEqual(await lintCode(code, filePath), []);
   });
 }
+
+// hex 색 직접 사용 금지 (프론트엔드 §5.1). [설명, 코드]
+const COMPONENT_PATH = 'frontend/src/components/ui/sample.tsx';
+
+/** @type {Array<[title: string, code: string]>} */
+const HEX_COLOR_VIOLATIONS = [
+  ['Tailwind 임의 값', 'export const a = <p className="text-[#4B6BFB]">x</p>;'],
+  ['style 객체', "export const style = { color: '#fff' };"],
+  ['문자열 변수', "export const background = '#181A2A';"],
+  ['8자리 알파', "export const overlay = '#181A2A80';"],
+  ['소문자 4자리', "export const tint = '#abcd';"],
+  ['템플릿 리터럴', 'export const border = `1px solid #E8E8EA`;'],
+  ['JSX 속성 값', 'export const a = <svg fill="#4B6BFB" />;'],
+  ['href가 아닌 단독 값', "export const color = '#ABC';"],
+  ['숫자만인 색', "export const black = '#000000';"],
+  ['border 숫자 hex', "export const style = { border: '1px solid #000' };"],
+  ['boxShadow 숫자 hex', "export const style = { boxShadow: '0 2px 4px #000000' };"],
+  ['outline', "export const style = { outline: '2px solid #4B6BFB' };"],
+  [
+    'Tailwind 임의 값 그림자(_ 구분)',
+    'export const a = <p className="shadow-[0_2px_4px_#000000]">x</p>;',
+  ],
+  [
+    'Tailwind 임의 값 border(_ 구분)',
+    'export const a = <p className="border-[1px_solid_#000]">x</p>;',
+  ],
+  [
+    'Tailwind 임의 값 그라디언트(쉼표·괄호 경계)',
+    'export const a = <p className="bg-[linear-gradient(90deg,#fff,#000)]">x</p>;',
+  ],
+  ['border 키워드 두 개 뒤 숫자 hex', "export const style = { border: 'solid thin #000' };"],
+  ['border medium 뒤 숫자 hex', "export const style = { border: 'solid medium #000000' };"],
+  ['번호 예외 없음: 문자열 안의 Issue #123', "export const note = 'Issue #123';"],
+  ['번호 예외 없음: 4자리 번호', "export const note = 'No. #1234';"],
+  ['번호 예외 없음: 한국어 번호', "export const note = '#123번 글';"],
+  ['inset 그림자', "export const style = { boxShadow: 'inset #123456' };"],
+];
+
+for (const [title, code] of HEX_COLOR_VIOLATIONS) {
+  test(`hex 색 거부: ${title}`, async () => {
+    const messages = await lintCode(code, COMPONENT_PATH);
+    const matched = messages.filter((message) => message.ruleId === 'jblog/no-hex-color');
+    assert.ok(matched.length > 0, `발견된 규칙: ${ruleIdsOf(messages).join(', ')}`);
+    assert.ok(matched.every((message) => message.severity === ERROR_SEVERITY));
+  });
+}
+
+/** @type {Array<[title: string, code: string]>} */
+const HEX_COLOR_ALLOWED = [
+  ['앵커 href', 'export const a = <a href="#main">m</a>;'],
+  ['hex 글자뿐인 앵커 href', 'export const a = <a href="#add">m</a>;'],
+  ['href 표현식', "export const a = <a href={'#face'}>m</a>;"],
+  ['href 객체 키', "export const link = { href: '#bad' };"],
+  ['경로 뒤 조각', "export const path = '/blog#section';"],
+  ['경로 뒤 hex 글자 조각', "export const path = '/blog#add';"],
+  ['템플릿 href', 'export const a = <a href={`#add`}>m</a>;'],
+  ['템플릿 href 객체 키', 'export const link = { href: `#bad` };'],
+  ['문자열 키 href', "export const link = { 'href': '#add' };"],
+  ['문자열 키 href 템플릿', "export const link = { 'href': `#add` };"],
+  ['계산 키 href', "export const link = { ['href']: '#add' };"],
+  ['밑줄 단어 뒤 붙은 조각', "export const path = 'snake_case#add';"],
+  ['한 자리 번호', "export const note = 'Step #1';"],
+  ['# 들어간 일반 단어', "export const tag = '#Issue';"],
+  ['길이가 맞지 않는 토큰', "export const id = '#12345';"],
+  ['주석', '// color: #4B6BFB\n/* #fff */\nexport const a = 1;'],
+  ['JSX 본문 텍스트', 'export const a = <p>#fff</p>;'],
+  ['정규식', 'export const pattern = /#[0-9a-f]{6}/;'],
+];
+
+for (const [title, code] of HEX_COLOR_ALLOWED) {
+  test(`hex 색 허용: ${title}`, async () => {
+    const messages = await lintCode(code, COMPONENT_PATH);
+    assert.deepEqual(
+      messages.filter((message) => message.ruleId === 'jblog/no-hex-color'),
+      [],
+    );
+  });
+}
+
+const HEX_COLOR_OUT_OF_SCOPE_PATHS = [
+  'frontend/src/app/globals.tokens.spec.ts',
+  'frontend/src/components/ui/button.test.tsx',
+  'frontend/src/generated/api.ts',
+  'backend/src/mail/template.ts',
+];
+
+for (const outOfScopePath of HEX_COLOR_OUT_OF_SCOPE_PATHS) {
+  test(`${outOfScopePath}에서는 hex 색을 허용한다`, async () => {
+    const messages = await lintCode("export const color = '#4B6BFB';", outOfScopePath);
+    assert.deepEqual(
+      messages.filter((message) => message.ruleId === 'jblog/no-hex-color'),
+      [],
+    );
+  });
+}
