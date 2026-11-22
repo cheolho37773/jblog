@@ -104,6 +104,11 @@ function QuickLinkColumn() {
  * role을 명시한 이유: <main> 안에 놓이면(개발 페이지 미리보기) 브라우저가 contentinfo로 보지 않는다.
  */
 export function Footer({ about, contact, categories }: FooterProps) {
+  // 495px 고정 폭과 오른쪽 붙임은 Category 칸 앞 80px을 맞추려는 규칙이다. 칸이 없으면 Quick Link가 앞 칸에서 바로 시작해야 한다.
+  const hasCategories = (categories?.length ?? 0) > 0;
+  const linksLayout = hasCategories
+    ? 'desktop:w-[495px] desktop:grid-cols-[1fr_207.5px] desktop:[&>:first-child]:justify-self-end'
+    : 'desktop:grid-cols-1';
   return (
     <footer role="contentinfo" className="bg-footer-bg border-border border-t">
       <Container className="pt-16 pb-8">
@@ -114,7 +119,7 @@ export function Footer({ about, contact, categories }: FooterProps) {
               <p className="text-footer-body text-muted font-jakarta max-w-70">{about}</p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-6 laptop:gap-20 desktop:w-[495px] desktop:shrink-0 desktop:grid-cols-[1fr_207.5px] desktop:[&>:first-child]:justify-self-end">
+          <div className={cn('grid grid-cols-2 gap-6 laptop:gap-20 desktop:shrink-0', linksLayout)}>
             <QuickLinkColumn />
             <CategoryColumn categories={categories} />
           </div>
