@@ -133,6 +133,31 @@ test.describe('모바일 메뉴 (375px)', () => {
     expect(await scrollLocked(page)).toBe(false);
   });
 
+  test('메뉴를 연 채 브라우저 뒤로 가기로 경로가 바뀌면 닫히고 스크롤 잠금이 풀리며 포커스가 햄버거로 돌아온다 (Codex M1-04 r1 #2)', async ({
+    page,
+  }) => {
+    await page.setViewportSize(MOBILE);
+    await page.goto('/');
+    // 클라이언트 이동으로 /search에 간다(전체 새로고침이면 메뉴 상태가 초기화되어 검증이 무의미하다).
+    await page.getByRole('banner').getByRole('button', { name: '검색 열기' }).click();
+    await page.getByRole('dialog', { name: SEARCH_DIALOG_NAME }).getByRole('searchbox').fill('x');
+    await page.keyboard.press('Enter');
+    await page.waitForURL('**/search?q=x');
+    await expect(hamburger(page)).toBeVisible();
+
+    await hamburger(page).click();
+    await expect(menu(page)).toBeVisible();
+    expect(await scrollLocked(page)).toBe(true);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+
+    await expect(menu(page)).toBeHidden();
+    await expect(hamburger(page)).toHaveAttribute('aria-expanded', 'false');
+    expect(await scrollLocked(page)).toBe(false);
+    await expect(hamburger(page)).toBeFocused();
+  });
+
   test('메뉴의 현재 항목 표시: / 에서 Home이 aria-current="page"이다', async ({ page }) => {
     await openMenu(page);
 
