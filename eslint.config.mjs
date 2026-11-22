@@ -43,4 +43,11 @@ export default [
     plugins: { jblog: jblogPlugin },
     rules: { 'jblog/import-boundaries': 'error' },
   },
+  {
+    // 색은 디자인 토큰으로만 쓴다 (프론트엔드 §5.1). 테스트는 토큰 값을 검증하므로 hex를 쓴다.
+    files: ['frontend/src/**/*.{ts,tsx}'],
+    ignores: ['frontend/src/**/*.{spec,test}.{ts,tsx}'],
+    plugins: { jblog: jblogPlugin },
+    rules: { 'jblog/no-hex-color': 'error' },
+  },
 ];
