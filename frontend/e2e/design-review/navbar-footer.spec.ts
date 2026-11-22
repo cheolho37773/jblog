@@ -340,8 +340,30 @@ function save(name: string, output: MeasureOutput, rows: Row[]) {
   );
 }
 
-function expectNoDifference(rows: Row[]) {
+// 오케스트레이터 판정(M1-05 ②): Dark 메뉴 글자색은 `--nav-text` 토큰 값(UI §10 #5 추정) 결정이라 Issue #27로 보류한다.
+// 실패로 두지 않고 측정값만 어노테이션으로 남긴다. 다른 항목의 판정 기준은 그대로다.
+const DEFERRED_ITEMS: { theme: Theme; area: string; itemPrefix: string }[] = [
+  { theme: 'dark', area: 'Navbar', itemPrefix: '메뉴 글자색 (Blog' },
+];
+
+function isDeferred(row: Row, theme: Theme) {
+  return DEFERRED_ITEMS.some(
+    (deferred) =>
+      deferred.theme === theme &&
+      deferred.area === row.area &&
+      row.item.startsWith(deferred.itemPrefix),
+  );
+}
+
+function expectNoDifference(rows: Row[], theme: Theme) {
   for (const row of rows) {
+    if (row.verdict === '차이' && isDeferred(row, theme)) {
+      test.info().annotations.push({
+        type: 'deferred',
+        description: `Issue #27 보류 - ${row.area} ${row.item}: 원본 ${row.ref} / 구현 ${row.impl} / 비율 ${row.diff}`,
+      });
+      continue;
+    }
     expect
       .soft(
         row.verdict,
@@ -359,7 +381,7 @@ for (const theme of ['light', 'dark'] as const) {
       const output = await measure(page, theme, 'navbar');
       const rows = navbarRows(output.ref as NavbarMeasure, output.impl as NavbarMeasure, theme);
       save(`navbar-${theme}`, output, rows);
-      expectNoDifference(rows);
+      expectNoDifference(rows, theme);
     });
 
     test(`Footer(예시 값) 위치·크기 ±${POSITION_TOLERANCE}px, 색 ±${COLOR_TOLERANCE}`, async ({
@@ -368,7 +390,7 @@ for (const theme of ['light', 'dark'] as const) {
       const output = await measure(page, theme, 'footer');
       const rows = footerRows(output.ref as FooterMeasure, output.impl as FooterMeasure);
       save(`footer-${theme}`, output, rows);
-      expectNoDifference(rows);
+      expectNoDifference(rows, theme);
     });
   });
 }

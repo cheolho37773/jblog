@@ -118,6 +118,21 @@ test.describe('§5.9 Footer 3덩어리 폭과 간격 (예시 값 Footer, 1920)',
     expectNear(category.left - quick.right, 80, 'Quick Link ↔ Category');
   });
 
+  test('Category 칸 폭 207.5px = (Links 495 - 80) / 2, Category 칸 x는 원본과 같다', async ({
+    page,
+  }) => {
+    const footer = section(page, 'dev-layout-footer');
+    const links = await rectOf(
+      footer.getByRole('heading', { name: 'Quick Link' }).locator('xpath=../..'),
+    );
+    const category = await rectOf(
+      footer.getByRole('heading', { name: 'Category' }).locator('xpath=..'),
+    );
+
+    expectNear(category.width, 207.5, 'Category 칸 폭');
+    expectNear(links.right - category.right, 0, 'Category 칸 오른쪽 ↔ Links 오른쪽');
+  });
+
   test('Info 소개 문단 폭 280px, muted 색이다', async ({ page }) => {
     const about = section(page, 'dev-layout-footer').getByText(
       '기술과 기록을 모아 두는 개인 블로그입니다.',
