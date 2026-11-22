@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { Footer } from '@/components/layout/Footer';
+import { Navbar } from '@/components/layout/Navbar';
+import { Section as LayoutSection } from '@/components/layout/Section';
+import { PageInfo } from '@/components/layout/PageInfo';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +38,14 @@ const ICON_BUTTON_LABEL = {
   focus: 'icon focus',
   disabled: 'icon disabled',
 } as const;
+// 연락처는 실제 값이 아닌 example.com 예시다.
+const EXAMPLE_FOOTER = {
+  about: '기술과 기록을 모아 두는 개인 블로그입니다.',
+  contact: { email: 'hello@example.com', githubUrl: 'https://github.com/example' },
+  categories: ['React', 'TypeScript', 'NestJS', 'Prisma', 'DevOps', 'Career', 'Extra'].map(
+    (name) => ({ name, slug: name.toLowerCase() }),
+  ),
+};
 const AVATAR_SIZES = [28, 40, 80];
 // 외부 URL·실제 인물 사진을 쓰지 않는 단색 더미 이미지
 const AVATAR_IMAGE = '/dev/avatar-dummy.png';
@@ -92,11 +104,34 @@ const TYPE_SAMPLES = [
   'text-exp-body',
 ];
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+// wide: 내용이 자기 Container를 가진 컴포넌트(Footer)는 개발 페이지 컨테이너 밖(전체 폭)에 둬야 실제 폭으로 보인다.
+function Section({
+  id,
+  title,
+  wide = false,
+  children,
+}: {
+  id: string;
+  title: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  if (wide) {
+    return (
+      <section data-testid={id} className="border-border border-t py-8">
+        <div className="container-site mb-4">
+          <h2 className="text-h4 text-strong">{title}</h2>
+        </div>
+        {children}
+      </section>
+    );
+  }
   return (
-    <section data-testid={id} className="border-border flex flex-col gap-4 border-t py-8">
-      <h2 className="text-h4 text-strong">{title}</h2>
-      {children}
+    <section data-testid={id} className="border-border border-t py-8">
+      <div className="container-site flex flex-col gap-4">
+        <h2 className="text-h4 text-strong">{title}</h2>
+        {children}
+      </div>
     </section>
   );
 }
@@ -107,8 +142,8 @@ function Row({ children }: { children: ReactNode }) {
 
 export default function ComponentsPage() {
   return (
-    <main className="container-site text-body py-8">
-      <header className="flex items-center justify-between gap-4">
+    <main className="text-body py-8">
+      <header className="container-site flex items-center justify-between gap-4 pb-8">
         <h1 className="text-h3-bold text-strong">Components</h1>
         <ThemeToggle />
       </header>
@@ -230,6 +265,37 @@ export default function ComponentsPage() {
           <Icon name="x" size={24} />
           <Icon name="youtube" size={24} />
         </Row>
+      </Section>
+
+      <Section id="dev-layout-navbar" title="Navbar">
+        <Navbar sticky={false} />
+      </Section>
+
+      <Section id="dev-layout-footer" title="Footer (예시 값)" wide>
+        <Footer {...EXAMPLE_FOOTER} />
+      </Section>
+
+      <Section id="dev-layout-footer-empty" title="Footer (값 없음)" wide>
+        <Footer />
+      </Section>
+
+      <Section id="dev-layout-pageinfo" title="PageInfo">
+        <PageInfo title="Blog" breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Blog' }]} />
+      </Section>
+
+      <Section id="dev-layout-sections" title="Section 간격 (연속 2개)">
+        {/* 부모가 flex gap을 가지면 Section 사이 간격에 더해지므로 일반 블록으로 한 번 감싼다 */}
+        <div>
+          <LayoutSection data-example="section-a">
+            <p>Section A</p>
+          </LayoutSection>
+          <LayoutSection data-example="section-b">
+            <p>Section B</p>
+          </LayoutSection>
+          <LayoutSection title="제목 있는 Section" data-example="section-titled">
+            <p>Section 내용</p>
+          </LayoutSection>
+        </div>
       </Section>
 
       <Section id="dev-tokens" title="Tokens">

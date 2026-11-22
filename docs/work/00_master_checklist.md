@@ -125,7 +125,7 @@
 
 - [ ] UI 기획서 §10 미확정 9개 항목 확정 (Figma 재확인, 개요 Q4)
 - [x] FE-02 디자인 토큰(`globals.css`, Light/Dark), 타이포 유틸, 그라디언트, Atom 컴포넌트(Badge·Button·Avatar·Input·ThemeToggle), `/dev/components` 페이지 — 토큰 #29·#35·#41, Atom·`/dev/components` #34 (2026-11-22)
-- [ ] FE-03 Navbar(모바일 메뉴·검색·테마 토글), Footer, Container/Section, PageInfo
+- [x] FE-03 Navbar(모바일 메뉴·검색·테마 토글), Footer, Container/Section, PageInfo — #40, 토큰 #41 (2026-11-22)
 - [ ] 디자인 검수: 원본 컴포넌트 Figma 대비 ±2px, Light/Dark (UI §11)
 
 **M1 완료 확인**
