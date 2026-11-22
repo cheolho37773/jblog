@@ -22,6 +22,9 @@ export default [
       '**/.next-components/**',
       '**/coverage/**',
       '**/.turbo/**',
+      // Playwright 실행 산출물(.gitignore 대상). 시각 회귀 컨테이너가 호스트로 되돌려 놓는다 (M1-05).
+      '**/playwright-report/**',
+      '**/test-results/**',
       'docs/**',
       'scripts/eslint/fixtures/**',
       // Prisma 생성 클라이언트. 생성물이라 검사 대상이 아니다 (.gitignore 대상).
