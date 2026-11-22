@@ -169,6 +169,63 @@ const COLOR_TOKENS: ColorExpectation[] = [
     lightFixed: true,
     darkFixed: false,
   },
+  // M1-08 추가 토큰 (글자용 강조색·오류·아이콘 버튼·토글 노브)
+  {
+    raw: 'primary-strong',
+    tailwind: 'color-primary-strong',
+    light: '#4361EE',
+    dark: '#4361EE',
+    lightFixed: true,
+    darkFixed: true,
+  },
+  {
+    raw: 'primary-text',
+    tailwind: 'color-primary-text',
+    light: '#4361EE',
+    dark: '#7B93FF',
+    lightFixed: true,
+    darkFixed: true,
+  },
+  {
+    raw: 'on-primary',
+    tailwind: 'color-on-primary',
+    light: '#FFFFFF',
+    dark: '#FFFFFF',
+    lightFixed: true,
+    darkFixed: true,
+  },
+  {
+    raw: 'danger',
+    tailwind: 'color-danger',
+    light: '#C81E1E',
+    dark: '#F87171',
+    lightFixed: true,
+    darkFixed: true,
+  },
+  {
+    raw: 'icon-button-bg',
+    tailwind: 'color-icon-button-bg',
+    light: '#696A75',
+    dark: '#696A75',
+    lightFixed: true,
+    darkFixed: true,
+  },
+  {
+    raw: 'toggle-knob',
+    tailwind: 'color-toggle-knob',
+    light: '#FFFFFF',
+    dark: '#FFFFFF',
+    lightFixed: true,
+    darkFixed: true,
+  },
+  {
+    raw: 'toggle-knob-icon',
+    tailwind: 'color-toggle-knob-icon',
+    light: '#181A2A',
+    dark: '#181A2A',
+    lightFixed: true,
+    darkFixed: true,
+  },
 ];
 
 // 양 테마 동일한 토큰: 원시 변수 없이 Tailwind 변수에 값을 둔다 (원시 변수를 거쳐도 해석되면 통과).
@@ -265,7 +322,19 @@ const TEXT_ON_BACKGROUND_PAIRS = {
 const PAIRED_CONTRASTS: [text: string, background: string][] = [
   ['input-placeholder', 'input-bg'],
   ['footer-link', 'footer-bg'],
+  // M1-08
+  ['on-primary', 'primary-strong'],
+  ['primary-text', 'bg'],
+  ['primary-text', 'surface'],
+  ['primary-text', 'bg-subtle'],
+  ['primary-text', 'input-bg'],
+  ['danger', 'bg'],
+  ['danger', 'surface'],
+  ['danger', 'input-bg'],
+  ['toggle-knob-icon', 'toggle-knob'],
 ];
+const WHITE = '#FFFFFF'; // Button icon의 아이콘 색 (UI §5.8)
+const AA_NON_TEXT_CONTRAST = 3; // WCAG 1.4.11 비텍스트 (UI §9)
 
 const TRANSITION_PROPERTIES = ['background-color', 'color', 'border-color'];
 const TRANSITION_DURATION = '200ms';
@@ -792,6 +861,23 @@ describe(`텍스트 대비 AA ${AA_TEXT_CONTRAST}:1 이상 (UI §9)`, () => {
           expect(ratio).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
         });
       }
+    });
+  }
+});
+
+describe('M1-08 추가 대비', () => {
+  for (const theme of THEMES) {
+    it(`${theme}: 흰색 아이콘 on --icon-button-bg ${AA_TEXT_CONTRAST}:1 이상`, () => {
+      expect(contrastRatio(WHITE, resolvedHex(theme, 'icon-button-bg'))).toBeGreaterThanOrEqual(
+        AA_TEXT_CONTRAST,
+      );
+    });
+
+    it(`${theme}: 비텍스트 --color-primary on --bg ${AA_NON_TEXT_CONTRAST}:1 이상 (장식·테두리·포커스 링)`, () => {
+      const primary = resolveColor(themeVars.get('--color-primary'), theme) as string;
+      expect(contrastRatio(primary, resolvedHex(theme, 'bg'))).toBeGreaterThanOrEqual(
+        AA_NON_TEXT_CONTRAST,
+      );
     });
   }
 });
