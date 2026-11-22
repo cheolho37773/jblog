@@ -136,7 +136,12 @@ async function collectFindings(
       };
 
       const skipped = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'META', 'LINK']);
-      for (const element of [document.documentElement, ...document.body.querySelectorAll('*')]) {
+      // body 자체(와 의사 요소)도 수집한다. querySelectorAll('*')은 body의 자손만 돌려준다.
+      for (const element of [
+        document.documentElement,
+        document.body,
+        ...document.body.querySelectorAll('*'),
+      ]) {
         if (skipped.has(element.tagName)) continue;
         check(element, null);
         for (const pseudo of pseudos) {
@@ -215,6 +220,33 @@ for (const theme of THEMES) {
       );
       expect(properties).toContain('color');
       expect(properties).toContain('font-family');
+    });
+
+    test('대조: body 배경색에 토큰 밖 색을 주면 body가 위반으로 나온다', async ({ page }) => {
+      await open(page, '/dev/components', { theme, size: FRAME });
+      // body에 배경색 전환(transition)이 걸려 있어 바로 읽으면 이전 색이 나온다. 전환을 끄고 주입한다.
+      await page.addStyleTag({
+        content: 'body { background-color: #123456 !important; transition: none !important; }',
+      });
+      const findings = await collectFindings(page, [...palette], fontTokenDeclarations());
+      expect(
+        findings.some((f) => f.where.startsWith('body') && f.property === 'background-color'),
+      ).toBe(true);
+    });
+
+    test('대조: body 의사 요소(::before)에 토큰 밖 색을 주면 body가 위반으로 나온다', async ({
+      page,
+    }) => {
+      await open(page, '/dev/components', { theme, size: FRAME });
+      await page.addStyleTag({ content: "body::before { content: ''; color: #123456; }" });
+
+      const findings = await collectFindings(page, [...palette], fontTokenDeclarations());
+      expect(
+        findings.some(
+          (f) =>
+            f.where.startsWith('body') && f.where.endsWith('::before') && f.property === 'color',
+        ),
+      ).toBe(true);
     });
 
     for (const route of ['/', '/dev/components']) {

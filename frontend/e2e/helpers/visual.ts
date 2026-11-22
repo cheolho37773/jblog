@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { pinTheme, waitForFonts, type Theme } from './theme';
 
 // M1-05 규약 6: 시각 회귀 캡처 폭. UI §11 1번(1920 / 1440 / 1024 / 768 / 375).
@@ -18,4 +18,21 @@ export async function openForCapture(
   await page.goto(route);
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
   await waitForFonts(page);
+}
+
+/**
+ * 저작권 문구(`© {올해} jblog…`)는 서버가 렌더링한 현재 연도를 담아 해마다 바뀐다.
+ * 브라우저 시계만 고정해서는 서버 렌더링 결과를 막을 수 없으므로 비교에서 뺀다.
+ * 문구의 위치·배치는 spec-values*.spec.ts가 DOM 수치로 검증한다.
+ */
+export function copyrightLocator(page: Page): Locator {
+  return page.locator('footer p', { hasText: '©' });
+}
+
+// 마스크는 테스트 코드 안의 캡처 처리다(디자인 토큰 대상 아님). 고정 색이라 캡처마다 같다.
+const MASK_COLOR = '#ff00ff';
+
+/** 모든 시각 회귀 캡처에 공통으로 쓰는 옵션: 연도가 들어간 저작권 문구를 가린다. */
+export function captureOptions(page: Page, options: { fullPage?: boolean } = {}) {
+  return { ...options, mask: [copyrightLocator(page)], maskColor: MASK_COLOR };
 }
