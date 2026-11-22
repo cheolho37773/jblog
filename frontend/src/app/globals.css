@@ -261,3 +261,25 @@ body {
     padding-inline: 32px;
   }
 }
+
+/*
+ * 글 본문·인용문 서체 묶음 (UI §3.5). Tailwind --text-* 변수로는 font-family·font-style을 못 붙여 유틸로 둔다.
+ * 크기·줄 높이는 변수를 참조하므로 모바일 축소를 따라간다.
+ * font-synthesis-style: none -> 이탤릭 폰트가 없는 한글(Noto Serif KR 등)을 가짜로 기울이지 않는다 (프론트엔드 §5.1-a).
+ * 영문 Source Serif 4는 실제 이탤릭을 로드하므로 영향이 없다.
+ */
+@utility type-article {
+  font-family: var(--font-serif);
+  font-size: var(--text-article);
+  line-height: var(--text-article--line-height);
+  font-weight: var(--text-article--font-weight);
+}
+
+@utility type-quote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-synthesis-style: none;
+  font-size: var(--text-quote);
+  line-height: var(--text-quote--line-height);
+  font-weight: var(--text-quote--font-weight);
+}
