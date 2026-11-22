@@ -31,7 +31,8 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
 3. **이슈·브랜치**
    ```bash
    gh issue create --title "[<ID>] <요약>" --label "<M>,<영역>,type:<유형>" --body "<지시서 링크·완료 기준>"
-   gh issue develop <번호> --base dev --name <feat|fix|contract>/<ID>-<요약>
+   gh issue develop <번호> --base dev --name <feat|fix|contract>/<ID>-<요약> --checkout
+   git branch --show-current   # 작업 브랜치인지 확인한 뒤 시작
    ```
    - 작업은 주 작업 폴더에서 한다. worktree를 쓰면 소유권 훅이 저장소 경로 밖 파일을 검사하지 못한다(M0 report). 의존성이 겹치는 작업(잠금 파일)은 동시에 진행하지 않는다
 4. **위임**: 서브에이전트를 실행하기 전에 역할을 기록한다 (`echo <역할> > .claude/.current-role`, 소유권 훅이 읽음). 난도 높음이면 모델을 Opus로 지정
@@ -54,7 +55,7 @@ description: "jblog 오케스트레이터 작업 절차. 마일스톤 시작(예
    - **head SHA** (개발자가 Merge 전에 PR 최신 커밋과 대조)
    - 완료 기준 체크, 필수 검증 상태(완료·실패·보류), 검수 판정, 에러 수정 횟수, 후속 처리 목록
 10. **개발자 작업**: GitHub에서 PR 생성 → PR CI 확인 → Merge (= G4). 수정 요청을 받으면 브랜치에서 수정 → 자체 검사 → Codex 재검수 → push → 새 head SHA로 다시 보고
-11. **정리** (Merge 확인 후): `git fetch origin`, `git worktree remove ../jblog-worktrees/<브랜치>`, `git branch -D <브랜치>`. `dev`의 체크리스트에 항목이 체크돼 있는지, 이슈가 닫혔는지 확인 (열려 있으면 개발자에게 알림)
+11. **정리** (Merge 확인 후): `git checkout dev && git pull --ff-only`, squash Merge라 `git diff --quiet <브랜치> dev`로 내용이 같은지 확인한 뒤 `git branch -D <브랜치>`. `dev`의 체크리스트에 항목이 체크돼 있는지, 이슈가 닫혔는지 확인 (열려 있으면 개발자에게 알림)
 
 ## 3. 검수 후 커밋이 추가되면 (협업 §6.5)
 
