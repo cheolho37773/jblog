@@ -14,15 +14,15 @@ type FooterProps = {
   categories?: { name: string; slug: string }[];
 };
 
-// 모바일에서 링크 한 줄이 44x44 터치 타겟(UI §4.2)이 되게 한다. 데스크톱은 글자 크기만큼.
+// 목록 항목 사이는 tablet 이상에서 8px(UI §5.9). 모바일에서 링크 한 줄이 44x44 터치 타겟(UI §4.2)이 되게 한다. 데스크톱은 글자 크기만큼.
 const LINK_CLASS =
-  'text-footer-body text-footer-link font-jakarta hover:text-primary-text inline-flex items-center max-tablet:min-h-11 max-tablet:min-w-11';
+  'text-footer-body text-footer-link font-jakarta hover:text-primary-text flex w-fit items-center max-tablet:min-h-11 max-tablet:min-w-11';
 
 function LinkColumn({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <h2 className="text-footer-title font-jakarta text-strong mb-4">{title}</h2>
-      <ul className="flex flex-col">{children}</ul>
+      <h2 className="text-footer-title font-jakarta text-strong mb-4 tablet:mb-6">{title}</h2>
+      <ul className="flex flex-col tablet:gap-2">{children}</ul>
     </div>
   );
 }
