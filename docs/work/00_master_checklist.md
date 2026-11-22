@@ -16,8 +16,8 @@
 | 단계 | 상태 | 완료일 |
 |---|---|---|
 | 기획 | ✅ 완료 | 2026-11-21 |
-| P1 협업 체계 준비 | 🔄 진행 중 (저장소 완료) | |
-| M0 셋업 | 🔄 진행 중 | |
+| P1 협업 체계 준비 | ✅ 완료 | 2026-11-22 (GitHub Codex PR 리뷰 연결은 사용하지 않기로 해 보류) |
+| M0 셋업 | ✅ 완료 | 2026-11-22, `docs/work/M0/report.md` |
 | M1 디자인 시스템 | ⬜ | |
 | M2 블로그 읽기 | ⬜ | |
 | M3 관리자 & 작성 | ⬜ | |
@@ -71,7 +71,7 @@
 
 **마무리**
 - [x] 브랜치 보호 켜기 (Ruleset): `dev`·`main` PR 필수(squash만), 직접·force push·삭제 금지 — 2026-11-21
-- [ ] Codex 로컬 검수 실제 1회 실행 확인 (M0 첫 작업에서)
+- [x] Codex 로컬 검수 실제 1회 실행 확인 (M0 첫 작업에서) — #2 (2026-11-21, M0-01 r1·r2)
 - [x] GitHub 계정 2FA 확인 (관리자 로그인 보안의 전제, 접근 통제 §1.2) — 2026-11-21
 
 ---
@@ -91,32 +91,33 @@
 - [x] 로컬 Docker Compose (PostgreSQL 17), `infra/.env.example`, `infra/README.md` — #9 (2026-11-21)
 - [x] 테스트 프레임워크 공통 설정: Jest(api), Vitest(web), Playwright, `pnpm test:*` 명령 — Jest #11, Vitest·Playwright #13 (2026-11-21)
 - [x] GitHub Actions CI (**작업 브랜치 push 이벤트 + `dev` 대상 pull_request 이벤트** 모두 실행): lint · typecheck · test(Testcontainers) · build · Docker 빌드 검증 · `ownership-check`(`scripts/ownership/roles.json` 사용) · 잠금 파일 검사, SHA 3종 출력, `permissions` 최소화 — #21 (2026-11-21, E2E·통합 테스트·API 계약 검사 포함)
-- [ ] `dev` Ruleset에 CI 잡과 `ownership-check`를 **필수 상태 검사**로 추가 (CI가 생긴 뒤)
+- [x] `dev` Ruleset에 CI 잡과 `ownership-check`를 **필수 상태 검사**로 추가 (CI가 생긴 뒤) — 2026-11-22, 8개 잡(GitHub Actions 앱 한정), 최신 `dev` 기준 필수
 - [x] Husky 도입 시 pre-commit이 `scripts/hooks/check-secrets.sh`를 호출하도록 이전 — #6 (2026-11-21)
 
 **백엔드 기반**
 - [x] BE-01 Nest 프로젝트, config(스키마 검증)/logging(pino redact)/helmet/ValidationPipe/Swagger(운영 비활성)/에러 필터 — #11 (2026-11-21)
 - [x] BE-02 Prisma 스키마, 마이그레이션, `pg_trgm`·부분 unique 인덱스 수동 SQL, seed(더미 데이터) — #17 (2026-11-21)
-- [ ] `backend/.env.example`
+- [x] `backend/.env.example` — #11, `DATABASE_URL` #17 (2026-11-21)
 
 **프론트엔드 기반**
 - [x] FE-01 Next.js 앱, Tailwind v4, 폰트, next-themes, `lib/env.ts`, api-types 연동 — #13, api-types 연동 #19 (2026-11-21)
-- [ ] `frontend/.env.example`
+- [x] `frontend/.env.example` — #13 (2026-11-21)
 - [x] M0-07 API 타입 파이프라인 (Swagger → `backend/openapi.json` → `frontend/src/generated/api-types.ts`) — #19 (2026-11-21)
-- [ ] Next.js 버전 고정 + `revalidateTag` 시그니처·즉시 만료 옵션 확인 (개요 Q5)
+- [x] Next.js 버전 고정 + `revalidateTag` 시그니처·즉시 만료 옵션 확인 (개요 Q5) — #13 (2026-11-21, Next 16.4.6)
 
 **협업 흐름 시험** (협업 §12 P2)
-- [ ] 이슈 → `dev`에서 브랜치 → 자체 검사 → Codex 최종 검수 @ SHA → push → CI → head SHA 보고 → 개발자 PR 생성·Merge → 이슈 자동 종료
-- [ ] push 이벤트로 CI가 실행되는지
+- [x] 이슈 → `dev`에서 브랜치 → 자체 검사 → Codex 최종 검수 @ SHA → push → CI → head SHA 보고 → 개발자 PR 생성·Merge → 이슈 자동 종료 — M0-01~08 (CI 단계는 #21부터)
+- [x] push 이벤트로 CI가 실행되는지 — #21 (2026-11-21)
 - [x] PR 본문의 `Closes #n`으로 Merge 시 이슈가 닫히는지 — #2 (2026-11-21, PR #5)
-- [ ] 검수 후 코드 커밋(CI 실패 수정 포함) 시 재검수 후 push되는지
-- [x] 범위 밖 파일 변경 시 CI `ownership-check`가 실패하는지 — #21 (2026-11-21, 시험 브랜치로 R9·R3·R6·R7 실패 확인, R5는 Merge 후 재확인)
-- [ ] CI 요약에 head·base·검사 SHA가 나오는지
+- [x] 검수 후 코드 커밋(CI 실패 수정 포함) 시 재검수 후 push되는지 — M0-04·05·07·08 (Codex 지적 수정 후 r2·r3 재검수)
+- [x] 범위 밖 파일 변경 시 CI `ownership-check`가 실패하는지 — #21 (2026-11-21, 시험 브랜치로 R9·R3·R6·R7·R5 실패 확인 — R5는 run 44916305479)
+- [x] CI 요약에 head·base·검사 SHA가 나오는지 — #21 (run 44916562916)
 
 **M0 완료 확인**
-- [ ] 빈 앱 두 개가 CI 통과
-- [ ] P3: 시험 결과로 협업 문서·스킬 보정 (G2)
-- [ ] `docs/work/M0/report.md` 작성, 개발자 보고
+- [x] 빈 앱 두 개가 CI 통과 — #21 (2026-11-21)
+- [x] P3-a: 시험 결과로 실행 절차(스킬·`CLAUDE.md`) 보정 — #23 (2026-11-22)
+- [ ] P3-b: 시험 결과로 협업 문서 보정 — 미완료: `docs/work/M0/report.md` §8 제안 13건, 개발자 승인(G2) 대기
+- [x] `docs/work/M0/report.md` 작성, 개발자 보고 — #23 (2026-11-22)
 
 ---
 

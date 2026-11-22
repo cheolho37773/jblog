@@ -1,6 +1,6 @@
 # jblog 백엔드 기획서
 
-> 버전 v0.1 · 작성일 2026-11-20
+> 버전 v0.2 · 작성일 2026-11-20 · 개정 2026-11-22: §8 Dockerfile·로컬 DB 예시를 실제 파일(M0-03·M0-08) 기준으로 교체 — 하드코딩 비밀번호 예시 제거 (개발자 승인)
 > 스택: **NestJS + Prisma + PostgreSQL 17** (Node.js 24 LTS, TypeScript)
 > 공통 결정사항은 [00_overview.md](./00_overview.md)를 따른다.
 
@@ -777,24 +777,20 @@ COMMIT
 
 ## 8. 컨테이너 & 배포
 
-**Dockerfile (multi-stage)**
+**Dockerfile (multi-stage, `backend/Dockerfile` — M0-08)**
 ```
-base(node:24-alpine) → deps(pnpm fetch) → build(turbo build --filter=api, prisma generate) → runner
-runner: 비root 사용자, dist + node_modules(prod) + prisma, HEALTHCHECK
-ENTRYPOINT: prisma migrate deploy && node dist/main.js
+base(node:24.x-alpine 정확한 태그) → manifests(package.json·lock) → build(nest build, prisma generate)
+                                   → prod-deps(운영 의존성) → runtime
+runtime: 비root(node) 사용자, dist + 운영 node_modules + prisma/ + prisma.config.ts, HEALTHCHECK(/api/health)
+CMD: prisma migrate deploy && node dist/main.js   (환경값은 실행 시 주입, 이미지에 넣지 않음)
 ```
 
-**docker-compose (로컬, `infra/docker-compose.yml`)**
-```yaml
-services:
-  db:
-    image: postgres:17-alpine
-    environment: { POSTGRES_USER: jblog, POSTGRES_PASSWORD: jblog, POSTGRES_DB: jblog }
-    ports: ["5432:5432"]
-    volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck: { test: ["CMD-SHELL", "pg_isready -U jblog"], interval: 5s, retries: 10 }
-volumes: { pgdata: {} }
-```
+**로컬 DB (`infra/docker-compose.yml` — M0-03, 실제 파일이 기준)**
+- 이미지 `postgres:17.12`(정확한 태그), 서비스 `db`, 볼륨 `pgdata`
+- 포트는 `127.0.0.1:5432`에만 바인딩(같은 네트워크의 다른 기기에서 접속 불가)
+- 사용자·비밀번호·DB 이름은 `infra/.env`(커밋 금지)에서 받고 **기본값이 없다** — 없으면 시작 전에 실패 (개요 §6-b)
+- healthcheck: `pg_isready -h 127.0.0.1`(초기화용 임시 서버를 정상으로 오판하지 않게 TCP로 확인)
+- 사용법: `infra/README.md`, 루트 `pnpm db:up`·`db:down`·`db:psql`
 
 **배포는 보류**한다 (개요 D6, [§6-a](./00_overview.md#6-a-배포-보류-범위)). 지금은 Dockerfile 작성과 CI에서의 이미지 빌드 검증까지만 한다. 배포 파이프라인, 운영 구성, 백업 자동화는 인프라가 정해진 뒤 별도 마일스톤에서 계획한다. 백업 요구사항(DB 일 1회 이상, 업로드 파일 포함, 외부 보관)은 그때의 기준으로 유지한다.
 
