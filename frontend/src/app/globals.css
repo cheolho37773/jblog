@@ -246,11 +246,15 @@ body {
   color: transparent;
 }
 
-/* UI §4.2: 최대 1216px, 좌우 여백 mobile 16 · tablet 24 · laptop 32 */
+/*
+ * UI §4.2: 콘텐츠 최대 1216px, 좌우 여백 mobile 16 · tablet 24 · laptop 32.
+ * Tailwind Preflight가 box-sizing: border-box라 max-width에 padding이 포함된다.
+ * 그래서 콘텐츠 1216px을 얻으려면 max-width에 좌우 여백 32px x 2를 더한다 (1920px에서 콘텐츠 시작 x 352).
+ */
 @utility container-site {
   margin-inline: auto;
   width: 100%;
-  max-width: 1216px;
+  max-width: calc(1216px + 2 * 32px);
   padding-inline: 16px;
 
   @media (min-width: 768px) {
