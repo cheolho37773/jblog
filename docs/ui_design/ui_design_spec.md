@@ -1,6 +1,6 @@
 # jblog UI 디자인 기획서 (Portfolio + Blog)
 
-> 버전 v0.4 · 작성일 2026-11-20 · 개정 2026-11-22: §3.3·§9·§11 강조색 글자 대비 토큰과 추가 토큰(M1-08, 개발자 결정) · 개정 2026-11-22: §11 M1 한시 대체 비교(개발자 결정) · 개정 2026-11-20 ([기획 검토 피드백](../plan/feedback/2026-11-20_plan_review.md) 반영: 메타 텍스트 대비, Hero CTA, 프로젝트 카드 정보 보강, Featured 조건부, 프로젝트 목록 열 수, 태그 필터, 연락처 복사 예외, 검수 기준 분리)
+> 버전 v0.5 · 작성일 2026-11-20 · 개정 2026-11-22: §3.3·§5.1·§5.9 Footer 카드 토큰(`footer-card`)·Contact Me 카드 확정·하단 정책 링크 제외·글자 로고(M1-10, 개발자 결정) · 개정 2026-11-22: §3.3·§9·§11 강조색 글자 대비 토큰과 추가 토큰(M1-08, 개발자 결정) · 개정 2026-11-22: §11 M1 한시 대체 비교(개발자 결정) · 개정 2026-11-20 ([기획 검토 피드백](../plan/feedback/2026-11-20_plan_review.md) 반영: 메타 텍스트 대비, Hero CTA, 프로젝트 카드 정보 보강, Featured 조건부, 프로젝트 목록 열 수, 태그 필터, 연락처 복사 예외, 검수 기준 분리)
 > 목적: 개인 포트폴리오 겸 기술 블로그 웹서비스의 UI 기준 문서. 프론트엔드 구현과 디자인 QA의 단일 기준(Single Source of Truth)으로 사용한다.
 
 ---
@@ -140,6 +140,7 @@ CSS 변수로 정의하고, `<html data-theme="light|dark">`로 전환한다.
 | `--color-danger` | `#C81E1E` | `#F87171` | 추가 (M1-08): 입력 오류 글자·테두리 |
 | `--color-icon-button-bg` | `#696A75` | `#696A75` | 추가 (M1-08): Button `icon` 배경(§5.8 원본 값을 토큰화, 흰 아이콘 5.4:1) |
 | `--color-toggle-knob` · `--color-toggle-knob-icon` | `#FFFFFF` · `#181A2A` | 같음 | 추가 (M1-08): 테마 토글 노브와 해·달 아이콘 |
+| `--color-footer-card` | `#FFFFFF` | `#242535` | **추가 (M1-10)**: Footer 오른쪽 카드 배경. Light는 `surface-2`가 `footer-bg`와 같아 카드가 보이지 않아 분리(참고 스크린샷 흰 상자) / Dark는 `surface-2` 확정값과 같음 |
 
 ### 3.4 그라디언트 (포트폴리오 액센트) — (추정)
 
@@ -252,7 +253,7 @@ Spacing 스케일 (블로그에서 실제 쓰인 값): `4 · 8 · 12 · 16 · 20
 | 요소 | 스펙 |
 |---|---|
 | 컨테이너 | `padding: 32px 0`, 내부 flex, align center |
-| Logo | 158×36 SVG. 사이트 로고("jblog")로 교체하되 높이 36 유지. Light/Dark 버전 2종 |
+| Logo | **글자 로고**("jblog", 높이 36, 토큰 색·폰트로 테마에 따라 자동 전환 — M1-10 개발자 결정). SVG 로고를 받으면 교체 |
 | 메뉴 아이템 | Work Sans 400 16/24, `--color-nav-text`. Active: `--color-primary` + 500 weight (원본에 없음, 추가) |
 | Hover | `--color-primary`, transition 150ms |
 | Search | bg `--color-input-bg`, radius 5, `padding: 8px 8px 8px 16px`, gap 12, 아이콘 16px. placeholder `--color-input-placeholder`. `aria-label="검색"`. Enter 시 `/search?q=` |
@@ -319,18 +320,19 @@ Spacing 스케일 (블로그에서 실제 쓰인 값): `4 · 8 · 12 · 16 · 20
 ```
 [Info 289px] ─20─ [Links 495px: Quick Link ─80─ Category] ─20─ [Newsletter 392px]
 ──────────────── border-top 1px ────────────────
-[Logo 48 + jblog / © 2026 ...]                    [Terms · Privacy · Cookie]
+[Logo + jblog / © 2026 ...]   (정책 링크 없음 — M1-10)
 ```
 
 - 컨테이너: bg `--color-footer-bg`, border-top 1px `--color-border`, padding-top 64, 상하 블록 gap 64
 - 컬럼 제목: Plus Jakarta Sans 600 18/28 `--color-text-strong`. 컬럼 제목 ↔ 리스트 gap 24, 리스트 아이템 gap 8
 - 링크 Plus Jakarta 400 16/24 `--color-footer-link`
 - Info: About 소개 (w 280, `--color-text-muted`) + Email / GitHub (원본의 Phone은 GitHub 링크로 교체). 이메일·GitHub 텍스트는 복사 방지 예외(선택 가능)
+- **동적 값**(Email·GitHub·Category, M1-10 개발자 결정): 컴포넌트가 값을 넘겨받고 **값이 없으면 그 항목·칸을 숨긴다**. API 연결은 M2~M3. `/dev/components`에서만 예시 값으로 표시
 - Quick Link: Home, Blog, Projects, About, Contact, RSS
 - Category: 블로그 카테고리 상위 6개 (동적)
-- **Newsletter 박스**: bg `--color-surface-2`, padding 32, radius 12, gap 30. 제목 h4 20/24, 설명 16/24 muted, 인풋 320px (padding 12 16, radius 6, border `--color-border-strong`, bg `--color-bg`, mail 아이콘 20) + Subscribe 버튼(primary, full width), 인풋 ↔ 버튼 gap 8.
-  → 구독 기능을 1차 범위에서 빼면 같은 박스를 **“Contact Me” 카드**(이메일 + 소셜 아이콘)로 대체한다.
-- 카피라이트: padding 32 0, 로고 48 + 텍스트 블록(gap 2). 우측 링크 gap 16, 사이에 24px 세로 디바이더
+- **Newsletter 박스**: bg `--color-footer-card`(M1-10), padding 32, radius 12, gap 30. 제목 h4 20/24, 설명 16/24 muted, 인풋 320px (padding 12 16, radius 6, border `--color-border-strong`, bg `--color-bg`, mail 아이콘 20) + Subscribe 버튼(primary, full width), 인풋 ↔ 버튼 gap 8.
+  → 뉴스레터는 MVP 제외(개요 범위)이므로 같은 박스를 **“Contact Me” 카드**(이메일 + 소셜 아이콘)로 **대체한다(확정, M1-10)**. 박스 크기·여백·배경은 위와 같다
+- 카피라이트: padding 32 0, 로고 + 저작권 문구(gap 2). 원본 우측의 Terms·Privacy·Cookie 링크는 **넣지 않는다**(정책 페이지가 IA에 없음, M1-10 개발자 결정)
 
 ---
 
