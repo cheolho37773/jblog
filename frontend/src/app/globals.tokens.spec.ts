@@ -592,6 +592,35 @@ describe('폰트 변수 5종 (프론트엔드 §5.1)', () => {
   }
 });
 
+describe('글 본문·인용문 서체 유틸 (UI §3.5, 프론트엔드 §5.1-a)', () => {
+  const SERIF_UTILITIES = [
+    { name: 'type-article', token: 'article' },
+    { name: 'type-quote', token: 'quote' },
+  ];
+
+  for (const { name, token } of SERIF_UTILITIES) {
+    it(`${name}는 serif 폰트와 --text-${token} 크기·줄 높이·굵기 변수를 참조한다`, () => {
+      const text = utilityText(name);
+      expect(text, `${name} 유틸 없음`).toBeDefined();
+      expect(text).toMatch(/font-family:\s*var\(--font-serif\)/);
+      expect(text).toMatch(new RegExp(`font-size:\\s*var\\(--text-${token}\\)`));
+      expect(text).toMatch(new RegExp(`line-height:\\s*var\\(--text-${token}--line-height\\)`));
+      expect(text).toMatch(new RegExp(`font-weight:\\s*var\\(--text-${token}--font-weight\\)`));
+    });
+  }
+
+  it('type-article은 기울이지 않는다', () => {
+    expect(utilityText('type-article')).not.toMatch(/font-style:\s*italic/);
+  });
+
+  it('type-quote는 italic이고, 이탤릭이 없는 한글을 가짜로 기울이지 않는다 (font-synthesis-style: none)', () => {
+    const text = utilityText('type-quote');
+    expect(text, 'type-quote 유틸 없음').toBeDefined();
+    expect(text).toMatch(/font-style:\s*italic/);
+    expect(text).toMatch(/font-synthesis-style:\s*none/);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 모바일 타이포 축소 (UI §4.2)
 // ---------------------------------------------------------------------------
