@@ -309,3 +309,29 @@ test.describe('UI §5.9 Footer 저작권 줄 (로고 + 문구 묶음)', () => {
     expectNear(center(text), 375 / 2, '문구 가운데');
   });
 });
+
+// 자체 검사 수정 1: 값이 없는 Footer(Quick Link만)에서 Quick Link가 콘텐츠 왼쪽에서 시작해야 한다.
+// 수정 전에는 Links 묶음이 오른쪽에 붙어 1920에서 약 472에서 시작했다.
+test.describe('Footer 값 없음: Quick Link 제목은 콘텐츠 왼쪽에서 시작한다', () => {
+  for (const width of [1920, 1280]) {
+    test(`${width}px에서 Quick Link 제목 왼쪽 = 콘텐츠 내용 상자 왼쪽`, async ({ page }) => {
+      await page.setViewportSize({ width, height: FRAME_HEIGHT });
+      await page.goto('/');
+      const positions = await footer(page).evaluate((root) => {
+        const container = root.querySelector<HTMLElement>('.container-site')!;
+        const style = getComputedStyle(container);
+        const contentLeft =
+          container.getBoundingClientRect().left +
+          parseFloat(style.paddingLeft) +
+          parseFloat(style.borderLeftWidth);
+        const title = Array.from(root.querySelectorAll('h2')).find(
+          (h) => h.textContent?.trim() === 'Quick Link',
+        );
+        if (!title) throw new Error('Quick Link 제목을 찾을 수 없다');
+        return { contentLeft, titleLeft: title.getBoundingClientRect().left };
+      });
+
+      expectNear(positions.titleLeft, positions.contentLeft, `Quick Link 왼쪽(${width})`);
+    });
+  }
+});

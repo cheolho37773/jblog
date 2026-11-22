@@ -212,3 +212,30 @@ test.describe('§4.1 Section 제목 ↔ 내용 32px', () => {
     expectNear(gap, 32, '제목 ↔ 내용');
   });
 });
+
+// 자체 검사 수정 1: Category가 없는 Footer는 Quick Link가 콘텐츠 왼쪽에서 시작한다 (수정 전 1920에서 약 120px 오른쪽).
+test.describe('Footer 값 없음: Quick Link 제목은 콘텐츠 왼쪽에서 시작한다', () => {
+  for (const width of [1920, 1280]) {
+    test(`dev-layout-footer-empty ${width}px에서 Quick Link 왼쪽 = 콘텐츠 내용 상자 왼쪽`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: FRAME.height });
+      const footer = section(page, 'dev-layout-footer-empty').getByRole('contentinfo');
+      const positions = await footer.evaluate((root) => {
+        const container = root.querySelector<HTMLElement>('.container-site')!;
+        const style = getComputedStyle(container);
+        const contentLeft =
+          container.getBoundingClientRect().left +
+          parseFloat(style.paddingLeft) +
+          parseFloat(style.borderLeftWidth);
+        const title = Array.from(root.querySelectorAll('h2')).find(
+          (h) => h.textContent?.trim() === 'Quick Link',
+        );
+        if (!title) throw new Error('Quick Link 제목을 찾을 수 없다');
+        return { contentLeft, titleLeft: title.getBoundingClientRect().left };
+      });
+
+      expectNear(positions.titleLeft, positions.contentLeft, `Quick Link 왼쪽(${width})`);
+    });
+  }
+});
