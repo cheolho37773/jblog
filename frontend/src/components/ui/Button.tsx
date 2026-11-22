@@ -7,10 +7,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-primary rounded-md px-5 py-3 text-white',
+        primary: 'bg-primary-strong text-on-primary rounded-md px-5 py-3',
         outline: 'border-border-strong text-body rounded-md border px-5 py-3',
         // 터치 타겟 44px: 보이는 크기는 32px, 클릭 영역만 after로 넓힌다 (UI §4.2)
-        icon: 'bg-muted relative rounded-md p-2 text-white after:absolute after:-inset-1.5 after:content-[""]',
+        icon: 'bg-icon-button-bg text-on-primary relative rounded-md p-2 after:absolute after:-inset-1.5 after:content-[""]',
         pillSolid: 'bg-strong text-bg h-13 rounded-full px-6',
         pillOutline: 'border-strong text-strong h-13 rounded-full border-2 px-6',
       },

@@ -37,7 +37,7 @@ export function Avatar({ src, alt, size = 36, className }: AvatarProps) {
       aria-label={alt}
       className={cn(
         rootClass,
-        'items-center justify-center bg-(image:--gradient-primary) font-semibold text-white',
+        'items-center justify-center bg-primary-strong text-on-primary font-semibold',
       )}
       style={{ ...sizeStyle, fontSize: size * INITIAL_FONT_RATIO }}
     >

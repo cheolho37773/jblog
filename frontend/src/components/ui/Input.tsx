@@ -31,13 +31,13 @@ export function Input({
         aria-describedby={descriptionIds || undefined}
         className={cn(
           'text-b4 bg-bg text-body placeholder:text-input-placeholder rounded-md border px-4 py-3 disabled:cursor-not-allowed disabled:opacity-50',
-          error ? 'border-red-600 dark:border-red-400' : 'border-border-strong',
+          error ? 'border-danger' : 'border-border-strong',
           className,
         )}
         {...props}
       />
       {error && (
-        <p id={errorId} className="text-b5 text-red-600 dark:text-red-400">
+        <p id={errorId} className="text-b5 text-danger">
           {error}
         </p>
       )}

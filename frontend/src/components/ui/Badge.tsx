@@ -6,8 +6,8 @@ import { cn } from '@/lib/cn';
 const badgeVariants = cva('text-b5-medium inline-block rounded-md', {
   variants: {
     variant: {
-      solid: 'bg-primary text-white',
-      soft: 'bg-primary-soft text-primary',
+      solid: 'bg-primary-strong text-on-primary',
+      soft: 'bg-primary-soft text-primary-text',
     },
     size: {
       md: 'px-2.5 py-1',
