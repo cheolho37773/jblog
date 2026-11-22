@@ -1,7 +1,7 @@
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
+import helmet, { type HelmetOptions } from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppModule, type AppModuleOptions } from './app.module';
 import { requestIdMiddleware } from './common/logging/logger.options';
@@ -26,9 +26,19 @@ function setupSwagger(app: INestApplication): void {
   SwaggerModule.setup(SWAGGER_PATH, app, createApiDocument(app));
 }
 
+// helmet 기본 CSP의 upgrade-insecure-requests는 운영(HTTPS 전제)에서만 둔다.
+// Safari(WebKit)는 localhost에도 이 지시어를 적용해 http://localhost의 Swagger UI 정적 파일을
+// https://로 요청하다 TLS 오류로 흰 화면이 된다(Issue #37). null은 helmet 기본 지시어를 뺀다는 뜻이다.
+export function createHelmetOptions(env: AppEnv): HelmetOptions {
+  if (env.NODE_ENV === 'production') return {};
+  return {
+    contentSecurityPolicy: { directives: { 'upgrade-insecure-requests': null } },
+  };
+}
+
 function applyHttpSettings(app: INestApplication, env: AppEnv): void {
   app.use(requestIdMiddleware);
-  app.use(helmet());
+  app.use(helmet(createHelmetOptions(env)));
   app.setGlobalPrefix(GLOBAL_PREFIX);
   app.useGlobalPipes(
     new ValidationPipe({
