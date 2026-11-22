@@ -1,32 +1,262 @@
 @import 'tailwindcss';
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-/* 토큰 일부만 둔다. 나머지는 FE-02에서 프론트엔드 기획서 §5.1대로 채운다. */
-:root {
+/*
+ * 디자인 토큰 (UI 기획서 §3.3~§3.6, 프론트엔드 §5.1).
+ * 원시 변수는 여기, Tailwind 이름 연결은 @theme inline. 컴포넌트는 시맨틱 토큰만 쓴다 (hex 직접 사용 금지).
+ */
+:root,
+[data-theme='light'] {
   --bg: #ffffff;
-  --text-strong: #181a2a;
+  --bg-subtle: #f6f6f7;
+  --surface: #ffffff;
+  --surface-2: #f6f6f7;
+  --border: #e8e8ea;
   --border-strong: #dcdddf;
+  --text-strong: #181a2a;
+  --text-body: #3b3c4a;
+  /* 원본 #97989F는 AA 미달이라 변경 (UI §9) */
+  --text-muted: #696a75;
+  --text-subtle: #696a75;
+  --nav-text: #3b3c4a;
+  /* 원본 #A1A1AA는 AA 미달이라 변경 (UI §9) */
+  --input-bg: #f4f4f5;
+  --input-placeholder: #696a75;
+  --footer-bg: #f6f6f7;
+  --footer-link: #3b3c4a;
+  --toggle-track: #e8e8ea;
 }
 
 [data-theme='dark'] {
   --bg: #181a2a;
-  --text-strong: #ffffff;
+  --bg-subtle: #242535;
+  --surface: #181a2a;
+  --surface-2: #242535;
+  --border: #242535;
   --border-strong: #3b3c4a;
+  --text-strong: #ffffff;
+  --text-body: #bababf;
+  --text-muted: #97989f;
+  --text-subtle: #97989f;
+  --nav-text: #ffffff;
+  --input-bg: #242535;
+  --input-placeholder: #97989f;
+  --footer-bg: #141624;
+  --footer-link: #bababf;
+  --toggle-track: #4b6bfb;
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-strong: var(--text-strong);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
   --color-border-strong: var(--border-strong);
-  --font-sans: var(--font-work-sans), sans-serif;
+  --color-strong: var(--text-strong);
+  --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+  --color-nav-text: var(--nav-text);
+  --color-input-bg: var(--input-bg);
+  --color-input-placeholder: var(--input-placeholder);
+  --color-footer-bg: var(--footer-bg);
+  --color-footer-link: var(--footer-link);
+  --color-toggle-track: var(--toggle-track);
+}
+
+/* 양 테마에서 값이 같은 색 */
+@theme {
+  --color-primary: #4b6bfb;
+  --color-primary-soft: rgba(75, 107, 251, 0.05);
+  --color-overlay: rgba(20, 22, 36, 0.4);
+}
+
+@theme inline {
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --radius-full: 100px;
+
+  --shadow-md: 0 12px 24px -6px rgba(24, 26, 42, 0.12);
+  --shadow-toggle: 0 1px 1px rgba(0, 0, 0, 0.12);
+
+  /* 포트폴리오 액센트 (UI §3.4, 양 테마 동일) */
+  --gradient-primary: linear-gradient(90deg, #ff8660 0%, #d53aff 100%);
+  --gradient-orange: linear-gradient(90deg, #ff8660 0%, #f23d4c 100%);
+  --gradient-blue: linear-gradient(90deg, #4b6bfb 0%, #3db8ff 100%);
+
+  /* UI §4.2 */
+  --breakpoint-tablet: 768px;
+  --breakpoint-laptop: 1024px;
+  --breakpoint-desktop: 1280px;
+
+  /* 한글은 영문 폰트 뒤 Pretendard로 fallback (프론트엔드 §5.1-a) */
+  --font-sans: var(--font-work-sans), var(--font-pretendard), sans-serif;
   --font-serif: var(--font-source-serif), serif;
-  --font-jakarta: var(--font-plus-jakarta), sans-serif;
-  --font-display: var(--font-poppins), sans-serif;
+  --font-jakarta: var(--font-plus-jakarta), var(--font-pretendard), sans-serif;
+  --font-display: var(--font-poppins), var(--font-pretendard), sans-serif;
   --font-mono: var(--font-jetbrains-mono), monospace;
+}
+
+/* 타이포 (UI §3.5): 크기 + 줄 높이 + 굵기.
+   inline이 아닌 @theme라 유틸이 var()를 참조하고, 모바일에서 :root 재정의가 먹는다. */
+@theme {
+  --text-h1: 36px;
+  --text-h1--line-height: 40px;
+  --text-h1--font-weight: 600;
+  --text-h3: 24px;
+  --text-h3--line-height: 28px;
+  --text-h3--font-weight: 600;
+  --text-h3-bold: 24px;
+  --text-h3-bold--line-height: 28px;
+  --text-h3-bold--font-weight: 700;
+  --text-h4: 20px;
+  --text-h4--line-height: 24px;
+  --text-h4--font-weight: 600;
+  --text-b2: 20px;
+  --text-b2--line-height: 28px;
+  --text-b2--font-weight: 500;
+  --text-b3: 18px;
+  --text-b3--line-height: 26px;
+  --text-b3--font-weight: 400;
+  --text-b4: 16px;
+  --text-b4--line-height: 24px;
+  --text-b4--font-weight: 400;
+  --text-b4-medium: 16px;
+  --text-b4-medium--line-height: 24px;
+  --text-b4-medium--font-weight: 500;
+  --text-b5: 14px;
+  --text-b5--line-height: 20px;
+  --text-b5--font-weight: 400;
+  --text-b5-medium: 14px;
+  --text-b5-medium--line-height: 20px;
+  --text-b5-medium--font-weight: 500;
+  --text-article: 20px;
+  --text-article--line-height: 32px;
+  --text-article--font-weight: 400;
+  --text-quote: 24px;
+  --text-quote--line-height: 32px;
+  --text-quote--font-weight: 400;
+  --text-footer-logo: 20px;
+  --text-footer-logo--line-height: 28px;
+  --text-footer-logo--font-weight: 700;
+  --text-footer-title: 18px;
+  --text-footer-title--line-height: 28px;
+  --text-footer-title--font-weight: 600;
+  --text-footer-body: 16px;
+  --text-footer-body--line-height: 24px;
+  --text-footer-body--font-weight: 400;
+  --text-footer-label: 16px;
+  --text-footer-label--line-height: 24px;
+  --text-footer-label--font-weight: 600;
+  --text-display-hero: 56px;
+  --text-display-hero--line-height: 64px;
+  --text-display-hero--font-weight: 700;
+  --text-display-section: 32px;
+  --text-display-section--line-height: 36px;
+  --text-display-section--font-weight: 700;
+  --text-eyebrow: 20px;
+  --text-eyebrow--line-height: 30px;
+  --text-eyebrow--font-weight: 500;
+  --text-eyebrow--letter-spacing: 0.2em;
+  --text-intro: 18px;
+  --text-intro--line-height: 27px;
+  --text-intro--font-weight: 400;
+  --text-exp-title: 20px;
+  --text-exp-title--line-height: 28px;
+  --text-exp-title--font-weight: 600;
+  --text-exp-body: 14px;
+  --text-exp-body--line-height: 22px;
+  --text-exp-body--font-weight: 400;
+}
+
+/* 모바일(<768px) 타이포 축소 (UI §4.2). 줄 높이 변수도 함께 바꾼다. */
+@media (max-width: 767px) {
+  :root {
+    --text-h1: 28px;
+    --text-h1--line-height: 34px;
+    --text-h3: 20px;
+    --text-h3--line-height: 26px;
+    --text-h3-bold: 20px;
+    --text-h3-bold--line-height: 26px;
+    --text-display-hero: 36px;
+    --text-display-hero--line-height: 44px;
+    --text-display-section: 24px;
+    --text-article: 18px;
+    --text-article--line-height: 30px;
+  }
+}
+
+/* 기본 스타일 */
+:root {
+  color-scheme: light dark;
 }
 
 body {
   background-color: var(--color-bg);
   color: var(--color-strong);
   font-family: var(--font-sans);
+}
+
+/* UI §8: 테마 전환 200ms. 움직임 줄이기 설정이면 끈다. */
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  body * {
+    transition:
+      background-color 200ms ease,
+      color 200ms ease,
+      border-color 200ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  body * {
+    transition: none;
+  }
+}
+
+/* UI §9 포커스 링 */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 그라디언트 텍스트는 display 크기에서만 쓴다 (UI §9) */
+@utility text-gradient-primary {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-orange {
+  background: var(--gradient-orange);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-blue {
+  background: var(--gradient-blue);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* UI §4.2: 최대 1216px, 좌우 여백 mobile 16 · tablet 24 · laptop 32 */
+@utility container-site {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1216px;
+  padding-inline: 16px;
+
+  @media (min-width: 768px) {
+    padding-inline: 24px;
+  }
+
+  @media (min-width: 1024px) {
+    padding-inline: 32px;
+  }
 }
