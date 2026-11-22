@@ -33,7 +33,7 @@ Claude Code 오케스트레이터 + 서브에이전트가 구현하고, Codex가
 3. **에러 수정 3회 상한**: 자체 검사·CI·Codex 지적 수정 각각 3회까지. 넘으면 시도 내역과 함께 개발자 승인 요청
 4. **민감 정보**: 비밀값·접속 정보는 코드에 하드코딩하지 않고 `.env`로만 주입. `.env` 파일은 읽지도 커밋하지도 않는다
 5. **가독성**: 협업 문서 §10-a 규칙 (이름, 작은 함수, early return, "왜"를 설명하는 주석, 매직 값 금지)
-6. **파일 소유권**: `scripts/ownership/roles.json`. 서브에이전트를 실행하기 전에 worktree의 `.claude/.current-role`에 역할을 기록한다 (훅이 범위 밖 Write/Edit를 차단)
+6. **파일 소유권**: `scripts/ownership/roles.json`. 서브에이전트를 실행하기 전에 `.claude/.current-role`에 역할을 기록한다 (구현은 주 작업 폴더에서 한 번에 한 작업, 협업 §4.4·§5.4) (훅이 범위 밖 Write/Edit를 차단)
 7. **검수 결과 보호**: `docs/reviews/**/*.codex.md`, `docs/plan/feedback/**`는 수정하지 않는다
 8. **보고**: 완료 / 실패 / 보류를 섞지 않는다. 결정이 필요한 것만 요약한다
 9. **체크리스트**: `docs/work/00_master_checklist.md`의 해당 항목을 **작업 PR 안에서**(기록 단계) 체크한다. `dev` 직접 push는 막혀 있다
