@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Footer } from '@/components/layout/Footer';
 import { Navbar } from '@/components/layout/Navbar';
+import { Section as LayoutSection } from '@/components/layout/Section';
 import { PageInfo } from '@/components/layout/PageInfo';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -257,6 +258,18 @@ export default function ComponentsPage() {
 
       <Section id="dev-layout-pageinfo" title="PageInfo">
         <PageInfo title="Blog" breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Blog' }]} />
+      </Section>
+
+      <Section id="dev-layout-sections" title="Section 간격 (연속 2개)">
+        {/* 부모가 flex gap을 가지면 Section 사이 간격에 더해지므로 일반 블록으로 한 번 감싼다 */}
+        <div>
+          <LayoutSection data-example="section-a">
+            <p>Section A</p>
+          </LayoutSection>
+          <LayoutSection data-example="section-b">
+            <p>Section B</p>
+          </LayoutSection>
+        </div>
       </Section>
 
       <Section id="dev-tokens" title="Tokens">
