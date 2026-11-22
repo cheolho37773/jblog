@@ -19,7 +19,7 @@
 | **M1-02** | 디자인 토큰 (**공유 계약**, 브랜치 `contract/M1-02-design-tokens`): `globals.css` 시맨틱 토큰 전체 Light/Dark(UI §3.3), 그라디언트(§3.4), 타이포 유틸(§3.5, 모바일 축소 §4.2), radius·shadow·spacing(§3.6), 컨테이너·브레이크포인트(§4), 폰트(Work Sans·Source Serif 4·Plus Jakarta Sans·Poppins·JetBrains Mono, **Pretendard 로컬 woff2** — OFL 라이선스 확인·고지), 토큰 검사 테스트 | 서브에이전트 조합 · test-engineer(토큰 값·대비 테스트 선작성) → frontend-dev | 보통 · Sonnet | M0 (M1-01과 무관하게 시작 가능, §7-1) |
 | **M1-03** | Atom 컴포넌트(UI §12): Badge(solid/soft), Button(primary/outline/icon/pill-solid/pill-outline), Avatar, Input, SearchInput, ThemeToggle(완성 스타일), Icon(lucide·simple-icons 래퍼) + `/dev/components` 페이지(운영 빌드에서 제외) + **E2E 실행 환경 분리**: 컴포넌트 캡처용 빌드(개발 전용 페이지 포함)와 운영 빌드(`/dev/components` 404 검증)를 각각 띄우는 Playwright 설정·CI `e2e` 잡 연결 | 서브에이전트 조합 · devops-engineer(Playwright 서버 2종·CI 연결 — 협업 §4.3-a) → test-engineer(컴포넌트 동작·접근성·404 테스트 선작성) → frontend-dev → test-engineer(독립 검증) | 보통 · Sonnet | M1-02 |
 | **M1-04** | 레이아웃 컴포넌트(FE-03): Navbar(데스크톱 메뉴·검색·테마 토글, 태블릿 이하 햄버거 → MobileMenu 드로어: 포커스 트랩·ESC·스크롤 잠금), Footer(4컬럼 → 모바일 스택), Container/Section, PageInfo/Breadcrumb. `(site)` 레이아웃에 연결 | 서브에이전트 조합 · test-engineer → frontend-dev → test-engineer | 보통 · Sonnet (모바일 메뉴 접근성) | M1-03 |
-| **M1-05** | 디자인 검수(UI §11): Playwright로 `/dev/components`·`(site)` 레이아웃을 1920/1440/1024/768/375 × Light/Dark 캡처 → A(Navbar·Footer)는 원본 대비 ±2px·색 일치, B는 토큰·간격 규칙 준수 → 차이 수정 → 승인한 스크린샷을 시각 회귀 기준 이미지로 확정, `@axe-core/playwright` serious/critical 0 | 서브에이전트 조합 · devops-engineer(시각 회귀 기준 이미지를 CI 러너(Linux)에서 만들고 갱신하는 방법·CI 연결) → test-engineer(캡처·비교·차이 목록) → frontend-dev(수정) → test-engineer(재비교) | 보통 · Sonnet (비교 설계는 test-engineer) | M1-04 (A 비교 원본은 §7-2) |
+| **M1-05** | 디자인 검수(UI §11): Playwright로 `/dev/components`·`(site)` 레이아웃을 1920/1440/1024/768/375 × Light/Dark 캡처 → A(Navbar·Footer)는 **M1 한시 대체 비교**(로컬 축소 스크린샷 기준 비율 환산, 아래 §4·§7 G1 결정 2), B는 토큰·간격 규칙 준수 → 차이 수정 → 승인한 스크린샷을 시각 회귀 기준 이미지로 확정, `@axe-core/playwright` serious/critical 0 | 서브에이전트 조합 · devops-engineer(시각 회귀 기준 이미지를 CI 러너(Linux)에서 만들고 갱신하는 방법·CI 연결) → test-engineer(캡처·비교·차이 목록) → frontend-dev(수정) → test-engineer(재비교) | 보통 · Sonnet (비교 설계는 test-engineer) | M1-04 (A 비교 원본은 §7-2) |
 | **M1-07** | Issue #24: 공개 환경변수에 비밀값처럼 보이는 이름이 정의되면 모듈 로드가 실패하는지 테스트로 고정(공개 키를 주입할 수 있게 검사 함수 분리) | 서브에이전트 조합 · test-engineer → frontend-dev | 낮음 · Sonnet | M0 (토큰 작업과 무관, 순서는 §3) |
 | **M1-06** | M1 report, 체크리스트 진행 현황 | 단일 실행 · docs-writer (+ 오케스트레이터 저장) | 낮음 · Sonnet | M1-05 |
 
@@ -62,7 +62,7 @@ M1-01 (Q4 확정): Figma 접근이 되는 시점에 끼워 넣는다 — 영향 
 | M1-02 | 모든 시맨틱 토큰이 Light/Dark CSS 변수로 존재, Tailwind 유틸로 쓸 수 있음, 텍스트 토큰 대비 AA(§9), 폰트 로드(FOUT·레이아웃 흔들림 최소화) | 컴포넌트 코드에 hex 직접 사용 시 lint 실패(규칙 또는 테스트), 기존 M0 테스트 회귀 없음 |
 | M1-03 | 각 Atom의 variant·크기·상태(hover·focus·disabled)가 `/dev/components`에 Light/Dark로 표시, 컴포넌트 테스트(역할·이름·키보드) 통과, 컴포넌트 캡처용 서버와 운영 서버가 각각 CI `e2e` 잡에서 뜸 | 운영 빌드에서 `/dev/components` 404, 포커스 링 누락 없음 |
 | M1-04 | 4개 브레이크포인트에서 Navbar·Footer 레이아웃이 UI §4.2·§5.1·§5.9와 일치, MobileMenu 포커스 트랩·ESC·스크롤 잠금, 터치 타겟 44px | 가로 스크롤 없음(375~1920), 메뉴 닫힌 상태에서 포커스가 드로어로 들어가지 않음 |
-| M1-05 | A 대상 ±2px·색 일치, B 대상 규칙 위반 0, axe serious/critical 0, 기준 이미지 확정 | 시각 회귀가 의도치 않은 변경을 검출(시험용 변경으로 확인) |
+| M1-05 | A 대상 **대체 비교 통과**: 캡처를 참고 스크린샷 폭으로 축소해 같은 영역을 비교 — 위치·크기 오차 **축소 이미지 기준 ±2px**(원본 환산 약 ±4~5px), 색은 채널별 **±3** 이내(축소 보간 허용), 판정 불가 항목은 "원본 확인 불가"로 기록. B 대상 규칙 위반 0, axe serious/critical 0, 기준 이미지 확정. **Figma 원본 ±2px 정밀 비교는 보류 → Issue #27**(해소 조건·담당 기재) | 시각 회귀가 의도치 않은 변경을 검출(시험용 변경으로 확인) |
 | M1-07 | 비밀값처럼 보이는 공개 키를 넣으면 검사가 실패(모듈 로드 실패와 같은 경로), 안전한 키는 통과 | 기존 env 테스트·빌드 회귀 없음, Issue #24 종료 |
 | M1-06 | 체크리스트 M1 전 항목 상태 확정, report | 완료·실패·보류를 섞지 않음 |
 
@@ -99,6 +99,6 @@ M1-01 (Q4 확정): Figma 접근이 되는 시점에 끼워 넣는다 — 영향 
 
 1. **Q4**: 로컬 참고 스크린샷 `docs/ui_design/references/`(공개 안 함, `.gitignore`)를 근거로 진행한다. M1-02에서 스크린샷의 색을 추출해 §10 추정값을 보정하고, 출처(파일·좌표)를 지시서 인계 노트에 남긴다. Figma가 풀리면 M1-01로 확정하고, 다르면 §3 절차(토큰 계약 PR + 컴포넌트 수정 + 재검수)로 고친다
    - 한계: 스크린샷은 원본 1920px 프레임을 축소한 이미지(폭 775~1106px)라 크기·간격은 비율로만 추정할 수 있다. 블로그 Dark 글 상세(§10-9 Dark 본문 색)·Dark Footer는 참고 스크린샷이 없어 Home Dark에서 같은 역할의 텍스트로 추정한다
-2. **원본 비교(UI §11 A)**: 로컬 참고 스크린샷에서 Navbar·Footer 영역을 잘라 비교한다. 축소 이미지라 ±2px 대신 **비율 환산 위치·크기와 색 일치**로 판정하고, 판정할 수 없는 항목은 차이 목록에 "원본 확인 불가"로 남긴다(Figma 확인 시 재비교)
+2. **원본 비교(UI §11 A)**: 로컬 참고 스크린샷에서 Navbar·Footer 영역을 잘라 비교한다(M1 한시 대체 비교 — UI 기획서 §11에 기록). 허용 오차는 §4 M1-05 행. 판정할 수 없는 항목은 차이 목록에 "원본 확인 불가"로 남긴다. 대체 비교 통과는 M1-05 완료로 보되, **Figma 원본 정밀 비교는 보류 항목**으로 Issue #27에서 M1-01과 함께 처리한다
 3. 작업 7개·순서·모델(전부 Sonnet) 승인
 4. `/dev/components`는 운영 빌드에서 404 승인
