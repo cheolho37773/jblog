@@ -9,6 +9,10 @@
 set -euo pipefail
 
 IMAGE_TAG="jblog-visual:local"
+# 왜 아키텍처를 고정하는가: Chromium의 알파 합성·그라디언트·반투명 렌더링이 arm64와 amd64에서 달라
+#   기준 이미지를 만든 곳과 CI 러너(linux/amd64)가 다르면 약 100픽셀씩 어긋난다(M1-05 CI 수정 1).
+#   Apple Silicon 로컬은 에뮬레이션이라 느려지지만, 기준 이미지를 어디서 만들어도 같게 하려고 감수한다.
+PLATFORM="linux/amd64"
 PNPM_STORE_VOLUME="jblog-visual-pnpm-store"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -57,13 +61,13 @@ check_playwright_version() {
 }
 
 build_image() {
-  docker build --quiet -f "$REPO_ROOT/scripts/visual/Dockerfile" -t "$IMAGE_TAG" "$REPO_ROOT/scripts/visual" >/dev/null
+  docker build --quiet --platform "$PLATFORM" -f "$REPO_ROOT/scripts/visual/Dockerfile" -t "$IMAGE_TAG" "$REPO_ROOT/scripts/visual" >/dev/null
 }
 
 run_in_container() {
   local mode="$1"
   mkdir -p "$SCREENSHOT_DIR" "$REPORT_DIR" "$RESULT_DIR"
-  docker run --rm --ipc=host \
+  docker run --rm --ipc=host --platform "$PLATFORM" \
     -v "$REPO_ROOT:/src:ro" \
     -v "$SCREENSHOT_DIR:/out/screenshots" \
     -v "$REPORT_DIR:/out/report" \
