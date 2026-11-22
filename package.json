@@ -24,6 +24,8 @@
     "prepare": "husky",
     "test:e2e": "pnpm --filter @jblog/frontend test:e2e",
     "test:api-e2e": "pnpm --filter @jblog/backend test:e2e",
+    "test:visual": "scripts/visual/run.sh compare",
+    "test:visual:update": "scripts/visual/run.sh update",
     "test:integration": "pnpm --filter @jblog/backend test:integration",
     "test:scripts": "python3 -m unittest discover -s scripts/tests && python3 scripts/ownership/pr_common_allow.py --self-test",
     "build:verify": "API_INTERNAL_URL=http://localhost:4999 NEXT_PUBLIC_SITE_URL=http://localhost:3100 turbo run build",

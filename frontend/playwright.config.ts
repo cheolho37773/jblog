@@ -11,6 +11,15 @@ const PROD_SERVER = { port: 3100, distDir: '.next', devPages: '' };
 const COMPONENTS_SERVER = { port: 3101, distDir: '.next-components', devPages: '1' };
 
 const COMPONENTS_TEST_DIR = './e2e/components';
+const VISUAL_TEST_DIR = './e2e/visual';
+const DESIGN_REVIEW_TEST_DIR = './e2e/design-review';
+
+// 시각 회귀·디자인 비교는 기본 실행(pnpm test:e2e)에서 돌지 않는다(M1-05 규약 3).
+// 환경값이 있을 때만 해당 프로젝트 하나로 좁혀 켠다. 둘 다 /·/dev/components만 쓰므로 components 서버(3101) 하나면 된다.
+// - JBLOG_VISUAL=1: 기준 이미지 비교. Linux 컨테이너(scripts/visual/run.sh)에서만 의미가 있다. macOS·GitHub 러너는 폰트 렌더링이 달라 기준이 될 수 없다.
+// - JBLOG_DESIGN_REVIEW=1: 원본 참고 이미지(로컬 전용, 비공개)와 비교. 로컬 macOS에서 실행한다.
+const VISUAL_MODE = process.env.JBLOG_VISUAL === '1';
+const DESIGN_REVIEW_MODE = process.env.JBLOG_DESIGN_REVIEW === '1';
 
 type E2eServer = typeof PROD_SERVER;
 
@@ -57,27 +66,75 @@ function hasComponentsTests(): boolean {
   return fs.readdirSync(dir, { recursive: true }).some((file) => String(file).endsWith('.spec.ts'));
 }
 
+// 시각 회귀 허용 오차 초기값. 같은 컨테이너 이미지라 렌더 결과가 거의 같으므로 작게 잡는다.
+// - threshold 0.1: 픽셀 색 차이 판정(YIQ, 기본 0.2). 안티앨리어싱 잡음은 넘기되 토큰 색 1개 변경은 잡도록 기본보다 엄격하게.
+// - maxDiffPixels 0: 다른 픽셀을 하나도 허용하지 않는다. 비율(maxDiffPixelRatio)은 전체 페이지(수백만 픽셀)에서
+//   수천 픽셀을 눈감아 4px 간격 변경을 놓칠 수 있어 쓰지 않는다. 같은 컨테이너·고정 폰트라 결과가 같다는 전제이며,
+//   흔들림이 확인되면 test-engineer가 작은 절대값으로 올린다.
+// 값은 test-engineer가 반복 실행·시험용 변경으로 검증해 조정한다(M1-05 규약 7).
+const VISUAL_EXPECT = {
+  // animations: 전환·애니메이션을 끝 상태로 고정해 캡처 시점에 따른 흔들림을 없앤다.
+  // caret: 입력창 깜빡이는 캐럿이 찍히지 않게 한다. scale css: 장치 배율과 무관하게 CSS 픽셀 크기로 저장한다.
+  animations: 'disabled',
+  caret: 'hide',
+  scale: 'css',
+  threshold: 0.1,
+  maxDiffPixels: 0,
+} as const;
+
+const visualProjects = [
+  {
+    name: 'visual',
+    testDir: VISUAL_TEST_DIR,
+    // 기준 이미지는 Linux 하나뿐이라 파일 이름에 플랫폼·프로젝트 접미사를 붙이지 않는다.
+    snapshotPathTemplate: `${VISUAL_TEST_DIR}/__screenshots__/{testFilePath}/{arg}{ext}`,
+    expect: { toHaveScreenshot: VISUAL_EXPECT },
+    use: { ...devices['Desktop Chrome'], baseURL: originOf(COMPONENTS_SERVER) },
+  },
+];
+
+const designReviewProjects = [
+  {
+    name: 'design-review',
+    testDir: DESIGN_REVIEW_TEST_DIR,
+    use: { ...devices['Desktop Chrome'], baseURL: originOf(COMPONENTS_SERVER) },
+  },
+];
+
+const defaultProjects = [
+  {
+    name: 'prod',
+    testDir: './e2e',
+    testIgnore: ['components/**', 'visual/**', 'design-review/**'],
+    use: { ...devices['Desktop Chrome'], baseURL: originOf(PROD_SERVER) },
+  },
+  {
+    name: 'components',
+    testDir: COMPONENTS_TEST_DIR,
+    use: { ...devices['Desktop Chrome'], baseURL: originOf(COMPONENTS_SERVER) },
+  },
+];
+
+function selectProjects() {
+  if (VISUAL_MODE) return visualProjects;
+  if (DESIGN_REVIEW_MODE) return designReviewProjects;
+  return defaultProjects;
+}
+
+function selectWebServers() {
+  if (VISUAL_MODE || DESIGN_REVIEW_MODE) return [webServerOf(COMPONENTS_SERVER)];
+  return [
+    webServerOf(PROD_SERVER),
+    ...(hasComponentsTests() ? [webServerOf(COMPONENTS_SERVER)] : []),
+  ];
+}
+
 export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: { trace: 'on-first-retry' },
-  projects: [
-    {
-      name: 'prod',
-      testDir: './e2e',
-      testIgnore: 'components/**',
-      use: { ...devices['Desktop Chrome'], baseURL: originOf(PROD_SERVER) },
-    },
-    {
-      name: 'components',
-      testDir: COMPONENTS_TEST_DIR,
-      use: { ...devices['Desktop Chrome'], baseURL: originOf(COMPONENTS_SERVER) },
-    },
-  ],
-  webServer: [
-    webServerOf(PROD_SERVER),
-    ...(hasComponentsTests() ? [webServerOf(COMPONENTS_SERVER)] : []),
-  ],
+  projects: selectProjects(),
+  webServer: selectWebServers(),
 });

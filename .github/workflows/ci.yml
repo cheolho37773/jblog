@@ -103,7 +103,7 @@ jobs:
   e2e:
     name: e2e
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -123,6 +123,22 @@ jobs:
         with:
           name: playwright-report
           path: frontend/playwright-report/
+          retention-days: 7
+
+      # M1-05: 시각 회귀. 기준 이미지를 만든 것과 같은 컨테이너 이미지(scripts/visual/Dockerfile, 태그+digest 고정)에서 비교한다.
+      # 러너(Ubuntu)에서 직접 돌리지 않는 이유: 폰트 렌더링이 달라 기준 이미지와 어긋난다. 필수 검사 이름은 e2e 그대로다.
+      - name: 시각 회귀 (고정 컨테이너)
+        run: pnpm test:visual
+
+      # diff·actual·expected 이미지는 test-results에, HTML 보고서는 playwright-report에 있다.
+      - name: 시각 회귀 실패 시 보고서·diff 보관
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: visual-regression-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
           retention-days: 7
 
   build:
