@@ -1,6 +1,6 @@
 # jblog 개발 기획 – 개요 & 공통 결정사항
 
-> 버전 v0.10 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
+> 버전 v0.11 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
 > 관련 문서: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · [백엔드 기획서](./01_backend_plan.md) · [프론트엔드 기획서](./02_frontend_plan.md) · [AI 자동 작성](./03_ai_authoring_mcp_plan.md) · [접근 통제 & 복사 방지](./04_access_control_and_content_protection.md) · [협업 아키텍처](./05_collaboration_architecture.md)
 
 ---
@@ -293,7 +293,7 @@ INTERNAL_API_KEY=
 | 장치 | 내용 |
 |---|---|
 | `.gitignore` | `.env`, `.env.*` 무시, `!.env.example`만 예외 |
-| pre-commit 훅 | 비밀정보 패턴 검사 (03 §4.2 시크릿 스캐너 규칙 재사용), `.env` 파일 커밋 차단 |
+| pre-commit 훅 | 비밀정보 패턴 검사 (03 §4.2 시크릿 스캐너 규칙 재사용), `.env` 파일 커밋 차단. 자리표시자라도 `스킴://이름:값@` 형태의 접속 URL은 거부되므로 문서·예시는 문장이나 `{사용자}` 형태로 쓴다 |
 | GitHub Secret scanning + Push protection | 공개 저장소 무료 기능 (05 §5.1-a) |
 | ESLint | `process.env` 직접 접근을 설정 모듈 밖에서 금지 (`no-restricted-properties`) |
 | Codex 검수 | 하드코딩된 비밀값·접속 정보, `NEXT_PUBLIC_` 비밀값, 비밀값 기본값을 "높음"으로 지적 (`AGENTS.md`) |
@@ -352,3 +352,4 @@ INTERNAL_API_KEY=
 | v0.8 | 2026-11-21 | 민감 정보 관리 규칙 추가(§6-b): 하드코딩 금지·`.env`로만 주입, 파일 구성, 코드 규칙, 검사 장치. 05·01·02에 참조 반영 |
 | v0.9 | 2026-11-21 | 저장소 구조를 `frontend/`·`backend/` 분리 구조로 변경하고 공용 코드 패키지 제거(D25, §4). API 타입은 `backend/openapi.json`에서 프론트엔드 안으로 생성, Markdown 파이프라인은 프론트엔드 내부 모듈. 01·02·04·05 경로 반영 |
 | v0.10 | 2026-11-21 | 프론트엔드를 기능별 구조(`features/`)로 전환하고 계층 import 규칙 추가(D26, 프론트엔드 §3). 백엔드 구조는 그대로 |
+| v0.11 | 2026-11-22 | §6-b 검사 장치에 접속 URL 예시 표기 규칙 추가 (M0 report §8 제안 10) |
