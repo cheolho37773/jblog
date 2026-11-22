@@ -73,3 +73,43 @@ test.describe('반응형 타이포 (--text-h1)', () => {
     await expect.poll(() => rootVariable(page, '--text-h1')).toBe('28px');
   });
 });
+
+// UI §4.1·§4.2: 데스크톱(>=1280px) 콘텐츠 폭은 1216px(카드 392x3 + gap 20x2)이고,
+// 좌우 여백은 laptop 32 · tablet 24 · mobile 16이다. (Codex M1-02 r1 #1 회귀)
+// 빌드된 앱에는 container-site를 쓰는 곳이 없어, 요소를 DOM에 넣어 계산값을 잰다.
+const CONTAINER_CASES = [
+  { viewport: 1920, content: 1216, startX: 352 },
+  { viewport: 1280, content: 1216, startX: 32 },
+  { viewport: 1100, content: 1100 - 64, startX: 32 },
+  { viewport: 800, content: 800 - 48, startX: 24 },
+  { viewport: 375, content: 375 - 32, startX: 16 },
+];
+
+for (const { viewport, content, startX } of CONTAINER_CASES) {
+  test(`container-site: 뷰포트 ${viewport}px에서 콘텐츠 폭 ${content}px, 왼쪽 시작 ${startX}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: viewport, height: 800 });
+    await page.goto('/');
+
+    const measured = await page.evaluate(() => {
+      const element = document.createElement('div');
+      element.className = 'container-site';
+      document.body.appendChild(element);
+      const style = getComputedStyle(element);
+      const left = element.getBoundingClientRect().left;
+      const paddingLeft = parseFloat(style.paddingLeft);
+      const paddingRight = parseFloat(style.paddingRight);
+      return {
+        maxWidth: style.maxWidth,
+        content: element.getBoundingClientRect().width - paddingLeft - paddingRight,
+        startX: left + paddingLeft,
+      };
+    });
+
+    // 유틸 CSS가 빌드 결과에 없으면(미사용 유틸 제거) 여기서 먼저 드러난다.
+    expect(measured.maxWidth, 'container-site CSS가 빌드에 없다').not.toBe('none');
+    expect(measured.content).toBe(content);
+    expect(measured.startX).toBe(startX);
+  });
+}
