@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { Footer } from '@/components/layout/Footer';
+import { Navbar } from '@/components/layout/Navbar';
+import { PageInfo } from '@/components/layout/PageInfo';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +37,14 @@ const ICON_BUTTON_LABEL = {
   focus: 'icon focus',
   disabled: 'icon disabled',
 } as const;
+// 연락처는 실제 값이 아닌 example.com 예시다.
+const EXAMPLE_FOOTER = {
+  about: '기술과 기록을 모아 두는 개인 블로그입니다.',
+  contact: { email: 'hello@example.com', githubUrl: 'https://github.com/example' },
+  categories: ['React', 'TypeScript', 'NestJS', 'Prisma', 'DevOps', 'Career', 'Extra'].map(
+    (name) => ({ name, slug: name.toLowerCase() }),
+  ),
+};
 const AVATAR_SIZES = [28, 40, 80];
 // 외부 URL·실제 인물 사진을 쓰지 않는 단색 더미 이미지
 const AVATAR_IMAGE = '/dev/avatar-dummy.png';
@@ -230,6 +241,22 @@ export default function ComponentsPage() {
           <Icon name="x" size={24} />
           <Icon name="youtube" size={24} />
         </Row>
+      </Section>
+
+      <Section id="dev-layout-navbar" title="Navbar">
+        <Navbar sticky={false} />
+      </Section>
+
+      <Section id="dev-layout-footer" title="Footer (예시 값)">
+        <Footer {...EXAMPLE_FOOTER} />
+      </Section>
+
+      <Section id="dev-layout-footer-empty" title="Footer (값 없음)">
+        <Footer />
+      </Section>
+
+      <Section id="dev-layout-pageinfo" title="PageInfo">
+        <PageInfo title="Blog" breadcrumb={[{ label: 'Home', href: '/' }, { label: 'Blog' }]} />
       </Section>
 
       <Section id="dev-tokens" title="Tokens">

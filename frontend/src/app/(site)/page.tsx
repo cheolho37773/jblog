@@ -1,10 +1,9 @@
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { Container } from '@/components/layout/Container';
 
 export default function HomePage() {
   return (
-    <main className="p-6">
-      <h1 className="text-2xl font-semibold">jblog</h1>
-      <ThemeToggle />
-    </main>
+    <Container className="py-8">
+      <h1 className="text-h1 text-strong">jblog</h1>
+    </Container>
   );
 }

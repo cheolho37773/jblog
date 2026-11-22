@@ -13,8 +13,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   // next-themes가 하이드레이션 전에 data-theme을 넣으므로 이 경고만 끈다.
   return (
-    <html lang="ko" className={fontVariableClassNames} suppressHydrationWarning>
-      <body>
+    <html
+      lang="ko"
+      className={`${fontVariableClassNames} has-[dialog[open]]:overflow-hidden`}
+      suppressHydrationWarning
+    >
+      <body className="flex min-h-dvh flex-col">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
