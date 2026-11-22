@@ -6,6 +6,7 @@ pnpm-lock.yaml
 node_modules/
 dist/
 .next/
+.next-components/
 .turbo/
 coverage/
 # Prisma 생성 클라이언트 (생성물, 커밋하지 않음)

@@ -113,6 +113,7 @@ jobs:
       - name: Playwright Chromium 설치 (시스템 의존성 포함)
         run: pnpm --filter @jblog/frontend exec playwright install --with-deps chromium
       # webServer가 frontend를 빌드하고 standalone 서버로 띄운다(더미 env는 playwright.config.ts).
+      # prod(운영 빌드)·components(JBLOG_DEV_PAGES=1 별도 빌드) 두 프로젝트를 모두 실행한다(M1-03).
       - name: Playwright E2E
         run: pnpm test:e2e
 

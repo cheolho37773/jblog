@@ -19,6 +19,7 @@ export default [
       '**/node_modules/**',
       '**/dist/**',
       '**/.next/**',
+      '**/.next-components/**',
       '**/coverage/**',
       '**/.turbo/**',
       'docs/**',

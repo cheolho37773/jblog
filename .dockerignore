@@ -10,6 +10,7 @@
 **/.pnpm-store
 **/dist
 **/.next
+**/.next-components
 **/.turbo
 **/*.tsbuildinfo
 backend/src/generated
