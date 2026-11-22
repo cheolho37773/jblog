@@ -45,7 +45,8 @@ export function NavLinks({
                 aria-current={active ? 'page' : undefined}
                 onClick={onNavigate}
                 className={cn(
-                  'text-b4 text-nav-text hover:text-primary-text inline-flex min-h-11 items-center',
+                  // hover 전환은 150ms(UI §5.1). 전역 색 전환(200ms, 레이어 밖 규칙)보다 이기도록 important(!)를 쓴다.
+                  'text-b4 text-nav-text hover:text-primary-text inline-flex min-h-11 items-center duration-150!',
                   active && 'text-primary-text font-medium',
                   linkClassName,
                 )}

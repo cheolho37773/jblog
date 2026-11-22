@@ -30,7 +30,7 @@ function LinkColumn({ title, children }: { title: string; children: ReactNode })
 function ContactCard({ email, githubUrl }: { email?: string; githubUrl?: string }) {
   if (!email && !githubUrl) return null;
   return (
-    <div className="bg-footer-card border-border flex flex-col gap-4 rounded-lg border p-8">
+    <div className="bg-footer-card border-border flex flex-col gap-7.5 rounded-lg border p-8">
       <h2 className="text-h4 text-strong">Contact Me</h2>
       {/* 연락처는 복사 방지 예외다 (프론트엔드 §7) */}
       <div className="allow-select flex flex-col items-start gap-2">
@@ -96,6 +96,8 @@ function QuickLinkColumn() {
   );
 }
 
+// >= 1280은 원본 3덩어리 폭(Info 289 · Links 495 · 카드 392)과 칸 사이 20px(UI §5.9). 칸이 없으면 나머지가 왼쪽부터 이어진다.
+
 /**
  * 사이트 Footer (UI §5.9). 값을 받지 못한 칸은 통째로 숨긴다. 값은 API가 붙는 M2~M3에서 넘긴다.
  * role을 명시한 이유: <main> 안에 놓이면(개발 페이지 미리보기) 브라우저가 contentinfo로 보지 않는다.
@@ -103,19 +105,19 @@ function QuickLinkColumn() {
 export function Footer({ about, contact, categories }: FooterProps) {
   return (
     <footer role="contentinfo" className="bg-footer-bg border-border border-t">
-      <Container className="py-16">
-        <div className="grid gap-10 tablet:grid-cols-2 laptop:grid-cols-[minmax(0,18rem)_auto_minmax(0,24rem)] laptop:justify-between">
+      <Container className="pt-16 pb-8">
+        <div className="grid gap-10 tablet:grid-cols-2 laptop:grid-cols-[minmax(0,18rem)_auto_minmax(0,24rem)] laptop:justify-between desktop:flex desktop:justify-start desktop:gap-5">
           {about && (
-            <div>
+            <div className="desktop:w-[289px] desktop:shrink-0">
               <h2 className="text-footer-title font-jakarta text-strong mb-4">About</h2>
-              <p className="text-footer-body text-muted font-jakarta">{about}</p>
+              <p className="text-footer-body text-muted font-jakarta max-w-70">{about}</p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-6 laptop:gap-20">
+          <div className="grid grid-cols-2 gap-6 laptop:gap-20 desktop:w-[495px] desktop:shrink-0">
             <QuickLinkColumn />
             <CategoryColumn categories={categories} />
           </div>
-          <div className="tablet:col-span-2 laptop:col-span-1 empty:hidden">
+          <div className="tablet:col-span-2 laptop:col-span-1 desktop:w-[392px] desktop:shrink-0 empty:hidden">
             <ContactCard email={contact?.email} githubUrl={contact?.githubUrl} />
           </div>
         </div>

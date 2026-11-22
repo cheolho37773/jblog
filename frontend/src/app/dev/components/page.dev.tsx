@@ -104,11 +104,34 @@ const TYPE_SAMPLES = [
   'text-exp-body',
 ];
 
-function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+// wide: 내용이 자기 Container를 가진 컴포넌트(Footer)는 개발 페이지 컨테이너 밖(전체 폭)에 둬야 실제 폭으로 보인다.
+function Section({
+  id,
+  title,
+  wide = false,
+  children,
+}: {
+  id: string;
+  title: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  if (wide) {
+    return (
+      <section data-testid={id} className="border-border border-t py-8">
+        <div className="container-site mb-4">
+          <h2 className="text-h4 text-strong">{title}</h2>
+        </div>
+        {children}
+      </section>
+    );
+  }
   return (
-    <section data-testid={id} className="border-border flex flex-col gap-4 border-t py-8">
-      <h2 className="text-h4 text-strong">{title}</h2>
-      {children}
+    <section data-testid={id} className="border-border border-t py-8">
+      <div className="container-site flex flex-col gap-4">
+        <h2 className="text-h4 text-strong">{title}</h2>
+        {children}
+      </div>
     </section>
   );
 }
@@ -119,8 +142,8 @@ function Row({ children }: { children: ReactNode }) {
 
 export default function ComponentsPage() {
   return (
-    <main className="container-site text-body py-8">
-      <header className="flex items-center justify-between gap-4">
+    <main className="text-body py-8">
+      <header className="container-site flex items-center justify-between gap-4 pb-8">
         <h1 className="text-h3-bold text-strong">Components</h1>
         <ThemeToggle />
       </header>
@@ -248,11 +271,11 @@ export default function ComponentsPage() {
         <Navbar sticky={false} />
       </Section>
 
-      <Section id="dev-layout-footer" title="Footer (예시 값)">
+      <Section id="dev-layout-footer" title="Footer (예시 값)" wide>
         <Footer {...EXAMPLE_FOOTER} />
       </Section>
 
-      <Section id="dev-layout-footer-empty" title="Footer (값 없음)">
+      <Section id="dev-layout-footer-empty" title="Footer (값 없음)" wide>
         <Footer />
       </Section>
 
@@ -268,6 +291,9 @@ export default function ComponentsPage() {
           </LayoutSection>
           <LayoutSection data-example="section-b">
             <p>Section B</p>
+          </LayoutSection>
+          <LayoutSection title="제목 있는 Section" data-example="section-titled">
+            <p>Section 내용</p>
           </LayoutSection>
         </div>
       </Section>

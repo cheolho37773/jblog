@@ -19,7 +19,7 @@ export function SearchInput({
         role="searchbox"
         aria-label={ariaLabel}
         className={cn(
-          'text-b5 bg-input-bg text-body placeholder:text-input-placeholder w-full rounded-sm py-2 pr-10 pl-4',
+          'text-b5 bg-input-bg text-body placeholder:text-input-placeholder w-full rounded-sm py-2 pr-9 pl-4',
           className,
         )}
         {...props}
