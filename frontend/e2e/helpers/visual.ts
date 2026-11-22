@@ -18,6 +18,23 @@ export async function openForCapture(
   await page.goto(route);
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
   await waitForFonts(page);
+  await waitForTransitionsToSettle(page, theme);
+}
+
+/**
+ * ThemeToggle 노브는 마운트 뒤에 다크 위치로 200ms 전환한다. 느린(에뮬레이션) 환경에서는 그 전환이
+ * 캡처와 겹쳐 약 2000픽셀이 흔들리므로, 스위치 상태가 테마를 따라온 뒤 진행 중인 전환이 끝날 때까지 기다린다.
+ */
+async function waitForTransitionsToSettle(page: Page, theme: Theme): Promise<void> {
+  const expectedChecked = theme === 'dark' ? 'true' : 'false';
+  for (const toggle of await page.getByRole('switch', { name: '다크 모드' }).all()) {
+    await expect(toggle).toHaveAttribute('aria-checked', expectedChecked);
+  }
+  await page.evaluate(() =>
+    Promise.all(
+      document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
 }
 
 /**
