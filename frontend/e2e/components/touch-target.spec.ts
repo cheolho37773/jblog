@@ -9,6 +9,8 @@ const MIN_TARGET = 44;
 const HALF = MIN_TARGET / 2;
 // 경계에 걸쳐 오차가 나지 않도록 44px 영역의 가장자리에서 1px 안쪽을 누른다.
 const EDGE_INSET = 1;
+const OUTSIDE_OFFSET = 30; // 44px 영역(22px) 바깥
+const NAVIGATION_SETTLE_MS = 500;
 
 test.use({ viewport: MOBILE_VIEWPORT });
 
@@ -62,10 +64,12 @@ async function expectHitArea(page: Page, { locate, reacted, reset }: HitAreaChec
     const dx = point.x - center.x;
     const dy = point.y - center.y;
     await page.mouse.click(fresh.x + dx, fresh.y + dy);
-    expect(
-      await reacted(),
-      `${point.name} 가장자리(${HALF - EDGE_INSET}px)를 눌러도 반응해야 한다`,
-    ).toBe(true);
+    // 같은 문서 안 해시 이동은 next/link가 비동기로 반영하므로 잠시 기다려 확인한다.
+    await expect
+      .poll(reacted, {
+        message: `${point.name} 가장자리(${HALF - EDGE_INSET}px)를 눌러도 반응해야 한다`,
+      })
+      .toBe(true);
   }
 }
 
@@ -92,7 +96,22 @@ test('Badge 링크는 시각 크기와 별개로 44x44 영역 어디를 눌러�
 
   await expectHitArea(page, {
     locate: link,
-    reacted: async () => new URL(page.url()).hash === href,
+    reacted: () => page.evaluate(() => location.hash).then((hash) => hash === href),
     reset: () => page.evaluate(() => history.replaceState(null, '', location.pathname)),
   });
+});
+
+test('Badge 링크는 44x44 영역 밖(중심에서 위로 30px)을 누르면 이동하지 않는다 (대조)', async ({
+  page,
+}) => {
+  await page.goto(PAGE_PATH);
+  const link = page.getByTestId('dev-badge').getByRole('link').first();
+  await expect(link).toBeVisible();
+
+  const center = await centerOf(link);
+  await page.mouse.click(center.x, center.y - OUTSIDE_OFFSET);
+  // 이동이 늦게 반영될 수 있으므로 같은 시간만큼 기다린 뒤 해시가 그대로인지 본다.
+  await page.waitForTimeout(NAVIGATION_SETTLE_MS);
+
+  expect(await page.evaluate(() => location.hash)).toBe('');
 });
