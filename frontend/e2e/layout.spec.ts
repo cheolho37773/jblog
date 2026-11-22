@@ -256,3 +256,55 @@ test.describe('히트 영역 44x44 (375px, M1-03 터치 타겟 방식)', () => {
     expect(insideButton).toBe(false);
   });
 });
+
+// Codex M1-04 r2: 데스크톱(>= 1024) Navbar는 하단 테두리를 뺀 높이가 100px이고(UI §4.1·§5.1),
+// 내부 요소는 세로 가운데에 놓인다. 44x44 히트 영역은 유지하므로 시각 높이가 아니라 요소의 상자 중심을 본다.
+test.describe('데스크톱 Navbar 높이와 세로 정렬 (UI §5.1)', () => {
+  const NAVBAR_HEIGHT = 100;
+  const HEIGHT_TOLERANCE = 0.5;
+  const CENTER_TOLERANCE = 1;
+
+  for (const width of [1280, 1024]) {
+    test(`${width}px: banner 높이(테두리 제외)는 ${NAVBAR_HEIGHT}px이다`, async ({ page }) => {
+      await open(page, width);
+
+      const height = await banner(page).evaluate((element) => element.clientHeight);
+
+      expect(Math.abs(height - NAVBAR_HEIGHT), `실제 높이 ${height}px`).toBeLessThanOrEqual(
+        HEIGHT_TOLERANCE,
+      );
+    });
+
+    test(`${width}px: 로고·메뉴·검색 입력·테마 토글의 세로 중심이 Navbar 중심과 ±${CENTER_TOLERANCE}px이다`, async ({
+      page,
+    }) => {
+      await open(page, width);
+      const targets = [
+        banner(page).getByRole('link', { name: 'jblog 홈' }),
+        ...MENU_NAMES.map((name) => menuLink(page, name)),
+        banner(page).getByRole('searchbox', { name: '검색' }),
+        banner(page).getByRole('switch', { name: '다크 모드' }),
+      ];
+
+      const navbarCenter = await banner(page).evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return box.top + element.clientTop + element.clientHeight / 2; // 상단 테두리·하단 테두리 제외한 가운데
+      });
+
+      for (const target of targets) {
+        await expect(target).toBeVisible();
+        const center = await target.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return box.top + box.height / 2;
+        });
+        const label = await target.evaluate(
+          (element) => element.getAttribute('aria-label') ?? element.textContent?.trim(),
+        );
+        expect(
+          Math.abs(center - navbarCenter),
+          `${label} 중심 ${center} / Navbar 중심 ${navbarCenter}`,
+        ).toBeLessThanOrEqual(CENTER_TOLERANCE);
+      }
+    });
+  }
+});
