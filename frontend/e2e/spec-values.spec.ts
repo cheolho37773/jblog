@@ -62,8 +62,21 @@ test.describe('UI §4.1 레이아웃', () => {
       CONTAINER_LEFT,
       'Navbar 로고 왼쪽',
     );
-    const footerContent = await box(footer(page).locator('h2').first());
-    expectNear(footerContent.left, CONTAINER_LEFT, 'Footer 내용 왼쪽');
+    // `/`의 Footer에는 About이 없어 첫 칸 제목 위치가 내용 시작점이 아니다(Quick Link는 Links 칸 안에서 오른쪽 정렬). 컨테이너 자체로 잰다.
+    // 컨테이너는 좌우 padding을 포함해 폭이 더 크므로, padding을 뺀 내용 상자로 잰다.
+    const content = await footer(page)
+      .locator('.container-site')
+      .first()
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const left = rect.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth);
+        const right =
+          rect.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth);
+        return { left, width: right - left };
+      });
+    expectNear(content.left, CONTAINER_LEFT, 'Footer 내용 왼쪽');
+    expectNear(content.width, CONTENT_WIDTH, 'Footer 내용 폭');
   });
 
   test('Navbar → 콘텐츠 간격 24px (Navbar 하단 ↔ 본문 첫 제목 상단)', async ({ page }) => {
@@ -261,4 +274,64 @@ test.describe('UI §5.9 Footer (값 없는 공개 사이트 `/`)', () => {
 
     expectNear(rule, CONTENT_WIDTH, 'Footer 내용 폭');
   });
+});
+
+test.describe('UI §5.9 Footer 저작권 줄 (로고 + 문구 묶음)', () => {
+  const copyrightBundle = async (page: Page) => {
+    const logo = await box(footer(page).getByRole('link', { name: 'jblog 홈' }));
+    const text = await box(footer(page).getByText(/All rights reserved/));
+    return { logo, text };
+  };
+
+  test('1920: 로고 아래에 문구가 gap 2px로 붙고 둘 다 콘텐츠 왼쪽(352)에서 시작한다', async ({
+    page,
+  }) => {
+    const { logo, text } = await copyrightBundle(page);
+
+    expectNear(text.top - logo.bottom, 2, '로고 ↔ 저작권 문구 gap');
+    expectNear(text.left, CONTAINER_LEFT, '저작권 문구 왼쪽');
+    expectNear(logo.left, CONTAINER_LEFT, '저작권 로고 왼쪽');
+  });
+
+  test('768 이상(tablet 경계)에서도 왼쪽 정렬이다', async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: FRAME_HEIGHT });
+    const { logo, text } = await copyrightBundle(page);
+
+    expectNear(text.left, logo.left, '문구 왼쪽 ↔ 로고 왼쪽');
+  });
+
+  test('768 미만(375)에서는 로고와 문구가 가운데 정렬이다', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: FRAME_HEIGHT });
+    const { logo, text } = await copyrightBundle(page);
+    const center = (target: Box) => (target.left + target.right) / 2;
+
+    expectNear(center(logo), 375 / 2, '로고 가운데');
+    expectNear(center(text), 375 / 2, '문구 가운데');
+  });
+});
+
+// 자체 검사 수정 1: 값이 없는 Footer(Quick Link만)에서 Quick Link가 콘텐츠 왼쪽에서 시작해야 한다.
+// 수정 전에는 Links 묶음이 오른쪽에 붙어 1920에서 약 472에서 시작했다.
+test.describe('Footer 값 없음: Quick Link 제목은 콘텐츠 왼쪽에서 시작한다', () => {
+  for (const width of [1920, 1280]) {
+    test(`${width}px에서 Quick Link 제목 왼쪽 = 콘텐츠 내용 상자 왼쪽`, async ({ page }) => {
+      await page.setViewportSize({ width, height: FRAME_HEIGHT });
+      await page.goto('/');
+      const positions = await footer(page).evaluate((root) => {
+        const container = root.querySelector<HTMLElement>('.container-site')!;
+        const style = getComputedStyle(container);
+        const contentLeft =
+          container.getBoundingClientRect().left +
+          parseFloat(style.paddingLeft) +
+          parseFloat(style.borderLeftWidth);
+        const title = Array.from(root.querySelectorAll('h2')).find(
+          (h) => h.textContent?.trim() === 'Quick Link',
+        );
+        if (!title) throw new Error('Quick Link 제목을 찾을 수 없다');
+        return { contentLeft, titleLeft: title.getBoundingClientRect().left };
+      });
+
+      expectNear(positions.titleLeft, positions.contentLeft, `Quick Link 왼쪽(${width})`);
+    });
+  }
 });

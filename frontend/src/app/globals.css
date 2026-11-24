@@ -220,6 +220,16 @@
   color-scheme: light dark;
 }
 
+/* 브라우저 기본 검정이 루트 계산값에 남지 않게 글자색 토큰을 지정한다 */
+html {
+  color: var(--color-body);
+}
+
+/* dialog는 브라우저 기본 글자색(CanvasText)을 따로 가진다. 부모 색을 이어받게 해 기본 검정이 남지 않게 한다 */
+dialog {
+  color: inherit;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-strong);
