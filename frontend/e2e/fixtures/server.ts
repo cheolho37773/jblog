@@ -555,14 +555,11 @@ function isMainModule(): boolean {
 }
 
 // 이 도구 서버의 포트·테스트 키만 읽는 단독 실행 진입점이라 설정 모듈을 따로 두지 않는다.
-// (eslint의 process.env 예외 목록에 이 파일을 넣으면 아래 주석은 지워도 된다.)
 function readFixtureSettings() {
-  /* eslint-disable no-restricted-properties */
   return {
     port: Number(process.env.FIXTURE_API_PORT ?? DEFAULT_FIXTURE_API_PORT),
     internalKey: process.env.FIXTURE_INTERNAL_KEY ?? DEFAULT_FIXTURE_INTERNAL_KEY,
   };
-  /* eslint-enable no-restricted-properties */
 }
 
 if (isMainModule()) {

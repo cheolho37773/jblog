@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as envSchema from './env.schema';
-import { PUBLIC_ENV_KEYS, findSecretLikePublicKeys, parseEnv } from './env.schema';
-
-// 구현(M2-E ③) 전에도 `next build`의 타입 검사가 깨지지 않도록 새 export·필드를 느슨한 타입으로 읽는다.
-// 구현이 들어오면 frontend-dev가 이 두 줄을 정식 import·타입으로 바꿔도 된다.
-const parseBuildEnv = (
-  envSchema as unknown as Record<string, (raw: Record<string, unknown>) => unknown>
-).parseBuildEnv as (raw: Record<string, unknown>) => unknown;
-const internalKeyOf = (server: unknown) => (server as Record<string, unknown>).INTERNAL_API_KEY;
+import { PUBLIC_ENV_KEYS, findSecretLikePublicKeys, parseBuildEnv, parseEnv } from './env.schema';
 
 // 명백한 더미 URL. 비밀값이 아니다.
 const API_URL = 'http://api.dummy.invalid:4000';
@@ -85,7 +77,7 @@ describe('parseEnv: INTERNAL_API_KEY (M2-E 동작 규약 5)', () => {
   it('서버 값에만 담기고 공개 값에는 들어가지 않는다', () => {
     const parsed = parseEnv(validRaw);
 
-    expect(internalKeyOf(parsed.server)).toBe(INTERNAL_KEY);
+    expect(parsed.server.INTERNAL_API_KEY).toBe(INTERNAL_KEY);
     expect(Object.keys(parsed.public)).not.toContain('INTERNAL_API_KEY');
     expect(JSON.stringify(parsed.public)).not.toContain(INTERNAL_KEY);
   });
@@ -113,7 +105,7 @@ describe('parseEnv: INTERNAL_API_KEY (M2-E 동작 규약 5)', () => {
   it('16자이면 통과한다', () => {
     const sixteen = 'k'.repeat(16);
 
-    expect(internalKeyOf(parseEnv({ ...validRaw, INTERNAL_API_KEY: sixteen }).server)).toBe(
+    expect(parseEnv({ ...validRaw, INTERNAL_API_KEY: sixteen }).server.INTERNAL_API_KEY).toBe(
       sixteen,
     );
   });

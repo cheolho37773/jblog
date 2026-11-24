@@ -138,3 +138,19 @@
 - 추천 글 slug는 `/api/posts?featured=true&size=1`로 얻어 내부 API로 제목을 읽는다(페이지가 e2e 픽스처를 import하지 않게)
 - 보고: `env.schema.spec.ts`의 느슨한 타입 읽기는 그대로 둔다(test 파일). 이제 정식 import로 바꿀 수 있다. `e2e/fixtures/server.ts` 560행 unused eslint-disable 경고 1건은 test-engineer 몫으로 남아 있다
 - 검사(Node 24): 단위 401건 통과(env 10건 포함), `pnpm test:e2e` 226건 통과(api-env·api-check 포함), `pnpm test:visual` 24건 통과(기준 이미지 변경 없음), `pnpm verify` 통과, `pnpm docker:build` 통과(키·백엔드 없이). lint 오류 0·경고 1(위)
+
+### ④ 독립 검증 (test-engineer)
+
+- 정리: `frontend/e2e/fixtures/server.ts`의 불필요한 `eslint-disable` 주석 제거(lint 경고 0), `env.schema.spec.ts`의 느슨한 타입 읽기를 정식 import(`parseBuildEnv`)·타입(`server.INTERNAL_API_KEY`)으로 교체(테스트 의미 유지, 28건 통과)
+- 보류했던 거부 검증(서버를 따로 띄워 확인. `frontend/.next-components/standalone/frontend`의 standalone 서버 3101 + 픽스처 4100, `curl /dev/api-check`)
+  - 프론트 키가 틀림(`INTERNAL_API_KEY`가 픽스처 키와 다름): 응답 **500**, 서버 로그 `Error: /internal/posts 조회 실패`. 빈 값으로 숨지 않음. 응답·로그에 키 값 없음. 완료
+  - 서버에 `INTERNAL_API_KEY` 없음: 서버는 기동하고, 첫 요청이 **500**, 로그 `환경변수가 없거나 올바르지 않습니다: INTERNAL_API_KEY`(이름만). 응답·로그에 키 값 없음. 완료
+  - 픽스처 서버 꺼짐: 응답 **500**(연결 실패 오류 로그), 목록 영역(`api-check-server`) 없음. 빈 목록으로 숨지 않음. 완료
+  - 주의: standalone의 `.next-components/cache/fetch-cache`에 이전 실행의 응답이 남아 있으면 `revalidate: 3600` 때문에 픽스처가 꺼져 있어도 200이 나온다(Next 데이터 캐시의 정상 동작). 위 확인은 캐시를 지운 뒤 했다. 이 검증은 서버를 따로 띄우는 절차라 자동 테스트로 남기지 않았다
+- 전체 실행(Node 24)
+  - `pnpm --filter @jblog/frontend test`: 21파일 401건 통과
+  - `pnpm test:e2e`: 226건 통과, 3회 반복 모두 226 통과(흔들림 없음)
+  - `pnpm test:visual`: 24건 통과, 기준 이미지 변경 없음(git status 깨끗), `playwright-report`·`test-results` 정리
+  - `pnpm verify`: 통과(exit 0, lint 경고 0). `pnpm docker:build`: 통과(키·백엔드 없이)
+- 필수 검증 항목별: 성공 4개(타입 검사, api-check E2E, 픽스처 구성 E2E·시각 회귀, 키·백엔드 없는 빌드) 완료. 거부 4개(픽스처 401, 프론트 키 오류 시 오류 종료, 런타임 키 없음 시 이름만 담은 오류, 번들 키 미노출·prod 404) 완료. 회귀(단위·E2E·시각 24건·verify) 완료. 보류·실패 없음
+- 남은 확인: "CI 필수 검사 8개의 이름과 개수 그대로"는 `.github/**`가 변경되지 않은 것(②: CI 변경 없음)으로만 확인했고 실제 CI 실행은 push 후 확인 대상이다. 체크박스는 건드리지 않았다
