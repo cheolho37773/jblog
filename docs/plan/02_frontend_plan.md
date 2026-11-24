@@ -1,6 +1,6 @@
 # jblog 프론트엔드 기획서
 
-> 버전 v0.2 · 작성일 2026-11-20 · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26), `revalidateTag` 시그니처 확인 완료 (§4, 개요 Q5)
+> 버전 v0.3 · 작성일 2026-11-20 · 개정 2026-11-24: §4 빌드와 데이터 — 빌드는 API 무의존, 상세 사전 생성 제거(M2 G1 결정 6, 개발자 승인) · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26), `revalidateTag` 시그니처 확인 완료 (§4, 개요 Q5)
 > 스택: **Next.js (App Router) + React + TypeScript + Tailwind CSS v4**
 > 화면/토큰/컴포넌트 스펙의 기준: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · API 계약: [백엔드 기획서 §4](./01_backend_plan.md#4-api-명세)
 
@@ -126,13 +126,20 @@ frontend/src/                         # frontend/ 루트에는 public/, e2e/, pa
 |---|---|---|---|
 | `/` | RSC + ISR | tags `posts`, `projects`, `profile`, `tech-stacks` | profile, tech-stacks(home), projects(featured), posts(featured 1 + latest 6) |
 | `/blog` | RSC + ISR | tag `posts` | `searchParams.category / tag / page` → posts. **Load More**는 클라이언트 컴포넌트가 다음 페이지를 추가 fetch |
-| `/blog/[slug]` | RSC + ISR, `generateStaticParams`로 최근 50개 사전 생성 | tags `posts`, `post:<slug>` | 내부 API `/internal/posts/:slug` **한 번 호출**로 메타+원문+이전/다음+관련 글을 같은 버전으로 받음. `redirectTo`가 오면 `permanentRedirect()`. **조회수/좋아요는 클라이언트 아일랜드** (`FEATURE_REACTIONS` 켜졌을 때만) |
+| `/blog/[slug]` | RSC, 요청 시 렌더 + 데이터 캐시. `generateStaticParams`는 빈 목록이고 첫 요청 때 생성해 캐시한다 (아래 "빌드와 데이터") | tags `posts`, `post:<slug>` | 내부 API `/internal/posts/:slug` **한 번 호출**로 메타+원문+이전/다음+관련 글을 같은 버전으로 받음. `redirectTo`가 오면 `permanentRedirect()`. **조회수/좋아요는 클라이언트 아일랜드** (`FEATURE_REACTIONS` 켜졌을 때만) |
 | `/projects`, `/projects/[slug]` | RSC + ISR | tags `projects`, `project:<slug>`, `tech-stacks` | 상세는 `/internal/projects/:slug` 한 번 호출 |
 | `/about` | RSC + ISR | tags `profile`, `experiences`, `tech-stacks` | |
 | `/search` | 동적 SSR (`no-store`) | — | `?q` |
 | `/admin/**` | 클라이언트 렌더링 (CSR) | `no-store` | TanStack Query |
 | `/feed.xml` | Route Handler + ISR | tag `posts` | |
 | `/sitemap.xml` | Route Handler + ISR | tags `posts`, `projects` | 글과 프로젝트 URL 모두 포함 |
+
+**빌드와 데이터 (2026-11-24 개발자 결정, M2 계획 G1 결정 6)**
+- 빌드는 API에 의존하지 않는다. 일반 빌드와 Docker 빌드는 백엔드 없이 돈다. 그래서 데이터 페이지는 빌드 때 사전 생성하지 않는다.
+  - 데이터 페이지는 요청 시 렌더한다.
+  - 같은 결과를 반복 계산하지 않도록 fetch 데이터 캐시(`revalidate: 3600` + 태그)를 쓴다.
+- 표의 "RSC + ISR"은 이 방식을 뜻한다. 태그 무효화와 즉시 만료 규칙은 그대로다. 달라지는 점은 상세 첫 방문 1회가 느려지는 것뿐이다.
+- 조회가 실패하면 빈 목록으로 숨기지 않고 오류로 처리한다(오류 페이지 또는 5xx).
 
 **캐시 원칙: 이벤트 기반 갱신이 기본, 시간 기반 갱신은 보조**
 - **기본**: 백엔드가 공개 상태를 바꾸는 이벤트(발행, 예약 시각 도달, 비공개 전환, 삭제, slug 변경 등)마다 outbox를 거쳐 정확한 태그를 무효화한다 ([백엔드 §5.7](./01_backend_plan.md#57-캐시-정책--무효화)).
