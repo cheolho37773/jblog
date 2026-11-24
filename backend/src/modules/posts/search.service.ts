@@ -6,7 +6,7 @@ import type { PostSummaryDto } from './dto/post-summary.dto';
 import type { SearchQueryDto } from './dto/post-queries.dto';
 import { type PageRequest, resolvePageRequest, skipOf, toPostList } from './pagination';
 import { POST_SUMMARY_SELECT, toPostSummary } from './post-mapper';
-import { PUBLISHED_POST_SQL } from './published-post';
+import { PUBLISHED_POST_SQL, publishedPostWhere } from './published-post';
 
 // LIKE 와일드카드(%, _)와 이스케이프 문자(\)를 글자 그대로 찾도록 앞에 \를 붙인다.
 // PostgreSQL LIKE의 기본 이스케이프 문자가 \ 이다.
@@ -54,9 +54,11 @@ export class SearchService {
   }
 
   // 목록과 같은 형태로 만들기 위해 Prisma로 다시 읽고, raw 쿼리가 정한 순서를 되살린다.
+  // ID 조회와 이 재조회 사이에 비공개로 바뀐 글이 응답에 새지 않도록 공개 조건을 다시 건다.
+  // 그 경합이 있으면 totalItems보다 items가 적을 수 있다. 비공개 글을 노출하는 것보다 안전하다.
   private async loadInOrder(ids: number[]): Promise<PostSummaryDto[]> {
     const rows = await this.prisma.post.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, ...publishedPostWhere() },
       select: { id: true, ...POST_SUMMARY_SELECT },
     });
     const byId = new Map(rows.map((row) => [row.id, row]));
