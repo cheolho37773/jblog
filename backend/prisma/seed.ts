@@ -12,6 +12,7 @@ import {
   SAMPLE_PROFILE,
   type SamplePost,
   SEED_CATEGORIES,
+  SEED_TAGS,
   sampleContentMarkdown,
   sampleExcerpt,
 } from './seed-content';
@@ -39,12 +40,32 @@ async function seedCategories(prisma: PrismaClient): Promise<Map<string, number>
   return categoryIds;
 }
 
+// 태그 slug → id. 글에 태그를 연결할 때 쓴다.
+async function seedTags(prisma: PrismaClient): Promise<Map<string, number>> {
+  const tagIds = new Map<string, number>();
+  for (const tag of SEED_TAGS) {
+    const saved = await prisma.tag.upsert({
+      where: { slug: tag.slug },
+      create: tag,
+      update: {},
+      select: { id: true },
+    });
+    tagIds.set(tag.slug, saved.id);
+  }
+  return tagIds;
+}
+
+interface SeedLookups {
+  categoryIds: Map<string, number>;
+  tagIds: Map<string, number>;
+}
+
 // slug는 한 번 쓰면 영구 예약이다(개요 D20). 이미 예약된 slug면 글이 지워졌거나 slug가 바뀐 경우이므로
 // 같은 slug로 새 글을 만들지 않고 건너뛴다. 글과 현재 PostSlug는 중첩 생성으로 함께 커밋된다.
 async function seedPost(
   prisma: PrismaClient,
   post: SamplePost,
-  categoryIds: Map<string, number>,
+  { categoryIds, tagIds }: SeedLookups,
 ): Promise<void> {
   const reserved = await prisma.postSlug.findUnique({ where: { slug: post.slug } });
   if (reserved) return;
@@ -55,21 +76,35 @@ async function seedPost(
       title: post.title,
       excerpt: sampleExcerpt(post),
       contentMd: sampleContentMarkdown(post),
+      // 예약 글은 별도 상태 없이 PUBLISHED + 미래 publishedAt이다 (백엔드 §5.1).
       status: post.publishedAt ? PostStatus.PUBLISHED : PostStatus.DRAFT,
       publishedAt: post.publishedAt,
+      coverImageUrl: post.coverImageUrl,
       isFeatured: post.isFeatured,
       readingMinutes: post.readingMinutes,
       categoryId: categoryIds.get(post.categoryName) ?? null,
-      slugs: { create: { slug: post.slug, isCurrent: true } },
+      slugs: {
+        create: [
+          { slug: post.slug, isCurrent: true },
+          ...post.previousSlugs.map((slug) => ({ slug, isCurrent: false })),
+        ],
+      },
+      tags: { create: post.tagSlugs.map((slug) => ({ tagId: requireId(tagIds, slug) })) },
     },
   });
 }
 
+function requireId(ids: Map<string, number>, key: string): number {
+  const id = ids.get(key);
+  if (id === undefined) throw new Error(`seed 정의 오류: 알 수 없는 키 ${key}`);
+  return id;
+}
+
 export async function seedDatabase(prisma: PrismaClient): Promise<void> {
   await seedProfile(prisma);
-  const categoryIds = await seedCategories(prisma);
+  const lookups = { categoryIds: await seedCategories(prisma), tagIds: await seedTags(prisma) };
   for (const post of SAMPLE_POSTS) {
-    await seedPost(prisma, post, categoryIds);
+    await seedPost(prisma, post, lookups);
   }
 }
 

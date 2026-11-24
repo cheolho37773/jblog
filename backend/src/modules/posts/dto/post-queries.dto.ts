@@ -54,8 +54,14 @@ export class PostListQueryDto extends PageQueryDto {
   featured?: boolean;
 }
 
+// 앞뒤 공백을 뺀 뒤 길이를 검사해야 공백만 있는 검색어를 거절할 수 있다. 문자열이 아니면 검증이 거절한다.
+function trimString({ value }: { value: unknown }): unknown {
+  return typeof value === 'string' ? value.trim() : value;
+}
+
 export class SearchQueryDto extends PageQueryDto {
   @ApiProperty({ minLength: MIN_SEARCH_QUERY_LENGTH, description: '검색어 (2자 이상)' })
+  @Transform(trimString)
   @IsString()
   @MinLength(MIN_SEARCH_QUERY_LENGTH)
   q!: string;

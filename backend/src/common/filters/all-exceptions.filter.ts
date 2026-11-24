@@ -8,6 +8,7 @@ import {
 import type { Request, Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
 import { AppException } from '../errors/app.exception';
+import { CACHE_CONTROL_NO_STORE } from '../http/cache-control';
 
 const INTERNAL_ERROR_CODE = 'INTERNAL_ERROR';
 // 내부 사정(스택, 원래 메시지)이 새지 않도록 500은 항상 이 문구만 보낸다.
@@ -46,6 +47,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = http.getResponse<Response>();
 
     const body = this.buildBody(exception, requestPath(request));
+    // 핸들러가 성공용 Cache-Control을 미리 붙였더라도 오류 응답은 캐시하지 않는다.
+    response.setHeader('Cache-Control', CACHE_CONTROL_NO_STORE);
     response.status(body.statusCode).json(body);
   }
 
