@@ -128,3 +128,13 @@
   - 기존 E2E 포함 `pnpm exec playwright test`(frontend): 218 통과, 8 실패. 시각 회귀 `pnpm test:visual`: 24건 통과(기준 이미지 변경 없음). lint 오류 0·경고 1(위), format·`test:scripts` 통과
   - 남은 실패 8건은 모두 frontend-dev 몫: `/dev/api-check` 없음(404) 때문에 components 7건(200·noindex, 서버 목록, HTML 서버 렌더, 브라우저 요청 버튼, 내부 API 제목, 헤더·경로 검사, 키 노출 검사), `X-Internal-Key`가 components 서버 번들에 없음(`createInternalApi` 없음) 1건
   - 연결 항목은 통과: prod `/api/categories`가 픽스처로 이어짐, `/internal/*` 404(키를 붙여도), `/dev/api-check` prod 404, 번들 키 미노출 검사
+
+### ③ 구현 (frontend-dev)
+
+- 변경: `frontend/src/lib/env.schema.ts`(`INTERNAL_API_KEY` 서버 스키마 최소 16자, `parseBuildEnv` 추가), `frontend/next.config.ts`(`parseBuildEnv` 사용), `frontend/src/lib/env.ts`, `frontend/src/lib/api/server.ts`, `frontend/src/app/dev/api-check/{page.dev.tsx,BrowserCheck.dev.tsx}`
+- `env.ts`: 공개 값은 `parseBuildEnv`로 바로 읽고(루트 layout이 빌드 중에 쓰기 때문), `env.server`는 getter로 처음 쓰는 요청 시점에 `parseEnv`(키 필수)로 검증한다. 키가 없으면 빌드는 통과하고 서버 값을 처음 쓰는 요청에서 이름만 담은 오류로 실패한다. 기동 시점 실패는 아니다(필요하면 instrumentation으로 앞당길 수 있으나 지시서가 "기동 또는 첫 요청"을 허용해 첫 요청으로 했다)
+- `server.ts`: `createServerApi`·`createInternalApi` 모두 `next: { revalidate: 3600, tags }`, 5xx는 미들웨어에서 예외로 올린다(네트워크 오류는 fetch가 던진다). 내부 클라이언트는 `onRequest`에서 `X-Internal-Key`를 붙인다. 생성 타입이 헤더를 필수 params로 요구해 호출부가 자리 채움 값을 넘기고, 미들웨어가 실제 키로 덮어쓴다(클라이언트 기본 `headers`는 호출별 값에 덮이므로 미들웨어를 택했다)
+- 요청 시 렌더(규약 8): `await connection()`(`next/server`). 근거는 `node_modules/next/dist/docs/01-app/03-api-reference/04-functions/connection.md` — "rendering should wait for an incoming user request", 호출 지점에서 prerender가 멈춘다. 이 프로젝트는 `cacheComponents`를 켜지 않았지만 Next 16 문서가 이 방식을 안내하고, `dynamic`·`revalidate` 라우트 설정은 문서(`02-route-segment-config/index.md`)상 v16에서 제거 방향이라 쓰지 않았다
+- 추천 글 slug는 `/api/posts?featured=true&size=1`로 얻어 내부 API로 제목을 읽는다(페이지가 e2e 픽스처를 import하지 않게)
+- 보고: `env.schema.spec.ts`의 느슨한 타입 읽기는 그대로 둔다(test 파일). 이제 정식 import로 바꿀 수 있다. `e2e/fixtures/server.ts` 560행 unused eslint-disable 경고 1건은 test-engineer 몫으로 남아 있다
+- 검사(Node 24): 단위 401건 통과(env 10건 포함), `pnpm test:e2e` 226건 통과(api-env·api-check 포함), `pnpm test:visual` 24건 통과(기준 이미지 변경 없음), `pnpm verify` 통과, `pnpm docker:build` 통과(키·백엔드 없이). lint 오류 0·경고 1(위)

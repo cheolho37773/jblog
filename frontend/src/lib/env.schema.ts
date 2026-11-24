@@ -4,11 +4,21 @@ import { publicSchema } from './env.public-schema';
 // 비밀값처럼 보이는 이름은 NEXT_PUBLIC_ 으로 노출하면 브라우저에 공개된다 (개요 §6-b).
 const SECRET_NAME_PATTERN = /SECRET|TOKEN|KEY|PASSWORD|SALT|JWT_|DATABASE_URL/;
 
-const serverSchema = z.object({
+// 내부 API 키의 최소 길이. 추측하기 쉬운 짧은 값을 막는다.
+const INTERNAL_API_KEY_MIN_LENGTH = 16;
+
+// 빌드에 필요한 서버 변수. 키 같은 비밀값은 빌드에 필요 없으므로 넣지 않는다 (M2-E 규약 4).
+const buildServerSchema = z.object({
   API_INTERNAL_URL: z.url(),
 });
 
+// 런타임 서버 변수. INTERNAL_API_KEY는 서버 스키마에만 두고 NEXT_PUBLIC_*에는 두지 않는다.
+const serverSchema = buildServerSchema.extend({
+  INTERNAL_API_KEY: z.string().min(INTERNAL_API_KEY_MIN_LENGTH),
+});
+
 export type ServerEnv = z.infer<typeof serverSchema>;
+export type BuildServerEnv = z.infer<typeof buildServerSchema>;
 export type PublicEnv = z.infer<typeof publicSchema>;
 
 export const PUBLIC_ENV_KEYS: readonly string[] = Object.keys(publicSchema.shape);
@@ -40,6 +50,20 @@ function formatInvalidNames(errors: (z.ZodError | undefined)[]): string {
 
 export function parseEnv(raw: Record<string, unknown>): { server: ServerEnv; public: PublicEnv } {
   const server = serverSchema.safeParse(raw);
+  const publicValues = publicSchema.safeParse(raw);
+
+  if (!server.success || !publicValues.success) {
+    throw new Error(formatInvalidNames([server.error, publicValues.error]));
+  }
+  return { server: server.data, public: publicValues.data };
+}
+
+// 빌드용: INTERNAL_API_KEY 없이 통과한다. 빌드는 API도 비밀값도 없이 돌아야 한다 (M2-E 규약 4).
+export function parseBuildEnv(raw: Record<string, unknown>): {
+  server: BuildServerEnv;
+  public: PublicEnv;
+} {
+  const server = buildServerSchema.safeParse(raw);
   const publicValues = publicSchema.safeParse(raw);
 
   if (!server.success || !publicValues.success) {
