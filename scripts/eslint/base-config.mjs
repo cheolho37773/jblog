@@ -17,6 +17,9 @@ const DENIED_IDENTIFIERS = ['data', 'tmp', 'temp', 'foo', 'bar', 'baz', 'obj', '
 export const PROCESS_ENV_ALLOWED_FILES = [
   'backend/src/config/**',
   'frontend/src/lib/env.ts',
+  // E2E 도구 서버(단독 실행 진입점). 설정 모듈을 따로 둘 만큼의 앱 코드가 아니다.
+  'frontend/e2e/fixtures/server.ts',
+  'scripts/e2e/proxy.mjs',
   // 도구 설정 파일은 루트·frontend·backend 바로 아래만 허용한다. src/ 같은 하위 폴더는 제외한다.
   '*.config.{js,mjs,cjs,ts}',
   'frontend/*.config.{js,mjs,cjs,ts}',

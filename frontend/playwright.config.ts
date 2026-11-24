@@ -7,15 +7,26 @@ import { defineConfig, devices } from '@playwright/test';
 // - components: JBLOG_DEV_PAGES=1로 빌드해 개발 전용 페이지(*.dev.tsx)를 포함한 빌드. /dev/components 캡처·동작 검증.
 // 두 빌드가 서로의 산출물을 덮지 않도록 distDir을 나눈다(next.config.ts가 JBLOG_DEV_PAGES로 고른다).
 // 포트는 개발 서버(3000)·backend(4000)와 겹치지 않는 e2e 전용 값이다.
-const PROD_SERVER = { port: 3100, distDir: '.next', devPages: '' };
-const COMPONENTS_SERVER = { port: 3101, distDir: '.next-components', devPages: '1' };
+// proxyPort는 브라우저가 접속하는 주소다(아래 "E2E 프록시" 참고). port는 프록시 뒤의 Next 서버다.
+const PROD_SERVER = { port: 3100, proxyPort: 3200, distDir: '.next', devPages: '' };
+const COMPONENTS_SERVER = {
+  port: 3101,
+  proxyPort: 3201,
+  distDir: '.next-components',
+  devPages: '1',
+};
+
+// 픽스처 API 서버(M2-E). 백엔드 대신 고정 응답을 준다. 빌드 검증용 닫힌 포트 4999와 구분되는 값이다.
+const FIXTURE_API_PORT = 4100;
+// 테스트용 더미 키다. 비밀이 아니다(실제 키는 .env로만 주입한다). 픽스처 서버의 기본 키와 같은 값이어야 한다.
+const E2E_INTERNAL_KEY = 'e2e-internal-key-not-secret';
 
 const COMPONENTS_TEST_DIR = './e2e/components';
 const VISUAL_TEST_DIR = './e2e/visual';
 const DESIGN_REVIEW_TEST_DIR = './e2e/design-review';
 
 // 시각 회귀·디자인 비교는 기본 실행(pnpm test:e2e)에서 돌지 않는다(M1-05 규약 3).
-// 환경값이 있을 때만 해당 프로젝트 하나로 좁혀 켠다. 둘 다 /·/dev/components만 쓰므로 components 서버(3101) 하나면 된다.
+// 환경값이 있을 때만 해당 프로젝트 하나로 좁혀 켠다. 둘 다 /·/dev/components만 쓰므로 components 서버(3101, 프록시 3201) 하나면 된다.
 // - JBLOG_VISUAL=1: 기준 이미지 비교. Linux 컨테이너(scripts/visual/run.sh)에서만 의미가 있다. macOS·GitHub 러너는 폰트 렌더링이 달라 기준이 될 수 없다.
 // - JBLOG_DESIGN_REVIEW=1: 원본 참고 이미지(로컬 전용, 비공개)와 비교. 로컬 macOS에서 실행한다.
 const VISUAL_MODE = process.env.JBLOG_VISUAL === '1';
@@ -23,17 +34,20 @@ const DESIGN_REVIEW_MODE = process.env.JBLOG_DESIGN_REVIEW === '1';
 
 type E2eServer = typeof PROD_SERVER;
 
-const originOf = (server: E2eServer) => `http://localhost:${server.port}`;
+// 브라우저가 보는 주소 = 프록시 주소. 운영에서 사용자가 Nginx 주소로 접속하는 것과 같다.
+const originOf = (server: E2eServer) => `http://localhost:${server.proxyPort}`;
 
 // frontend/.env*는 읽지 않는다. 아래는 명백한 더미 URL이며 비밀값이 아니다.
-// API_INTERNAL_URL은 실제로 응답하는 서버가 없어도 되는 값이다(스모크는 API를 호출하지 않는다).
+// API_INTERNAL_URL은 서버 컴포넌트가 API를 부르는 주소로, 픽스처 서버를 가리킨다.
 // PORT·HOSTNAME은 standalone server.js가 읽는 값이다.
 // JBLOG_DEV_PAGES는 빌드 시점 스위치라 빈 문자열로 덮어, 셸에 남은 값이 prod 빌드에 새지 않게 한다.
 const envOf = (server: E2eServer) => ({
-  API_INTERNAL_URL: 'http://localhost:4999',
+  API_INTERNAL_URL: `http://localhost:${FIXTURE_API_PORT}`,
+  INTERNAL_API_KEY: E2E_INTERNAL_KEY,
   NEXT_PUBLIC_SITE_URL: originOf(server),
   PORT: String(server.port),
-  HOSTNAME: 'localhost',
+  // IPv4 루프백에 고정한다. 프록시가 같은 주소로 접속한다(localhost는 컨테이너에서 IPv6로 풀려 엇갈릴 수 있다).
+  HOSTNAME: '127.0.0.1',
   JBLOG_DEV_PAGES: server.devPages,
 });
 
@@ -52,10 +66,34 @@ function standaloneServerCommand({ distDir }: E2eServer): string {
 // 운영 형태로 검증하려고 빌드한 standalone 서버를 띄운다. 개발 서버·next start는 쓰지 않는다.
 const webServerOf = (server: E2eServer) => ({
   command: standaloneServerCommand(server),
-  url: originOf(server),
+  url: `http://localhost:${server.port}`,
   env: envOf(server),
   reuseExistingServer: false,
   timeout: 180_000,
+});
+
+// 픽스처 API 서버. 모든 프로젝트(prod·components·visual)가 같은 서버를 쓴다.
+// frontend 서버보다 먼저 적어, 서버가 뜰 때 API가 이미 응답할 수 있게 한다.
+const fixtureApiServer = {
+  command: 'node --no-warnings e2e/fixtures/server.ts',
+  url: `http://localhost:${FIXTURE_API_PORT}/__fixture/health`,
+  env: { FIXTURE_API_PORT: String(FIXTURE_API_PORT), FIXTURE_INTERNAL_KEY: E2E_INTERNAL_KEY },
+  reuseExistingServer: false,
+  timeout: 30_000,
+};
+
+// E2E 프록시: 운영의 Nginx 구조를 흉내 낸다. /api/*·/uploads/*는 픽스처로, 나머지는 Next로 보낸다.
+// standalone 서버에는 개발 전용 rewrite가 없고, 브라우저 요청이 같은 출처로 가야 하기 때문이다.
+const proxyOf = (server: E2eServer) => ({
+  command: 'node ../scripts/e2e/proxy.mjs',
+  url: `http://localhost:${server.proxyPort}/__proxy/health`,
+  env: {
+    E2E_PROXY_PORT: String(server.proxyPort),
+    E2E_PROXY_WEB_PORT: String(server.port),
+    E2E_PROXY_API_PORT: String(FIXTURE_API_PORT),
+  },
+  reuseExistingServer: false,
+  timeout: 30_000,
 });
 
 // (Playwright는 frontend/에서 실행되므로 상대 경로는 frontend/ 기준이다.)
@@ -125,10 +163,14 @@ function selectProjects() {
 }
 
 function selectWebServers() {
-  if (VISUAL_MODE || DESIGN_REVIEW_MODE) return [webServerOf(COMPONENTS_SERVER)];
+  if (VISUAL_MODE || DESIGN_REVIEW_MODE) {
+    return [fixtureApiServer, webServerOf(COMPONENTS_SERVER), proxyOf(COMPONENTS_SERVER)];
+  }
   return [
+    fixtureApiServer,
     webServerOf(PROD_SERVER),
-    ...(hasComponentsTests() ? [webServerOf(COMPONENTS_SERVER)] : []),
+    proxyOf(PROD_SERVER),
+    ...(hasComponentsTests() ? [webServerOf(COMPONENTS_SERVER), proxyOf(COMPONENTS_SERVER)] : []),
   ];
 }
 
