@@ -46,9 +46,9 @@
 |---|---|---|---|
 | M1 계획 (`docs/work/M1/plan.md`) | `2bab895` | #28 | 검수 r5 head `c6f77c2` |
 | M1-02 | `5b6ed72` | #32 | 검수 r5 head `b176b17` |
-| M1-07 | `745ddec` | #33 | 기록 없음 |
+| M1-07 | `745ddec` | #33 | 검수 r1 head `c529fb3` (`docs/reviews/M1-07/r1.codex.md`) |
 | M1-08 | `bd9a847` | #36 | head `28d1550` (깨끗한 클론 확인) |
-| M1-03 | `c8abe34` | #38 | 검수 r2 대상 `65b635d` |
+| M1-03 | `c8abe34` | #38 | 검수 r3 head `1080416` (`docs/reviews/M1-03/r3.codex.md`) |
 | M1-09 | `593d55a` | #39 | head `c920f40` (깨끗한 클론 확인) |
 | M1-10 | `804ae43` | #42 | head `d2652ea` (깨끗한 클론 확인) |
 | M1-04 | `750cb8f` | #44 | head `8553520` (깨끗한 클론 확인) |
@@ -189,7 +189,7 @@
 | 공개 환경변수 검사 (#24) | M1-07 | 해소 |
 | Swagger UI가 CSP에서 렌더링되는지 | 미정 | 해소 (#37) |
 | Pretendard · Noto Serif KR | FE-02 · FE-04 | Pretendard는 반영(최적화는 #30). Noto Serif KR은 M2 FE-04 |
-| `postSlug` 현재 slug 조회 주의 | M2 BE-03 | 미해결 (M2 지시서에 반영) |
+| `postSlug` 현재 slug 조회 주의 | M2 BE-03 | 미해결 (M2 지시서 작성 때 반영 예정) |
 | `x-request-id` 길이·문자 제한 | M2 | 미해결 |
 | health 외 에러 응답 OpenAPI | M2 | 미해결 |
 | 동적 라우트 런타임 환경변수 주입 | 첫 동적 라우트 작업 | 해당 없음 (M1에는 동적 라우트 없음) |
@@ -220,7 +220,7 @@
 |---|---|---|
 | 개요 §8 착수 조건 | M2 행 없음. 확정할 항목 없음 | 개요 §8 |
 | M1 체크리스트 | 완료 + 보류 1건(#27, 사유 기록됨) | `00_master_checklist.md` |
-| M0 §7에서 M2로 넘긴 항목 | BE-03 `postSlug`, `x-request-id`, 에러 OpenAPI → M2 지시서에 반영 | §8-3 |
+| M0 §7에서 M2로 넘긴 항목 | BE-03 `postSlug`, `x-request-id`, 에러 OpenAPI → 미해결. M2 지시서 작성 때 반영 예정 | §8-3 |
 | #43 | `/blog`·`/search`를 만들 때 해소 | §8-1 |
 | 개요 §7 M1 산출물의 "Card" | M1 계획 §1에 따라 PostCard·ProjectCard는 M2·M4 범위다. 개요 문구와 다르므로 M2 계획에서 확인한다 | `plan.md` §1, 개요 §7 |
 
