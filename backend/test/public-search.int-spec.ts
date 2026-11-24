@@ -268,7 +268,7 @@ describe('검색 API (실제 PostgreSQL)', () => {
         expectErrorShape(response.body, {
           statusCode: 400,
           code: 'VALIDATION_FAILED',
-          path: `/api/search?q=${encodeURIComponent(q)}`,
+          path: '/api/search', // 검색어가 에러 응답에 남지 않도록 쿼리스트링은 뺀다
         });
       },
     );
@@ -346,6 +346,14 @@ describe('목록 excerpt 자동 생성 (실제 PostgreSQL)', () => {
       publishedAt: new Date(now - 2 * MS_PER_DAY),
     });
     await createPost(prisma, {
+      slug: 'fenced',
+      title: 'F',
+      excerpt: null,
+      contentMd:
+        '앞 문장입니다.\n\n```ts\nconst secretCode = 1;\n```\n\n![대체문구](https://example.com/a.png "그림캡션")\n\n뒤 문장입니다.',
+      publishedAt: new Date(now - 1.5 * MS_PER_DAY),
+    });
+    await createPost(prisma, {
       slug: 'short',
       title: 'T',
       excerpt: null,
@@ -379,7 +387,18 @@ describe('목록 excerpt 자동 생성 (실제 PostgreSQL)', () => {
   it('긴 본문은 기호를 걷어 낸 앞 160자로 자른다', async () => {
     const excerpt = (await list()).find((post) => post.slug === 'long')?.excerpt;
 
-    expect(excerpt).toBe('가'.repeat(AUTO_EXCERPT_LENGTH));
+    // 헤딩 문구는 남고 기호만 빠진다(위 Markdown 테스트와 같은 규칙)
+    expect(excerpt).toBe(`헤딩 ${'가'.repeat(400)}`.slice(0, AUTO_EXCERPT_LENGTH));
+  });
+
+  it('코드 블록과 이미지 문법은 요약에 섞지 않고 일반 문장만 남긴다', async () => {
+    const excerpt = (await list()).find((post) => post.slug === 'fenced')?.excerpt ?? '';
+
+    expect(excerpt).toContain('앞 문장입니다.');
+    expect(excerpt).toContain('뒤 문장입니다.');
+    for (const leaked of ['secretCode', '```', '![', 'a.png']) {
+      expect(excerpt).not.toContain(leaked);
+    }
   });
 
   it('160자보다 짧은 본문은 그대로 쓴다', async () => {

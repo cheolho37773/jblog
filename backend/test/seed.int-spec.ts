@@ -191,6 +191,20 @@ describe('seed (실제 PostgreSQL)', () => {
     expect(rich.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('본문에 콜아웃(> [!NOTE])과 이미지 캡션(![alt](url "캡션")) 문법을 담은 글이 1개 이상 있다', async () => {
+    await runSeed(db.databaseUrl);
+
+    const posts: { contentMd: string }[] = await db.prisma.post.findMany({
+      select: { contentMd: true },
+    });
+    const withCallout = posts.filter((post) => /^> \[!NOTE\]/m.test(post.contentMd));
+    const withCaption = posts.filter((post) =>
+      /!\[[^\]]*\]\([^)\s]+ "[^"]+"\)/.test(post.contentMd),
+    );
+    expect(withCallout.length).toBeGreaterThanOrEqual(1);
+    expect(withCaption.length).toBeGreaterThanOrEqual(1);
+  });
+
   it('관리자 계정(User)을 시드하지 않는다', async () => {
     await runSeed(db.databaseUrl);
 

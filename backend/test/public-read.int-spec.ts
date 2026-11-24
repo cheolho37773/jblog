@@ -402,7 +402,7 @@ describe('공개 조회 API (실제 PostgreSQL)', () => {
       expectErrorShape(response.body, {
         statusCode: 400,
         code: 'VALIDATION_FAILED',
-        path: `/api/posts?${query}`,
+        path: '/api/posts',
       });
       expect(response.headers['cache-control']).toBe(CACHE_CONTROL_NO_STORE);
     });
