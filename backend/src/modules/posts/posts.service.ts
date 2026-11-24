@@ -4,7 +4,7 @@ import type { PostSummaryDto } from './dto/post-summary.dto';
 import { MAX_RELATED_POSTS, type PostDetailResponseDto } from './dto/post-detail-response.dto';
 import type { PostListResponseDto } from './dto/post-list-response.dto';
 import type { PostListQueryDto } from './dto/post-queries.dto';
-import { resolvePageRequest, skipOf, toPostList } from './pagination';
+import { hasItemsOnPage, resolvePageRequest, skipOf, toPostList } from './pagination';
 import {
   POST_DETAIL_SELECT,
   POST_SUMMARY_SELECT,
@@ -31,16 +31,17 @@ export class PostsService {
       ...(query.tag === undefined ? {} : { tags: { some: { tag: { slug: query.tag } } } }),
       ...(query.featured === true ? { isFeatured: true } : {}),
     };
-    const [rows, totalItems] = await Promise.all([
-      this.prisma.post.findMany({
-        where,
-        orderBy: NEWEST_FIRST,
-        skip: skipOf(pageRequest),
-        take: pageRequest.size,
-        select: POST_SUMMARY_SELECT,
-      }),
-      this.prisma.post.count({ where }),
-    ]);
+    const totalItems = await this.prisma.post.count({ where });
+    // 범위를 넘는 page는 DB에 skip을 넘기지 않고 빈 목록으로 답한다.
+    if (!hasItemsOnPage(totalItems, pageRequest)) return toPostList([], totalItems, pageRequest);
+
+    const rows = await this.prisma.post.findMany({
+      where,
+      orderBy: NEWEST_FIRST,
+      skip: skipOf(pageRequest),
+      take: pageRequest.size,
+      select: POST_SUMMARY_SELECT,
+    });
     return toPostList(rows.map(toPostSummary), totalItems, pageRequest);
   }
 

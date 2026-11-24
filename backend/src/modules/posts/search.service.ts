@@ -4,7 +4,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { PostListResponseDto } from './dto/post-list-response.dto';
 import type { PostSummaryDto } from './dto/post-summary.dto';
 import type { SearchQueryDto } from './dto/post-queries.dto';
-import { type PageRequest, resolvePageRequest, skipOf, toPostList } from './pagination';
+import {
+  type PageRequest,
+  hasItemsOnPage,
+  resolvePageRequest,
+  skipOf,
+  toPostList,
+} from './pagination';
 import { POST_SUMMARY_SELECT, toPostSummary } from './post-mapper';
 import { PUBLISHED_POST_SQL, publishedPostWhere } from './published-post';
 
@@ -25,10 +31,11 @@ export class SearchService {
     const matches = Prisma.sql`${PUBLISHED_POST_SQL}
       AND (title ILIKE ${pattern} OR excerpt ILIKE ${pattern} OR "contentMd" ILIKE ${pattern})`;
 
-    const [totalItems, ids] = await Promise.all([
-      this.countMatches(matches),
-      this.findPageIds(matches, pattern, pageRequest),
-    ]);
+    const totalItems = await this.countMatches(matches);
+    // 범위를 넘는 page는 DB에 OFFSET을 넘기지 않고 빈 목록으로 답한다.
+    if (!hasItemsOnPage(totalItems, pageRequest)) return toPostList([], totalItems, pageRequest);
+
+    const ids = await this.findPageIds(matches, pattern, pageRequest);
     const items = await this.loadInOrder(ids);
     return toPostList(items, totalItems, pageRequest);
   }
