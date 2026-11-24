@@ -34,6 +34,8 @@
   --toggle-knob-icon: #181a2a;
   /* Footer 카드. Light에서는 surface-2가 footer-bg와 같아 분리했다 */
   --footer-card: #ffffff;
+  /* 코드 블록 배경 (M2-02). 인라인 코드 배경은 primary-soft다 */
+  --code-bg: #f6f6f7;
 }
 
 [data-theme='dark'] {
@@ -61,6 +63,7 @@
   --toggle-knob: #ffffff;
   --toggle-knob-icon: #181a2a;
   --footer-card: #242535;
+  --code-bg: #141624;
 }
 
 @theme inline {
@@ -88,6 +91,7 @@
   --color-toggle-knob: var(--toggle-knob);
   --color-toggle-knob-icon: var(--toggle-knob-icon);
   --color-footer-card: var(--footer-card);
+  --color-code-bg: var(--code-bg);
 }
 
 /* 양 테마에서 값이 같은 색 */
