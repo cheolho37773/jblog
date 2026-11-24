@@ -15,7 +15,7 @@ function toBoolean({ value }: { value: unknown }): unknown {
 }
 
 export class PageQueryDto {
-  @ApiPropertyOptional({ type: Number, default: DEFAULT_PAGE, minimum: 1 })
+  @ApiPropertyOptional({ type: 'integer', default: DEFAULT_PAGE, minimum: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -23,7 +23,7 @@ export class PageQueryDto {
   page?: number;
 
   @ApiPropertyOptional({
-    type: Number,
+    type: 'integer',
     default: DEFAULT_PAGE_SIZE,
     minimum: 1,
     maximum: MAX_PAGE_SIZE,

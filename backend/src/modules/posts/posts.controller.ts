@@ -33,7 +33,7 @@ export class PostsController {
 
   @Get(':slug')
   @ApiOperation({ summary: '글 상세 (이전·다음 글, 관련 글 포함)' })
-  @ApiParam({ name: 'slug', description: '글 slug' })
+  @ApiParam({ name: 'slug', type: String, description: '글 slug' })
   @ApiOkResponse({ type: PostDetailResponseDto })
   @ApiResponse({
     status: 301,

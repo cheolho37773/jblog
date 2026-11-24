@@ -24,7 +24,7 @@ export class InternalPostsController {
   @Get(':slug')
   @ApiOperation({ summary: '글 원문 조회 (내부 전용)' })
   @ApiHeader({ name: INTERNAL_KEY_HEADER, required: true, description: '내부 API 키' })
-  @ApiParam({ name: 'slug', description: '글 slug (이전 slug면 redirectTo 응답)' })
+  @ApiParam({ name: 'slug', type: String, description: '글 slug (이전 slug면 redirectTo 응답)' })
   @ApiExtraModels(InternalPostResponseDto, InternalPostRedirectDto)
   @ApiOkResponse({
     schema: {

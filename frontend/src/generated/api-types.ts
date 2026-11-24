@@ -419,7 +419,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description 글 slug */
-                slug: unknown;
+                slug: string;
             };
             cookie?: never;
         };
@@ -512,7 +512,7 @@ export interface operations {
             };
             path: {
                 /** @description 글 slug (이전 slug면 redirectTo 응답) */
-                slug: unknown;
+                slug: string;
             };
             cookie?: never;
         };
