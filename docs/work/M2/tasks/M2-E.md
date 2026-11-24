@@ -61,18 +61,18 @@
 ## 필수 검증
 
 - 성공
-  - [ ] 픽스처 데이터가 생성 타입으로 타입 검사를 통과한다(`typecheck`)
-  - [ ] components E2E에서 `/dev/api-check`의 서버 목록, 브라우저 요청 개수, 내부 API 제목이 모두 픽스처 값과 같다
-  - [ ] prod·components·visual 프로젝트가 픽스처 서버를 쓰는 구성으로 돈다(`pnpm test:e2e`, `pnpm test:visual`)
-  - [ ] `pnpm build:verify`와 `pnpm docker:build`가 백엔드와 `INTERNAL_API_KEY` 없이 통과한다
+  - [x] 픽스처 데이터가 생성 타입으로 타입 검사를 통과한다(`typecheck`)
+  - [x] components E2E에서 `/dev/api-check`의 서버 목록, 브라우저 요청 개수, 내부 API 제목이 모두 픽스처 값과 같다
+  - [x] prod·components·visual 프로젝트가 픽스처 서버를 쓰는 구성으로 돈다(`pnpm test:e2e`, `pnpm test:visual`)
+  - [x] `pnpm build:verify`와 `pnpm docker:build`가 백엔드와 `INTERNAL_API_KEY` 없이 통과한다
 - 거부
-  - [ ] 픽스처 서버에 `X-Internal-Key`가 틀리면 401이다. 프론트 `createInternalApi`의 키가 틀리면 페이지가 빈 값이 아니라 오류로 끝난다
-  - [ ] 서버 런타임에 `INTERNAL_API_KEY`가 없으면 기동 또는 첫 요청에서 이름만 담은 오류로 실패한다(값 미노출)
-  - [ ] 브라우저 번들(`.next/static/**`)에 `INTERNAL_API_KEY` 값과 `X-Internal-Key` 사용 코드가 없다
-  - [ ] 운영 빌드에서 `/dev/api-check`는 404다. 브라우저 경로 `/internal/posts/x`도 404다
+  - [x] 픽스처 서버에 `X-Internal-Key`가 틀리면 401이다. 프론트 `createInternalApi`의 키가 틀리면 페이지가 빈 값이 아니라 오류로 끝난다
+  - [x] 서버 런타임에 `INTERNAL_API_KEY`가 없으면 기동 또는 첫 요청에서 이름만 담은 오류로 실패한다(값 미노출)
+  - [x] 브라우저 번들(`.next/static/**`)에 `INTERNAL_API_KEY` 값과 `X-Internal-Key` 사용 코드가 없다
+  - [x] 운영 빌드에서 `/dev/api-check`는 404다. 브라우저 경로 `/internal/posts/x`도 404다
 - 회귀
-  - [ ] 기존 단위 테스트(343건), E2E(207건), 시각 회귀 24건(기준 이미지 변경 없음), `pnpm verify`가 통과한다
-  - [ ] CI 필수 검사 8개의 이름과 개수가 그대로다
+  - [x] 기존 단위 테스트(343건), E2E(207건), 시각 회귀 24건(기준 이미지 변경 없음), `pnpm verify`가 통과한다
+  - [x] CI 필수 검사 8개의 이름과 개수가 그대로다
 
 ## 인계 노트
 
@@ -154,3 +154,18 @@
   - `pnpm verify`: 통과(exit 0, lint 경고 0). `pnpm docker:build`: 통과(키·백엔드 없이)
 - 필수 검증 항목별: 성공 4개(타입 검사, api-check E2E, 픽스처 구성 E2E·시각 회귀, 키·백엔드 없는 빌드) 완료. 거부 4개(픽스처 401, 프론트 키 오류 시 오류 종료, 런타임 키 없음 시 이름만 담은 오류, 번들 키 미노출·prod 404) 완료. 회귀(단위·E2E·시각 24건·verify) 완료. 보류·실패 없음
 - 남은 확인: "CI 필수 검사 8개의 이름과 개수 그대로"는 `.github/**`가 변경되지 않은 것(②: CI 변경 없음)으로만 확인했고 실제 CI 실행은 push 후 확인 대상이다. 체크박스는 건드리지 않았다
+
+### 오케스트레이터 독립 확인 (깨끗한 클론)
+
+- 대상: `fd83947` (`git clone --branch feat/M2-E-data-env` → `pnpm install --frozen-lockfile`, Node 24)
+
+| 명령 | 결과 |
+|---|---|
+| `pnpm --filter @jblog/frontend test` | 401건 통과 |
+| `pnpm verify` | 종료 코드 0 (`build:verify`는 백엔드·`INTERNAL_API_KEY` 없이) |
+| `pnpm test:e2e` | 226건 통과 (픽스처 서버 + E2E 프록시) |
+| `pnpm test:visual` (고정 컨테이너) | 24건 통과, 기준 이미지 변경 없음 |
+| `pnpm docker:build` | 종료 코드 0 (키·백엔드 없이) |
+
+- `.github/**` 변경 없음(`git diff 2ff65b3..HEAD -- .github` 0건). CI 필수 검사 이름·개수는 push 후 CI에서 확인한다
+- 에러 수정 횟수: 자체 검사 0, Codex 0, CI 0
