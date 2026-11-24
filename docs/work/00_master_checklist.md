@@ -18,7 +18,7 @@
 | 기획 | ✅ 완료 | 2026-11-21 |
 | P1 협업 체계 준비 | ✅ 완료 | 2026-11-22 (GitHub Codex PR 리뷰 연결은 사용하지 않기로 해 보류) |
 | M0 셋업 | ✅ 완료 | 2026-11-22, `docs/work/M0/report.md` |
-| M1 디자인 시스템 | ⬜ | |
+| M1 디자인 시스템 | ✅ 완료 | 2026-11-24, `docs/work/M1/report.md` · 보류 1건: UI §10 확정(M1-01) → #27 |
 | M2 블로그 읽기 | ⬜ | |
 | M3 관리자 & 작성 | ⬜ | |
 | M4 포트폴리오 | ⬜ | |
@@ -123,14 +123,14 @@
 
 ## M1. 디자인 시스템
 
-- [ ] UI 기획서 §10 미확정 9개 항목 확정 (Figma 재확인, 개요 Q4)
+- [ ] UI 기획서 §10 미확정 9개 항목 확정 (Figma 재확인, 개요 Q4) ⏸ 보류: Figma 접근 불가 → #27
 - [x] FE-02 디자인 토큰(`globals.css`, Light/Dark), 타이포 유틸, 그라디언트, Atom 컴포넌트(Badge·Button·Avatar·Input·ThemeToggle), `/dev/components` 페이지 — 토큰 #29·#35·#41, Atom·`/dev/components` #34 (2026-11-22)
 - [x] FE-03 Navbar(모바일 메뉴·검색·테마 토글), Footer, Container/Section, PageInfo — #40, 토큰 #41 (2026-11-22)
 - [x] 디자인 검수: 원본 컴포넌트 Figma 대비 ±2px, Light/Dark (UI §11) — 로컬 참고 스크린샷 대체 비교·규칙 준수·axe·시각 회귀 기준 이미지 #45 (2026-11-22). Figma 원본 정밀 비교와 Dark 메뉴 글자색은 보류 → #27
 
 **M1 완료 확인**
-- [ ] `/dev/components`에서 모든 공통 컴포넌트를 Light/Dark·4개 브레이크포인트로 확인
-- [ ] `docs/work/M1/report.md`, 개발자 보고
+- [x] `/dev/components`에서 모든 공통 컴포넌트를 Light/Dark·4개 브레이크포인트로 확인 — #45 (2026-11-24). 근거: 시각 회귀 기준 이미지 5폭(1920·1440·1024·768·375) × Light/Dark, 4개 브레이크포인트 포함
+- [x] `docs/work/M1/report.md`, 개발자 보고 — #47 (2026-11-24)
 
 ---
 
