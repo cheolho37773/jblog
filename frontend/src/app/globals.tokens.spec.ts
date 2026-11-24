@@ -235,6 +235,15 @@ const COLOR_TOKENS: ColorExpectation[] = [
     lightFixed: true,
     darkFixed: true,
   },
+  // M2-02 추가 토큰 (코드 블록 배경, UI §7.3). Light는 bg-subtle과 같은 값이지만 용도가 달라 따로 둔다
+  {
+    raw: 'code-bg',
+    tailwind: 'color-code-bg',
+    light: '#F6F6F7',
+    dark: '#141624',
+    lightFixed: true,
+    darkFixed: true,
+  },
 ];
 
 // 양 테마 동일한 토큰: 원시 변수 없이 Tailwind 변수에 값을 둔다 (원시 변수를 거쳐도 해석되면 통과).
@@ -892,6 +901,60 @@ describe('M1-08 추가 대비', () => {
       expect(contrastRatio(primary, resolvedHex(theme, 'bg'))).toBeGreaterThanOrEqual(
         AA_NON_TEXT_CONTRAST,
       );
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// M2-02 코드 블록 배경 대비 (UI §7.3·§9)
+// ---------------------------------------------------------------------------
+
+/** `rgba(r,g,b,a)`를 불투명한 `base` hex 위에 알파 합성해 hex로 돌려준다. */
+function compositeOver(overlay: string, base: string): string {
+  const match = /^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/i.exec(
+    canonicalColors(overlay),
+  );
+  if (!match) throw new Error(`rgba 형식이 아니다: ${overlay}`);
+  const alpha = Number(match[4]);
+  const overlayChannels = [match[1], match[2], match[3]].map(Number);
+  const hex = parseHex(base)
+    .map((baseChannel, index) =>
+      Math.round(alpha * (overlayChannels[index] as number) + (1 - alpha) * baseChannel),
+    )
+    .map((channel) => channel.toString(16).padStart(2, '0'))
+    .join('');
+  return `#${hex}`;
+}
+
+// 별도 계산한 기대 대비 (WCAG 상대 휘도). 실제 값은 globals.css에서 읽고, 이 표는 계산 확인용이다.
+const CODE_BG_EXPECTED_CONTRAST: Record<Theme, Record<string, number>> = {
+  light: { 'text-strong': 15.94, 'text-body': 10.07, 'text-muted': 4.96, 'primary-text': 4.73 },
+  dark: { 'text-strong': 17.95, 'text-body': 9.29, 'text-muted': 6.25, 'primary-text': 5.82 },
+};
+const EXPECTED_CONTRAST_TOLERANCE = 0.01;
+
+describe('M2-02 코드 블록 대비 AA (UI §7.3·§9)', () => {
+  for (const theme of THEMES) {
+    describe(theme === 'light' ? 'Light' : 'Dark', () => {
+      for (const text of ['text-strong', 'text-body', 'text-muted']) {
+        it(`--${text} on --code-bg ${AA_TEXT_CONTRAST}:1 이상`, () => {
+          const ratio = contrastRatio(resolvedHex(theme, text), resolvedHex(theme, 'code-bg'));
+          expect(ratio).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
+          expect(Math.abs(ratio - (CODE_BG_EXPECTED_CONTRAST[theme][text] as number))).toBeLessThan(
+            EXPECTED_CONTRAST_TOLERANCE,
+          );
+        });
+      }
+
+      it(`--primary-text on --color-primary-soft(bg 위 알파 합성) ${AA_TEXT_CONTRAST}:1 이상 (인라인 코드·링크)`, () => {
+        const soft = resolveColor(themeVars.get('--color-primary-soft'), theme) as string;
+        const composite = compositeOver(soft, resolvedHex(theme, 'bg'));
+        const ratio = contrastRatio(resolvedHex(theme, 'primary-text'), composite);
+        expect(ratio).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
+        expect(
+          Math.abs(ratio - (CODE_BG_EXPECTED_CONTRAST[theme]['primary-text'] as number)),
+        ).toBeLessThan(EXPECTED_CONTRAST_TOLERANCE);
+      });
     });
   }
 });
