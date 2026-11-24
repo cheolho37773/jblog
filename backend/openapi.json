@@ -1,6 +1,46 @@
 {
   "components": {
     "schemas": {
+      "CategoryRefDto": {
+        "properties": {
+          "name": {
+            "example": "백엔드",
+            "type": "string"
+          },
+          "slug": {
+            "example": "backend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "CategoryWithCountDto": {
+        "properties": {
+          "name": {
+            "example": "백엔드",
+            "type": "string"
+          },
+          "postCount": {
+            "description": "발행된 글 수",
+            "example": 0,
+            "type": "number"
+          },
+          "slug": {
+            "example": "backend",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "postCount"
+        ],
+        "type": "object"
+      },
       "ErrorResponseDto": {
         "properties": {
           "code": {
@@ -78,6 +118,421 @@
           "details"
         ],
         "type": "object"
+      },
+      "InternalPostDto": {
+        "properties": {
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryRefDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "contentMd": {
+            "description": "마크다운 원문",
+            "type": "string"
+          },
+          "coverImageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "likeCount": {
+            "example": 0,
+            "type": "number"
+          },
+          "publishedAt": {
+            "description": "발행 시각 (ISO 8601)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "readingMinutes": {
+            "example": 5,
+            "type": "number"
+          },
+          "seoDescription": {
+            "nullable": true,
+            "type": "string"
+          },
+          "seoTitle": {
+            "nullable": true,
+            "type": "string"
+          },
+          "slug": {
+            "example": "hello-world",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagRefDto"
+            },
+            "type": "array"
+          },
+          "title": {
+            "example": "첫 번째 글",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "example": 1,
+            "type": "number"
+          },
+          "viewCount": {
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "excerpt",
+          "coverImageUrl",
+          "category",
+          "publishedAt",
+          "readingMinutes",
+          "viewCount",
+          "likeCount",
+          "tags",
+          "isFeatured",
+          "seoTitle",
+          "seoDescription",
+          "updatedAt",
+          "contentMd",
+          "version"
+        ],
+        "type": "object"
+      },
+      "InternalPostRedirectDto": {
+        "properties": {
+          "redirectTo": {
+            "description": "새 slug",
+            "example": "hello-world",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirectTo"
+        ],
+        "type": "object"
+      },
+      "InternalPostResponseDto": {
+        "properties": {
+          "next": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostLinkDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "post": {
+            "$ref": "#/components/schemas/InternalPostDto"
+          },
+          "prev": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostLinkDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/PostSummaryDto"
+            },
+            "maxItems": 3,
+            "type": "array"
+          }
+        },
+        "required": [
+          "post",
+          "prev",
+          "next",
+          "related"
+        ],
+        "type": "object"
+      },
+      "PostDetailDto": {
+        "properties": {
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryRefDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "coverImageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "likeCount": {
+            "example": 0,
+            "type": "number"
+          },
+          "publishedAt": {
+            "description": "발행 시각 (ISO 8601)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "readingMinutes": {
+            "example": 5,
+            "type": "number"
+          },
+          "seoDescription": {
+            "nullable": true,
+            "type": "string"
+          },
+          "seoTitle": {
+            "nullable": true,
+            "type": "string"
+          },
+          "slug": {
+            "example": "hello-world",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagRefDto"
+            },
+            "type": "array"
+          },
+          "title": {
+            "example": "첫 번째 글",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "viewCount": {
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "excerpt",
+          "coverImageUrl",
+          "category",
+          "publishedAt",
+          "readingMinutes",
+          "viewCount",
+          "likeCount",
+          "tags",
+          "isFeatured",
+          "seoTitle",
+          "seoDescription",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PostDetailResponseDto": {
+        "properties": {
+          "next": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostLinkDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "post": {
+            "$ref": "#/components/schemas/PostDetailDto"
+          },
+          "prev": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostLinkDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/PostSummaryDto"
+            },
+            "maxItems": 3,
+            "type": "array"
+          }
+        },
+        "required": [
+          "post",
+          "prev",
+          "next",
+          "related"
+        ],
+        "type": "object"
+      },
+      "PostLinkDto": {
+        "properties": {
+          "slug": {
+            "example": "hello-world",
+            "type": "string"
+          },
+          "title": {
+            "example": "첫 번째 글",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title"
+        ],
+        "type": "object"
+      },
+      "PostListResponseDto": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostSummaryDto"
+            },
+            "type": "array"
+          },
+          "page": {
+            "example": 1,
+            "type": "number"
+          },
+          "size": {
+            "example": 9,
+            "type": "number"
+          },
+          "totalItems": {
+            "example": 0,
+            "type": "number"
+          },
+          "totalPages": {
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalItems",
+          "totalPages"
+        ],
+        "type": "object"
+      },
+      "PostSummaryDto": {
+        "properties": {
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryRefDto"
+              }
+            ],
+            "nullable": true,
+            "type": "object"
+          },
+          "coverImageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "likeCount": {
+            "example": 0,
+            "type": "number"
+          },
+          "publishedAt": {
+            "description": "발행 시각 (ISO 8601)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "readingMinutes": {
+            "example": 5,
+            "type": "number"
+          },
+          "slug": {
+            "example": "hello-world",
+            "type": "string"
+          },
+          "title": {
+            "example": "첫 번째 글",
+            "type": "string"
+          },
+          "viewCount": {
+            "example": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "excerpt",
+          "coverImageUrl",
+          "category",
+          "publishedAt",
+          "readingMinutes",
+          "viewCount",
+          "likeCount"
+        ],
+        "type": "object"
+      },
+      "TagRefDto": {
+        "properties": {
+          "name": {
+            "example": "NestJS",
+            "type": "string"
+          },
+          "slug": {
+            "example": "nestjs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "TagWithCountDto": {
+        "properties": {
+          "name": {
+            "example": "NestJS",
+            "type": "string"
+          },
+          "postCount": {
+            "description": "발행된 글 수",
+            "example": 0,
+            "type": "number"
+          },
+          "slug": {
+            "example": "nestjs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "postCount"
+        ],
+        "type": "object"
       }
     }
   },
@@ -89,6 +544,31 @@
   },
   "openapi": "3.0.0",
   "paths": {
+    "/api/categories": {
+      "get": {
+        "operationId": "CategoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryWithCountDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "summary": "카테고리 목록 (sortOrder 순, 발행 글 수 포함)",
+        "tags": [
+          "categories"
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "operationId": "HealthController_check",
@@ -117,6 +597,289 @@
         },
         "tags": [
           "Health"
+        ]
+      }
+    },
+    "/api/posts": {
+      "get": {
+        "operationId": "PostsController_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 9,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "카테고리 slug",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "태그 slug",
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "추천 글만",
+            "in": "query",
+            "name": "featured",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostListResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            },
+            "description": "쿼리 검증 실패 (VALIDATION_FAILED)"
+          }
+        },
+        "summary": "발행된 글 목록",
+        "tags": [
+          "posts"
+        ]
+      }
+    },
+    "/api/posts/{slug}": {
+      "get": {
+        "operationId": "PostsController_detail",
+        "parameters": [
+          {
+            "description": "글 slug",
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "301": {
+            "description": "이전 slug로 요청함. Location 헤더가 새 경로를 가리킨다"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            },
+            "description": "글 없음 (POST_NOT_FOUND)"
+          }
+        },
+        "summary": "글 상세 (이전·다음 글, 관련 글 포함)",
+        "tags": [
+          "posts"
+        ]
+      }
+    },
+    "/api/search": {
+      "get": {
+        "operationId": "SearchController_search",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 9,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "검색어 (2자 이상)",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "minLength": 2,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostListResponseDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            },
+            "description": "쿼리 검증 실패 (VALIDATION_FAILED)"
+          }
+        },
+        "summary": "글 검색 (백엔드 §5.4)",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "operationId": "TagsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TagWithCountDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "summary": "태그 목록 (발행 글 수 포함)",
+        "tags": [
+          "tags"
+        ]
+      }
+    },
+    "/internal/posts/{slug}": {
+      "get": {
+        "operationId": "InternalPostsController_detail",
+        "parameters": [
+          {
+            "description": "글 slug (이전 slug면 redirectTo 응답)",
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "내부 API 키",
+            "in": "header",
+            "name": "X-Internal-Key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/InternalPostResponseDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalPostRedirectDto"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            },
+            "description": "키 없음·불일치 (UNAUTHORIZED)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            },
+            "description": "글 없음 (POST_NOT_FOUND)"
+          }
+        },
+        "summary": "글 원문 조회 (내부 전용)",
+        "tags": [
+          "internal"
         ]
       }
     }

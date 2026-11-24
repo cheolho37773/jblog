@@ -6,6 +6,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { createLoggerParams } from './common/logging/logger.options';
 import type { AppEnv } from './config/env.validation';
 import { HealthModule } from './modules/health/health.module';
+import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 export type ModuleImports = NonNullable<ModuleMetadata['imports']>;
@@ -32,6 +33,7 @@ export class AppModule {
         LoggerModule.forRoot(createLoggerParams(env, options.logStream)),
         PrismaModule,
         HealthModule,
+        PostsModule,
         ...(options.imports ?? []),
       ],
       providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
