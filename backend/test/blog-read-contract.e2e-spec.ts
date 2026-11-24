@@ -285,10 +285,19 @@ describe('M2-01 계약: 공개 글·카테고리·태그·검색 + 내부 원문
       expect(featured.schema?.type).toBe('boolean');
     });
 
+    it.each(['/api/posts', '/api/search'])(
+      'GET %s 의 page·size 쿼리는 정수(integer)로 선언된다',
+      (path) => {
+        expect(parameter(document, path, 'page').schema?.type).toBe('integer');
+        expect(parameter(document, path, 'size').schema?.type).toBe('integer');
+      },
+    );
+
     it('GET /api/posts/{slug} 는 path 파라미터 slug 가 필수다', () => {
       const slug = parameter(document, '/api/posts/{slug}', 'slug');
       expect(slug.in).toBe('path');
       expect(slug.required).toBe(true);
+      expect(slug.schema?.type).toBe('string');
     });
 
     it('GET /api/search 쿼리: q 는 필수 문자열(2자 이상), page·size 는 선택', () => {
@@ -310,6 +319,7 @@ describe('M2-01 계약: 공개 글·카테고리·태그·검색 + 내부 원문
       expect(key.in).toBe('header');
       expect(key.required).toBe(true);
       expect(parameter(document, INTERNAL_PATH, 'slug').in).toBe('path');
+      expect(parameter(document, INTERNAL_PATH, 'slug').schema?.type).toBe('string');
     });
   });
 
