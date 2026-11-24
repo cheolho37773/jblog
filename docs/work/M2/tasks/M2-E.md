@@ -77,3 +77,32 @@
 ## 인계 노트
 
 (단계별로 덧붙인다)
+
+### ① 픽스처·테스트 선작성 (test-engineer)
+
+- 픽스처 서버: `frontend/e2e/fixtures/server.ts`(데이터 포함, 파일 하나), 커버 PNG 6장 `frontend/e2e/fixtures/assets/cover-*.png`, 생성 스크립트 `frontend/e2e/fixtures/make-assets.ts`
+  - 데이터 모듈을 따로 나누지 않았다. `node server.ts`로 직접 실행하려면 로컬 `.ts` import가 필요한데 `tsconfig`가 `allowImportingTsExtensions`를 허용하지 않아 `typecheck`가 깨지기 때문이다. 나누고 싶으면 devops가 그 옵션을 켠 뒤에 한다
+  - 데이터: 카테고리 6, 태그 7, 발행 글 13(featured 1: `designing-cache-strategy`, 분류 없는 글 1, 이전 slug `old-internal-api-guard` → `nestjs-internal-api-guard`). 데이터는 `components['schemas']`로 `satisfies` 검사한다
+  - 흉내 내는 경로: `/api/posts`, `/api/posts/{slug}`, `/api/categories`, `/api/tags`, `/api/search`, `/internal/posts/{slug}`, `/uploads/fixtures/{file}`, 상태 확인용 `/__fixture/health`(200)
+- 포트·환경변수(기본값)
+  - `FIXTURE_API_PORT` 기본 **4100**(3000·3100·3101·4000·4999와 겹치지 않음)
+  - `FIXTURE_INTERNAL_KEY` 기본 `e2e-internal-key-not-secret`(서버가 기대하는 키. frontend 서버의 `INTERNAL_API_KEY`에도 같은 값을 넣어야 한다)
+  - frontend의 `API_INTERNAL_URL`은 `http://localhost:4100`으로 맞춘다(지금 config는 4999)
+- devops가 연결할 실행 명령(`frontend/`에서 실행, `webServer`에 frontend 서버보다 **먼저**)
+  - `node --no-warnings e2e/fixtures/server.ts` (Node 24는 타입 제거를 기본 지원. `--no-warnings`는 "module type 미지정" 경고 숨김용). `url`은 `http://localhost:4100/__fixture/health`
+  - 이 파일은 `process.env`를 읽는다. `eslint`의 `PROCESS_ENV_ALLOWED_FILES`(`scripts/eslint/base-config.mjs`)에 `frontend/e2e/fixtures/server.ts`를 넣어 주면 파일 안의 `eslint-disable no-restricted-properties` 주석을 지워도 된다
+  - 브라우저 `/api/*`·`/uploads/*` 프록시는 `http://localhost:4100`으로 보낸다. `/internal/*`은 프록시하지 않는다(404)
+  - 테스트가 `e2e/fixtures/server.ts`를 import해서 데이터(`CATEGORIES_RESPONSE`, `FEATURED_SLUG` 등)와 기본 키를 쓴다. 키를 환경변수로 바꿔 쓰면 `api-env.spec.ts`의 번들 검사도 같은 값을 기본으로 보므로, 기본값 그대로 쓰는 것을 권한다
+- 테스트 (총 47 + 20 + 새 env 10)
+  - `frontend/test/fixture-server.spec.ts` 47건(Vitest, node 환경, 서버를 포트 0으로 띄워 검사): 경로별 형태·필터·페이지네이션·301·400·401·`redirectTo`·캐시 헤더·`/uploads/*`·405·404·prev/next·related·본문 구성. `pnpm --filter @jblog/frontend test`에 포함된다
+  - `frontend/e2e/components/api-check.spec.ts` 7건(components 프로젝트): `/dev/api-check` 200·noindex, 서버 목록, HTML에 서버 렌더 결과, "브라우저 요청" 버튼 → `/api/categories` 1회·개수, 내부 API 제목, 브라우저 요청에 `X-Internal-Key`·`/internal` 없음, HTML·정적 청크에 키 값 없음
+  - `frontend/e2e/api-env.spec.ts` 12건(prod 프로젝트): `/dev/api-check` 404, `/internal/posts/x` 404, 올바른 키를 붙여도 `/internal/*` 404, `/api/categories`가 픽스처로 이어짐, `.next`·`.next-components`의 `static/**`에 키 값·`X-Internal-Key` 없음(검사 대상 파일이 있는지 포함), components 서버 번들에는 `X-Internal-Key`가 있음(대조군), 서버 번들에도 키 값 없음
+  - `frontend/src/lib/env.schema.spec.ts`: 기존 `validRaw`에 `INTERNAL_API_KEY`를 추가하고 `parseEnv` 6건 + `parseBuildEnv` 5건 추가. `parseBuildEnv`·`INTERNAL_API_KEY` 필드는 `next build` 타입 검사가 지금 깨지지 않도록 느슨한 타입으로 읽는다(구현 후 frontend-dev가 정식 import·타입으로 바꿔도 된다)
+- 확인 결과
+  - 픽스처 서버 자체 테스트 47건 통과. 서버를 `node`로 직접 띄워 `/api/posts`·`/uploads`·`/internal`(키 있음 200, 없음 401)을 `curl`로 확인
+  - `eslint`·`prettier --check`·`typecheck` 통과(픽스처가 생성 타입과 맞음)
+  - env 단위 10건 실패(의도): `parseBuildEnv is not a function`, `INTERNAL_API_KEY`가 서버 값에 없음·검증 없음. 그 외 기존 단위 391건 통과
+  - Playwright(현 config, 픽스처 연결 전, `api-env`+`api-check` 19건): 7건 실패, 12건 통과
+    - 실패(의도): `/dev/api-check` 404(페이지 없음), `api-check-server`·`api-check-internal` 요소 없음, "브라우저 요청" 버튼 없음(타임아웃), `/api/categories`가 prod에서 404(프록시 없음), components 서버 번들에 `X-Internal-Key` 없음
+    - 통과(이미 만족하는 거부·회귀 방어): prod `/dev/api-check` 404, `/internal/*` 404, 번들(static)에 키 값·`X-Internal-Key` 없음, 서버 번들에 키 값 없음. 구현 후에도 계속 통과해야 한다
+  - 환경 메모: components 페이지·프록시 구성이 없어 서버 렌더·브라우저 요청 테스트는 devops·frontend 구현 뒤에야 통과한다. 키가 틀릴 때 페이지가 오류로 끝나는지(필수 검증 거부 항목)는 서버를 따로 띄워야 해서 ④ 독립 검증에서 다룬다
