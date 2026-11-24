@@ -1,4 +1,4 @@
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
+import { type INestApplication, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import helmet, { type HelmetOptions } from 'helmet';
@@ -11,6 +11,9 @@ import { type AppEnv, validateEnv } from './config/env.validation';
 export type CreateAppOptions = AppModuleOptions;
 
 const GLOBAL_PREFIX = 'api';
+// 내부 API(/internal/*)는 프론트 서버만 부르는 경로라 공개 API(/api)와 prefix를 나눈다.
+// 그래야 /api/internal/*가 404가 되고, 문서 경로도 /internal/posts/{slug}로 나온다(백엔드 §4.5).
+const INTERNAL_ROUTES = [{ path: 'internal/posts/:slug', method: RequestMethod.GET }];
 const SWAGGER_PATH = `${GLOBAL_PREFIX}/docs`;
 
 const API_TITLE = 'jblog API';
@@ -39,7 +42,7 @@ export function createHelmetOptions(env: AppEnv): HelmetOptions {
 function applyHttpSettings(app: INestApplication, env: AppEnv): void {
   app.use(requestIdMiddleware);
   app.use(helmet(createHelmetOptions(env)));
-  app.setGlobalPrefix(GLOBAL_PREFIX);
+  app.setGlobalPrefix(GLOBAL_PREFIX, { exclude: INTERNAL_ROUTES });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
