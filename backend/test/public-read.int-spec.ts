@@ -297,6 +297,21 @@ describe('공개 조회 API (실제 PostgreSQL)', () => {
       expect(body.totalPages).toBe(2);
     });
 
+    // page 는 DTO 에서 Number 로 변환되어 그대로 응답에 실린다 (9007199254740993 은 부동소수점이라 ...992 가 된다)
+    it.each([['100000000000000000000'], ['9007199254740993']])(
+      '매우 큰 page=%s 도 500 없이 200, 빈 items, 실제 totalItems·totalPages 를 준다',
+      async (page) => {
+        const response = await get(`/api/posts?page=${page}&size=9`);
+
+        expect(response.status).toBe(200);
+        const body = response.body as ListBody;
+        expect(body.items).toEqual([]);
+        expect(body.page).toBe(Number(page));
+        expect(body.totalItems).toBe(12);
+        expect(body.totalPages).toBe(2);
+      },
+    );
+
     it('항목은 PostSummary 의 필드만 가지며 publishedAt 은 ISO 8601 이다', async () => {
       const response = await get('/api/posts?size=1');
 

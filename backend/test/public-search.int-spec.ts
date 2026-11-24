@@ -216,6 +216,17 @@ describe('검색 API (실제 PostgreSQL)', () => {
     expect((outOfRange.body as ListBody).items).toEqual([]);
   });
 
+  it('매우 큰 page 도 500 없이 200, 빈 items, 실제 totalItems·totalPages 를 준다', async () => {
+    const response = await search('docker', '&page=100000000000000000000');
+
+    expect(response.status).toBe(200);
+    const body = response.body as ListBody;
+    expect(body.items).toEqual([]);
+    expect(body.page).toBe(100000000000000000000);
+    expect(body.totalItems).toBe(4);
+    expect(body.totalPages).toBe(1);
+  });
+
   it('일치하는 글이 없으면 빈 목록(200)이다', async () => {
     const response = await search('zzzz-없는-단어');
 
