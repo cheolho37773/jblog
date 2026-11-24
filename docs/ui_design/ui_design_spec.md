@@ -1,6 +1,6 @@
 # jblog UI 디자인 기획서 (Portfolio + Blog)
 
-> 버전 v0.6 · 작성일 2026-11-20 · 개정 2026-11-24: §11-6 시각 회귀 운용(실행 환경·허용 오차, M1 결과 보정) · 개정 2026-11-22: §3.3·§5.1·§5.9 Footer 카드 토큰(`footer-card`)·Contact Me 카드 확정·하단 정책 링크 제외·글자 로고(M1-10, 개발자 결정) · 개정 2026-11-22: §3.3·§9·§11 강조색 글자 대비 토큰과 추가 토큰(M1-08, 개발자 결정) · 개정 2026-11-22: §11 M1 한시 대체 비교(개발자 결정) · 개정 2026-11-20 ([기획 검토 피드백](../plan/feedback/2026-11-20_plan_review.md) 반영: 메타 텍스트 대비, Hero CTA, 프로젝트 카드 정보 보강, Featured 조건부, 프로젝트 목록 열 수, 태그 필터, 연락처 복사 예외, 검수 기준 분리)
+> 버전 v0.6.1 · 작성일 2026-11-20 · 개정 2026-11-24: §3.3·§7.3 코드 블록 배경 토큰 `code-bg`, 인라인 코드·링크 글자 `primary-text`(M2-02) · 개정 2026-11-24: §11-6 시각 회귀 운용(실행 환경·허용 오차, M1 결과 보정) · 개정 2026-11-22: §3.3·§5.1·§5.9 Footer 카드 토큰(`footer-card`)·Contact Me 카드 확정·하단 정책 링크 제외·글자 로고(M1-10, 개발자 결정) · 개정 2026-11-22: §3.3·§9·§11 강조색 글자 대비 토큰과 추가 토큰(M1-08, 개발자 결정) · 개정 2026-11-22: §11 M1 한시 대체 비교(개발자 결정) · 개정 2026-11-20 ([기획 검토 피드백](../plan/feedback/2026-11-20_plan_review.md) 반영: 메타 텍스트 대비, Hero CTA, 프로젝트 카드 정보 보강, Featured 조건부, 프로젝트 목록 열 수, 태그 필터, 연락처 복사 예외, 검수 기준 분리)
 > 목적: 개인 포트폴리오 겸 기술 블로그 웹서비스의 UI 기준 문서. 프론트엔드 구현과 디자인 QA의 단일 기준(Single Source of Truth)으로 사용한다.
 
 ---
@@ -141,6 +141,7 @@ CSS 변수로 정의하고, `<html data-theme="light|dark">`로 전환한다.
 | `--color-icon-button-bg` | `#696A75` | `#696A75` | 추가 (M1-08): Button `icon` 배경(§5.8 원본 값을 토큰화, 흰 아이콘 5.4:1) |
 | `--color-toggle-knob` · `--color-toggle-knob-icon` | `#FFFFFF` · `#181A2A` | 같음 | 추가 (M1-08): 테마 토글 노브와 해·달 아이콘 |
 | `--color-footer-card` | `#FFFFFF` | `#242535` | **추가 (M1-10)**: Footer 오른쪽 카드 배경. Light는 `surface-2`가 `footer-bg`와 같아 카드가 보이지 않아 분리(참고 스크린샷 흰 상자) / Dark는 `surface-2` 확정값과 같음 |
+| `--color-code-bg` | `#F6F6F7` | `#141624` | **추가 (M2-02)**: 코드 블록 배경(§7.3). Light는 `bg-subtle`과 같은 값이지만 용도가 달라 분리 |
 
 ### 3.4 그라디언트 (포트폴리오 액센트) — (추정)
 
@@ -454,9 +455,9 @@ About 페이지 상단과 글 상세 하단의 “작성자 소개”에 재사�
 | 본문 h3 (추가) | Work Sans 600 20/24 |
 | Quote | bg `--color-bg-subtle`, border-left 4px `--color-border`, padding 32, radius 12, Source Serif Pro Italic 24/32 `--color-text-strong` |
 | 본문 이미지 | 폭 100%, radius 12, 캡션(추가) 14/20 muted 가운데 |
-| 코드 블록 (추가) | 기술 블로그 필수 요소. bg Light `#F6F6F7` / Dark `#141624`, border 1px `--color-border`, radius 12, padding 20 24, JetBrains Mono 14/22, 우측 상단 복사 버튼 |
-| 인라인 코드 (추가) | bg `--color-primary-soft`, color `--color-primary`, padding 2 6, radius 4 |
-| 링크 | `--color-primary`, underline offset 3px |
+| 코드 블록 (추가) | 기술 블로그 필수 요소. bg `--color-code-bg`(M2-02), border 1px `--color-border`, radius 12, padding 20 24, JetBrains Mono 14/22, 우측 상단 복사 버튼 |
+| 인라인 코드 (추가) | bg `--color-primary-soft`, color `--color-primary-text`(§9 강조색 글자), padding 2 6, radius 4 |
+| 링크 | `--color-primary-text`(§9 강조색 글자), underline offset 3px |
 | 하단 | 태그 목록(soft badge, 각각 `/blog?tag=<slug>` 링크) → Author Info Box(§6.6, 폭 800으로 축소) → 이전/다음 글 2열 카드 → 관련 글 3개(카드 그리드) |
 | 목차 TOC (추가) | ≥1280px에서만 아티클 우측 sticky (폭 200, 14/20 muted, 현재 항목 primary) |
 
