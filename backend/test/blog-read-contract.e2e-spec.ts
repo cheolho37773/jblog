@@ -97,6 +97,13 @@ function schemaOf(document: ApiDocument, name: string) {
   return flatten(document, component(document, name));
 }
 
+// 필드가 없으면 undefined 로 흘려보내지 않고 이유가 보이는 메시지로 실패시킨다.
+function fieldOf(fields: Record<string, SchemaNode>, name: string): SchemaNode {
+  const field = fields[name];
+  if (!field) throw new Error(`스키마에 필드 ${name} 가 없다`);
+  return field;
+}
+
 // 필드가 가리키는 DTO 이름. `$ref`, nullable 객체(`allOf: [{$ref}]`), 배열(`items.$ref`)을 모두 푼다.
 function targetName(field: SchemaNode): string | undefined {
   return refName(field) ?? refName(field.allOf?.[0]) ?? refName(field.items);
@@ -366,12 +373,15 @@ describe('M2-01 계약: 공개 글·카테고리·태그·검색 + 내부 원문
         expect(Object.keys(fields).sort()).toEqual(Object.keys(spec).sort());
         expect([...required].sort()).toEqual(Object.keys(spec).sort());
         for (const [field, expected] of Object.entries(spec)) {
-          expect({ field, nullable: isNullable(fields[field]) }).toEqual({
+          expect({ field, nullable: isNullable(fieldOf(fields, field)) }).toEqual({
             field,
             nullable: expected.nullable === true,
           });
           if (expected.ref)
-            expect({ field, ref: targetName(fields[field]) }).toEqual({ field, ref: expected.ref });
+            expect({ field, ref: targetName(fieldOf(fields, field)) }).toEqual({
+              field,
+              ref: expected.ref,
+            });
         }
       },
     );
@@ -382,7 +392,9 @@ describe('M2-01 계약: 공개 글·카테고리·태그·검색 + 내부 원문
       const expected = [...Object.keys(detail.fields), ...INTERNAL_ONLY_KEYS].sort();
       expect(Object.keys(internal.fields).sort()).toEqual(expected);
       expect([...internal.required].sort()).toEqual(expected);
-      INTERNAL_ONLY_KEYS.forEach((key) => expect(isNullable(internal.fields[key])).toBe(false));
+      INTERNAL_ONLY_KEYS.forEach((key) =>
+        expect(isNullable(fieldOf(internal.fields, key))).toBe(false),
+      );
     });
 
     it('PostDetailDto 는 PostSummaryDto 의 필드를 모두 포함한다', () => {
@@ -441,7 +453,7 @@ describe('M2-01 계약: 공개 글·카테고리·태그·검색 + 내부 원문
       expectErrorShape(response.body, {
         statusCode: 501,
         code: 'NOT_IMPLEMENTED',
-        path: url.split('?')[0],
+        path: url.split('?')[0] ?? url,
       });
     });
 
