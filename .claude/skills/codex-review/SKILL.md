@@ -17,6 +17,7 @@ scripts/codex-review.sh <작업ID> --plan     # 기획 문서 변경 검수 → 
 - 기준은 `origin/dev`와의 merge-base ~ HEAD. 결과 첫 줄에 base·head SHA가 기록된다
 - Codex는 읽기 전용 샌드박스로 실행된다. 코드를 바꾸지 않는다
 - 결과: `docs/reviews/<ID>/r<N>.codex.md` (N은 자동 증가)
+- 실행이 결과 파일 없이 실패하면(사용량 한도 등) 회차로 세지 않는다. 원인이 풀린 뒤 다시 실행하고, 실패 시각·원인은 그 회차 대응 기록에 적는다. 그동안 push하지 않는다(협업 §6.2)
 
 ## 독립성 규칙
 
