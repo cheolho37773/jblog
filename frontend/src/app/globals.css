@@ -34,7 +34,7 @@
   --toggle-knob-icon: #181a2a;
   /* Footer 카드. Light에서는 surface-2가 footer-bg와 같아 분리했다 */
   --footer-card: #ffffff;
-  /* 코드 블록·인라인 코드 배경 (M2-02) */
+  /* 코드 블록 배경 (M2-02). 인라인 코드 배경은 primary-soft다 */
   --code-bg: #f6f6f7;
 }
 
