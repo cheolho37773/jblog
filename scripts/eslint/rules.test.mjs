@@ -132,6 +132,8 @@ const PROCESS_ENV_ALLOWED_PATHS = [
   'frontend/src/lib/env.ts',
   'jest.config.mjs',
   'frontend/vitest.config.ts',
+  'frontend/e2e/fixtures/server.ts',
+  'scripts/e2e/proxy.mjs',
   'backend/jest.config.ts',
 ];
 

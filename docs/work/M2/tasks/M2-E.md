@@ -106,3 +106,25 @@
     - 실패(의도): `/dev/api-check` 404(페이지 없음), `api-check-server`·`api-check-internal` 요소 없음, "브라우저 요청" 버튼 없음(타임아웃), `/api/categories`가 prod에서 404(프록시 없음), components 서버 번들에 `X-Internal-Key` 없음
     - 통과(이미 만족하는 거부·회귀 방어): prod `/dev/api-check` 404, `/internal/*` 404, 번들(static)에 키 값·`X-Internal-Key` 없음, 서버 번들에 키 값 없음. 구현 후에도 계속 통과해야 한다
   - 환경 메모: components 페이지·프록시 구성이 없어 서버 렌더·브라우저 요청 테스트는 devops·frontend 구현 뒤에야 통과한다. 키가 틀릴 때 페이지가 오류로 끝나는지(필수 검증 거부 항목)는 서버를 따로 띄워야 해서 ④ 독립 검증에서 다룬다
+
+### ② 실행 환경 연결 (devops-engineer)
+
+- 구성도 (브라우저는 프록시 주소만 안다. 운영에서 Nginx 주소로 접속하는 것과 같다)
+
+  | 프로젝트 | 브라우저(baseURL, 프록시) | Next standalone | 픽스처 API |
+  |---|---|---|---|
+  | prod | `localhost:3200` | `127.0.0.1:3100` | `localhost:4100` |
+  | components·visual | `localhost:3201` | `127.0.0.1:3101` | `localhost:4100` |
+
+  - 프록시 `scripts/e2e/proxy.mjs`(Node 내장 `http`): `/api/*`·`/uploads/*` → 픽스처(4100), `/internal`·`/internal/*` → 404, 나머지 → Next. 상태 확인 `/__proxy/health`. 뒤쪽 연결 실패는 502와 로그로 드러낸다
+  - `webServer` 순서: 픽스처 → Next → 프록시(components는 같은 순서로 이어서). 픽스처는 모든 프로젝트가 하나를 공유한다
+  - frontend 서버 env: `API_INTERNAL_URL=http://localhost:4100`, `INTERNAL_API_KEY=e2e-internal-key-not-secret`(테스트용 더미, 비밀 아님). `NEXT_PUBLIC_SITE_URL`은 브라우저가 보는 프록시 주소
+  - Next는 `HOSTNAME=127.0.0.1`로 고정했다. 시각 회귀 컨테이너에서 `localhost`가 IPv6로 풀려 프록시가 502를 받았기 때문이다(24건 모두 실패 → 고친 뒤 통과)
+  - 개발 전용 rewrite(`next.config.ts`)는 그대로이며 E2E는 쓰지 않는다
+- 바꾼 파일: `frontend/playwright.config.ts`, `scripts/e2e/proxy.mjs`(신규), `scripts/eslint/base-config.mjs`(`PROCESS_ENV_ALLOWED_FILES`에 `frontend/e2e/fixtures/server.ts`·`scripts/e2e/proxy.mjs`), `scripts/eslint/rules.test.mjs`(허용 경로 시험). `scripts/visual/run.sh`·`frontend/Dockerfile`·`package.json`·CI는 변경 없음(run.sh는 같은 config를 컨테이너에서 그대로 실행)
+- 빌드 명령: `build:verify`·`docker:build`에 키를 추가하지 않았다. `build:verify`는 백엔드·`INTERNAL_API_KEY` 없이 통과(`parseBuildEnv`는 frontend-dev 구현 대상). `docker:build`는 이 단계에서 변경이 없어 실행하지 않았다
+- test-engineer 확인 필요: `frontend/e2e/fixtures/server.ts` 560행의 `eslint-disable no-restricted-properties` 주석이 이제 불필요해 lint 경고(`Unused eslint-disable directive`) 1건이 난다. 지워도 된다(devops는 수정하지 않음)
+- 확인 결과
+  - 기존 E2E 포함 `pnpm exec playwright test`(frontend): 218 통과, 8 실패. 시각 회귀 `pnpm test:visual`: 24건 통과(기준 이미지 변경 없음). lint 오류 0·경고 1(위), format·`test:scripts` 통과
+  - 남은 실패 8건은 모두 frontend-dev 몫: `/dev/api-check` 없음(404) 때문에 components 7건(200·noindex, 서버 목록, HTML 서버 렌더, 브라우저 요청 버튼, 내부 API 제목, 헤더·경로 검사, 키 노출 검사), `X-Internal-Key`가 components 서버 번들에 없음(`createInternalApi` 없음) 1건
+  - 연결 항목은 통과: prod `/api/categories`가 픽스처로 이어짐, `/internal/*` 404(키를 붙여도), `/dev/api-check` prod 404, 번들 키 미노출 검사
