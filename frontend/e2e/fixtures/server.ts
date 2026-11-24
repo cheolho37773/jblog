@@ -376,6 +376,16 @@ function sendError({ req, res }: Exchange, { status, code, message }: Failure) {
 
 const NOT_FOUND: Failure = { status: 404, code: 'NOT_FOUND', message: 'Not found' };
 const POST_NOT_FOUND: Failure = { status: 404, code: 'POST_NOT_FOUND', message: 'Post not found' };
+const INVALID_PATH: Failure = {
+  status: 400,
+  code: 'VALIDATION_FAILED',
+  message: 'Malformed URL encoding',
+};
+const INTERNAL_ERROR: Failure = {
+  status: 500,
+  code: 'INTERNAL_ERROR',
+  message: 'Unexpected fixture server error',
+};
 const INVALID_QUERY: Failure = {
   status: 400,
   code: 'VALIDATION_FAILED',
@@ -518,32 +528,49 @@ function handleUpload(exchange: Exchange, pathname: string) {
   res.end(req.method === 'HEAD' ? undefined : bytes);
 }
 
+// 잘못된 퍼센트 인코딩(`%`)은 decodeURIComponent가 URIError를 던진다. 클라이언트 입력 문제이므로 400이다.
+function routeOf(exchange: Exchange, internalKey: string) {
+  const { req, res } = exchange;
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return sendError(exchange, {
+      status: 405,
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'Only GET is supported',
+    });
+  }
+  const { pathname, searchParams } = new URL(req.url ?? '/', 'http://fixture.local');
+
+  if (pathname === '/__fixture/health') {
+    return sendJson(res, {
+      status: 200,
+      body: { status: 'ok' },
+      cacheControl: CACHE_CONTROL.internal,
+    });
+  }
+  if (pathname.startsWith('/api/')) return handlePublicApi(exchange, pathname, searchParams);
+  if (pathname.startsWith('/internal/')) return handleInternalApi(exchange, pathname, internalKey);
+  if (pathname.startsWith('/uploads/')) return handleUpload(exchange, pathname);
+  return sendError(exchange, NOT_FOUND);
+}
+
+// 어떤 요청도 프로세스를 죽이면 안 된다. 예상 못 한 예외는 로그를 남기고 500으로 답한다.
+function respondToFailure(exchange: Exchange, error: unknown) {
+  if (error instanceof URIError) return sendError(exchange, INVALID_PATH);
+  console.error('fixture api unexpected error', error);
+  if (exchange.res.headersSent) return exchange.res.destroy();
+  return sendError(exchange, INTERNAL_ERROR);
+}
+
 export function createFixtureServer(
   internalKey: string = DEFAULT_FIXTURE_INTERNAL_KEY,
 ): http.Server {
   return http.createServer((req, res) => {
     const exchange: Exchange = { req, res };
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      return sendError(exchange, {
-        status: 405,
-        code: 'METHOD_NOT_ALLOWED',
-        message: 'Only GET is supported',
-      });
+    try {
+      routeOf(exchange, internalKey);
+    } catch (error) {
+      respondToFailure(exchange, error);
     }
-    const { pathname, searchParams } = new URL(req.url ?? '/', 'http://fixture.local');
-
-    if (pathname === '/__fixture/health') {
-      return sendJson(res, {
-        status: 200,
-        body: { status: 'ok' },
-        cacheControl: CACHE_CONTROL.internal,
-      });
-    }
-    if (pathname.startsWith('/api/')) return handlePublicApi(exchange, pathname, searchParams);
-    if (pathname.startsWith('/internal/'))
-      return handleInternalApi(exchange, pathname, internalKey);
-    if (pathname.startsWith('/uploads/')) return handleUpload(exchange, pathname);
-    return sendError(exchange, NOT_FOUND);
   });
 }
 

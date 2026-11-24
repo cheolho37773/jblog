@@ -371,3 +371,29 @@ describe('그 밖의 요청', () => {
     expect((await get('/__fixture/health')).status).toBe(200);
   });
 });
+
+describe('잘못된 URL 인코딩', () => {
+  const MALFORMED_PATHS = ['/api/posts/%', '/internal/posts/%'];
+
+  it.each(MALFORMED_PATHS)('%s는 공통 에러 형식의 400이다', async (path) => {
+    const { res, body } = await getJson<Schemas['ErrorResponseDto']>(path, {
+      'x-internal-key': KEY,
+    });
+
+    expect(res.status).toBe(400);
+    expect(body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_FAILED',
+      path,
+    });
+    expect(typeof body.message).toBe('string');
+    expect(Number.isNaN(Date.parse(body.timestamp))).toBe(false);
+  });
+
+  it('잘못된 인코딩 요청 뒤에도 서버가 살아 있어 정상 요청이 200이다', async () => {
+    for (const path of MALFORMED_PATHS) await get(path, { 'x-internal-key': KEY });
+
+    expect((await get('/api/posts')).status).toBe(200);
+    expect((await get(`/api/posts/${FEATURED_SLUG}`)).status).toBe(200);
+  });
+});

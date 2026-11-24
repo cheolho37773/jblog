@@ -169,3 +169,12 @@
 
 - `.github/**` 변경 없음(`git diff 2ff65b3..HEAD -- .github` 0건). CI 필수 검사 이름·개수는 push 후 CI에서 확인한다
 - 에러 수정 횟수: 자체 검사 0, Codex 0, CI 0
+
+### Codex r1 대응 ① (test-engineer)
+
+- 지적 #2 (픽스처 서버): `frontend/e2e/fixtures/server.ts`가 `decodeURIComponent` 실패(URIError)를 공통 에러 형식(`VALIDATION_FAILED`) 400으로 답하고, 그 밖의 예외는 로그 + 500(`INTERNAL_ERROR`)으로 답해 프로세스가 죽지 않는다. 회귀 테스트(`frontend/test/fixture-server.spec.ts`): `/api/posts/%`·`/internal/posts/%` → 400 공통 형식, 이후 정상 요청 200. 통과(50건).
+- 지적 #1 (운영 필수 키): `frontend/e2e/prod-env-guard.spec.ts` 추가(prod 프로젝트). prod 빌드 산출물(`.next/standalone/frontend/server.js`)을 별도 프로세스로 띄운다(포트 3102·3103, 필요한 환경값만 명시 전달).
+  - 키 없음: 종료 코드 != 0 또는 첫 요청 5xx여야 하고, 출력에 `INTERNAL_API_KEY` 이름은 있고 키 값·다른 비밀 값(표지 값)은 없어야 한다. **현재 실패**: `exit=null status=200`(키 없이도 `/`가 200) — 의도한 이유.
+  - 키 있음: 첫 요청 200, 출력에 값 없음. 통과.
+- 전체 prod 프로젝트: 120 통과 / 1 실패(위 의도된 실패). typecheck·prettier 통과.
+- frontend-dev 참고: 서버 기동 시점(예: `instrumentation.ts`의 `register()`에서 `env.server` 접근) 또는 루트 layout 등 모든 요청이 거치는 곳에서 서버 설정을 검증한다. 단 빌드(`next build`)는 키 없이 통과해야 한다(`NEXT_PHASE`가 build일 때는 건너뛰기 등). 오류 메시지에는 변수 이름만 담는다.
