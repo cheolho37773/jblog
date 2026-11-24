@@ -178,3 +178,10 @@
   - 키 있음: 첫 요청 200, 출력에 값 없음. 통과.
 - 전체 prod 프로젝트: 120 통과 / 1 실패(위 의도된 실패). typecheck·prettier 통과.
 - frontend-dev 참고: 서버 기동 시점(예: `instrumentation.ts`의 `register()`에서 `env.server` 접근) 또는 루트 layout 등 모든 요청이 거치는 곳에서 서버 설정을 검증한다. 단 빌드(`next build`)는 키 없이 통과해야 한다(`NEXT_PHASE`가 build일 때는 건너뛰기 등). 오류 메시지에는 변수 이름만 담는다.
+
+### Codex r1 대응 ② (frontend-dev)
+
+- 지적 #1: `frontend/src/instrumentation.ts`의 `register()`가 `env.ts`의 `verifyRuntimeEnv()`를 부른다. 운영 서버 기동 시 `parseEnv`(INTERNAL_API_KEY 포함)를 검증하고, 키가 없으면 종료 코드 != 0으로 기동에 실패한다. 오류에는 변수 이름만 있다.
+- 근거: Next 16 문서(`01-app/02-guides/instrumentation.md`)는 `register`가 서버 인스턴스 시작 시 한 번 호출되고 끝나야 요청을 받는다고 한다. standalone `server.js`에서 실제로 실행됨을 `prod-env-guard`로 확인했다(키 없음 실패, 키 있음 200). 문서는 빌드 중 호출 여부를 명시하지 않아, `NEXT_RUNTIME !== 'nodejs'`(Edge)와 `NEXT_PHASE === PHASE_PRODUCTION_BUILD`(빌드)는 건너뛴다. 키 없는 `build:verify`·`docker:build`는 통과한다.
+- `process.env` 읽기는 lint 규칙상 `lib/env.ts`에서만 가능해 검증 함수를 거기에 두었다. `env.server` getter 동작은 그대로다.
+- 검사: 단위 404건, `test:e2e` 228건(prod-env-guard 2건 포함), `test:visual` 24건(기준 이미지 변경 없음), `pnpm verify` 0, `pnpm docker:build` 0.
