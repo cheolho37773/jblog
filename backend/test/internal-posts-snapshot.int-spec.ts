@@ -113,7 +113,10 @@ describe('내부 원문 API 스냅샷: 조회 도중 다른 연결이 글을 바
     ids = await seedDataset();
   });
 
-  afterEach(() => restorePrisma());
+  afterEach(() => {
+    restorePrisma();
+    jest.useRealTimers();
+  });
 
   // 최신순: next(1일 전) > target(2일 전) > prev(3일 전). related 는 같은 카테고리의 sibling(5일 전).
   async function seedDataset(): Promise<Record<string, number>> {
@@ -147,7 +150,7 @@ describe('내부 원문 API 스냅샷: 조회 도중 다른 연결이 글을 바
   function intrudeAfterFirstQuery(intrude: () => Promise<void>): () => boolean {
     let intruded = false;
     let running = false;
-    const afterQuery = async () => {
+    installQueryHook(async () => {
       if (intruded || running) return;
       running = true;
       try {
@@ -156,10 +159,16 @@ describe('내부 원문 API 스냅샷: 조회 도중 다른 연결이 글을 바
       } finally {
         running = false;
       }
-    };
-    const originals = new Map<string, PropertyDescriptor | undefined>();
+    });
+    return () => intruded;
+  }
+
+  // 앱의 PrismaService 의 모든 데이터 조회가 끝날 때마다 afterQuery 를 실행하도록 훅을 건다.
+  function installQueryHook(afterQuery: () => Promise<void>): void {
+    // Prisma 클라이언트의 모델 대리자는 자기 속성 설명자로 보이지 않으므로, 값을 저장했다가 되돌린다.
+    const originals = new Map<string, unknown>();
     const define = (name: string, value: unknown) => {
-      originals.set(name, Object.getOwnPropertyDescriptor(prismaService, name));
+      originals.set(name, (prismaService as unknown as Record<string, unknown>)[name]);
       Object.defineProperty(prismaService, name, { value, configurable: true, writable: true });
     };
 
@@ -174,14 +183,12 @@ describe('내부 원문 API 스냅샷: 조회 도중 다른 연결이 글을 바
         : originalTransaction(arg, ...rest),
     );
     restorePrisma = () => {
-      for (const [name, descriptor] of originals) {
-        if (descriptor) Object.defineProperty(prismaService, name, descriptor);
-        else delete (prismaService as unknown as Record<string, unknown>)[name];
+      for (const [name, value] of originals) {
+        Object.defineProperty(prismaService, name, { value, configurable: true, writable: true });
       }
       originals.clear();
       restorePrisma = () => undefined;
     };
-    return () => intruded;
   }
 
   const intrusions: [string, () => Promise<void>][] = [
@@ -258,5 +265,72 @@ describe('내부 원문 API 스냅샷: 조회 도중 다른 연결이 글을 바
     const after = (await getTarget()).body as InternalBody;
 
     expect(after.next?.title).toBe('바뀐 Next 제목');
+  });
+
+  // 조회 도중 예약 발행 시각이 지나는 경우: 응답 전체가 요청 시작 시점 하나만 기준으로 삼아야 한다 (백엔드 §4.5).
+  // 시계(Date)만 가짜로 두고, 데이터 조회가 하나 끝날 때마다 1시간씩 앞당긴다.
+  // 같은 카테고리의 예약 글(target 보다 최신)이 시작 시각에는 비공개이므로 next·related 어디에도 나오면 안 된다.
+  const MS_PER_HOUR = 60 * 60 * 1000;
+  const SCHEDULE_OFFSETS_MINUTES = [30, 150];
+
+  async function seedScheduledSibling(offsetMinutes: number): Promise<void> {
+    const category = await db.prisma.category.findFirstOrThrow({ select: { id: true } });
+    // 예약 글이 target 의 바로 다음 글이 되도록 기존 next 글은 지운다.
+    await db.prisma.post.delete({ where: { id: ids.next } });
+    await createPost(db.prisma, {
+      slug: 'scheduled',
+      title: 'Scheduled 제목',
+      publishedAt: new Date(Date.now() + offsetMinutes * 60 * 1000),
+      categoryId: category.id,
+    });
+  }
+
+  function advanceClockHourlyPerQuery(): void {
+    jest.useFakeTimers({
+      now: Date.now(),
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+        'setTimeout',
+        'clearTimeout',
+        'queueMicrotask',
+        'performance',
+        'hrtime',
+      ],
+    });
+    installQueryHook(async () => {
+      jest.setSystemTime(Date.now() + MS_PER_HOUR);
+      return Promise.resolve();
+    });
+  }
+
+  it.each(SCHEDULE_OFFSETS_MINUTES)(
+    '내부 상세: 조회 도중 %i분 뒤 예약 발행 시각이 지나도 next·related 모두 시작 시점 기준으로 제외된다',
+    async (offsetMinutes) => {
+      await seedScheduledSibling(offsetMinutes);
+      advanceClockHourlyPerQuery();
+
+      const response = await getTarget();
+
+      const body = response.body as InternalBody;
+      expect(response.status).toBe(200);
+      expect(body.next).toBeNull();
+      expect(body.related.map((post) => post.slug)).toEqual(['sibling']);
+    },
+  );
+
+  it('공개 상세: 조회 도중 예약 발행 시각이 지나도 next·related 모두 시작 시점 기준으로 제외된다', async () => {
+    await seedScheduledSibling(30);
+    advanceClockHourlyPerQuery();
+
+    const response = await request(app.getHttpServer()).get('/api/posts/target');
+
+    const body = response.body as InternalBody;
+    expect(response.status).toBe(200);
+    expect(body.next).toBeNull();
+    expect(body.related.map((post) => post.slug)).toEqual(['sibling']);
   });
 });
