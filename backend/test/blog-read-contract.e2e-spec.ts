@@ -450,14 +450,8 @@ describe('M2-01 계약: 공개 글·카테고리·태그·검색 + 내부 원문
   });
 
   describe('구현 전 핸들러는 공통 에러 형식의 501이다 (빈 200 금지)', () => {
-    it.each([
-      '/api/posts',
-      '/api/posts/some-slug',
-      '/api/categories',
-      '/api/tags',
-      '/api/search?q=ab',
-      '/internal/posts/some-slug',
-    ])('GET %s 는 501 NOT_IMPLEMENTED', async (url) => {
+    // 공개 조회 5개는 M2-03에서 구현돼 DB 없는 e2e 로는 확인할 수 없다(통합 테스트가 맡는다)
+    it.each(['/internal/posts/some-slug'])('GET %s 는 501 NOT_IMPLEMENTED', async (url) => {
       const response = await request(app.getHttpServer()).get(url);
       expect(response.status).toBe(501);
       expectErrorShape(response.body, {

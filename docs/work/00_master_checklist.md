@@ -138,7 +138,7 @@
 ## M2. 블로그 읽기
 
 **백엔드**
-- [ ] BE-03 Posts/Categories/Tags 공개 조회 + 검색(`pg_trgm`)
+- [x] BE-03 Posts/Categories/Tags 공개 조회 + 검색(`pg_trgm`) — 계약 #53, 구현 #59 (2026-11-25)
 - [ ] BE-04a / SEC-05 내부 API `/internal/posts/:slug`·`/internal/projects/:slug`(메타+원문 단일 응답, 스냅샷 조회) + `InternalKeyGuard`, 응답 유형별 `Cache-Control`
 
 **프론트엔드**
