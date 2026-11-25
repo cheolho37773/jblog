@@ -1,16 +1,18 @@
 import { type INestApplication, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import helmet, { type HelmetOptions } from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { AppModule, type AppModuleOptions } from './app.module';
+import { GLOBAL_PREFIX } from './common/http/global-prefix';
 import { requestIdMiddleware } from './common/logging/logger.options';
 import { createValidationFailedException } from './common/errors/validation-failed';
 import { type AppEnv, validateEnv } from './config/env.validation';
+import { serveSeedAssets } from './dev-static-assets';
 
 export type CreateAppOptions = AppModuleOptions;
 
-const GLOBAL_PREFIX = 'api';
 // 내부 API(/internal/*)는 프론트 서버만 부르는 경로라 공개 API(/api)와 prefix를 나눈다.
 // 그래야 /api/internal/*가 404가 되고, 문서 경로도 /internal/posts/{slug}로 나온다(백엔드 §4.5).
 const INTERNAL_ROUTES = [{ path: 'internal/posts/:slug', method: RequestMethod.GET }];
@@ -39,7 +41,7 @@ export function createHelmetOptions(env: AppEnv): HelmetOptions {
   };
 }
 
-function applyHttpSettings(app: INestApplication, env: AppEnv): void {
+function applyHttpSettings(app: NestExpressApplication, env: AppEnv): void {
   app.use(requestIdMiddleware);
   app.use(helmet(createHelmetOptions(env)));
   app.setGlobalPrefix(GLOBAL_PREFIX, { exclude: INTERNAL_ROUTES });
@@ -54,6 +56,8 @@ function applyHttpSettings(app: INestApplication, env: AppEnv): void {
   app.enableShutdownHooks();
   // 운영에서는 API 구조를 노출하지 않는다(규약 6).
   if (env.NODE_ENV !== 'production') setupSwagger(app);
+  // 시드 커버 이미지는 개발에서만 api가 서빙한다. 운영은 Nginx가 /uploads를 맡는다(M2-03 규약 8).
+  if (env.NODE_ENV !== 'production') serveSeedAssets(app);
 }
 
 // listen하지 않는다. 호출 측(main.ts, 테스트)이 init()/listen()을 고른다.
@@ -62,7 +66,9 @@ export async function createApp(
   options: CreateAppOptions = {},
 ): Promise<INestApplication> {
   const env = validateEnv(rawEnv);
-  const app = await NestFactory.create(AppModule.register(env, options), { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule.register(env, options), {
+    bufferLogs: true,
+  });
   app.useLogger(app.get(Logger));
   applyHttpSettings(app, env);
   return app;
