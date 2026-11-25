@@ -144,7 +144,7 @@
   - [ ] BE-04a-2 `/internal/projects/:slug` ⏸ 보류: 프로젝트 공개 API와 함께 M4(BE-08)에서 (M2 계획 G1 결정 4)
 
 **프론트엔드**
-- [ ] FE-04 `frontend/src/lib/markdown` 파이프라인 + `.prose-jblog` + 한글 본문 폰트(Noto Serif KR)
+- [x] FE-04 `frontend/src/lib/markdown` 파이프라인 + `.prose-jblog` + 한글 본문 폰트(Noto Serif KR) — 토큰 #55, 구현 #66 (2026-11-26)
 - [ ] FE-05 Blog 목록/상세/검색, 태그 필터, PostCard 3종, LoadMore, TOC, slug 301 처리, SEO(메타/OG/JSON-LD)
 - [ ] FE-05a / SEC-06 복사 방지(CopyGuard, 입력 요소·연락처 예외, 코드 복사 버튼, 인쇄 차단, 링크 복사)
 - [ ] Home의 블로그 섹션 (Featured 조건부, Latest Post)
