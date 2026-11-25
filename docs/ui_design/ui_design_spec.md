@@ -188,7 +188,7 @@ CSS 변수로 정의하고, `<html data-theme="light|dark">`로 전환한다.
 | `Title/exp` | Poppins | 600 | 20 / 28 | 경력 항목 제목 | |
 | `Body/exp` | Poppins | 400 | 14 / 22 | 경력 설명 | |
 
-> **폰트 결정**: Work Sans(UI), Source Serif Pro(본문), Plus Jakarta Sans(푸터/로고), Poppins(포트폴리오 Display) 4종을 쓴다. 검색 placeholder의 Inter는 Work Sans 14/20으로 대체한다 (육안 차이 미미, 폰트 1종 절감).
+> **폰트 결정**: Work Sans(UI), Source Serif Pro(본문), Plus Jakarta Sans(푸터/로고), Poppins(포트폴리오 Display) 4종을 쓴다. 본문 serif 스택에는 한글 본문 폰트 Noto Serif KR 변수(`--font-noto-serif-kr`)가 들어간다. 이 변수는 글 상세에서만 정의되고, 다른 페이지에서는 기존 serif로 떨어진다(M2-05, 2026-11-26 개발자 수용). 검색 placeholder의 Inter는 Work Sans 14/20으로 대체한다 (육안 차이 미미, 폰트 1종 절감).
 > 한글: 각 영문 폰트 뒤에 `Pretendard`를 fallback으로 지정한다. 본문 세리프의 한글은 `Noto Serif KR`(400·700)이며, 글/프로젝트 상세 페이지에서만 로드한다. 한글은 이탤릭이 없으므로 인용문의 한글은 기울이지 않는다 (로딩 방식: [프론트엔드 §5.1-a](../plan/02_frontend_plan.md#51-a-한글-본문-폰트)).
 
 ### 3.6 Radius / Shadow / Spacing (확정)

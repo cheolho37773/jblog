@@ -1,6 +1,6 @@
 # jblog 프론트엔드 기획서
 
-> 버전 v0.3 · 작성일 2026-11-20 · 개정 2026-11-24: §4 빌드와 데이터 — 빌드는 API 무의존, 상세 사전 생성 제거(M2 G1 결정 6, 개발자 승인) · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26), `revalidateTag` 시그니처 확인 완료 (§4, 개요 Q5)
+> 버전 v0.4 · 작성일 2026-11-20 · 개정 2026-11-26: §5.3·§8 `/uploads` 이미지는 일반 `<img>` + 서버 WebP(M2-05 G2, 개발자 결정) · 개정 2026-11-24: §4 빌드와 데이터 — 빌드는 API 무의존, 상세 사전 생성 제거(M2 G1 결정 6, 개발자 승인) · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26), `revalidateTag` 시그니처 확인 완료 (§4, 개요 Q5)
 > 스택: **Next.js (App Router) + React + TypeScript + Tailwind CSS v4**
 > 화면/토큰/컴포넌트 스펙의 기준: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · API 계약: [백엔드 기획서 §4](./01_backend_plan.md#4-api-명세)
 
@@ -267,11 +267,11 @@ contentMd
  → remark-rehype → rehype-slug → rehype-autolink-headings
  → @shikijs/rehype { themes: { light: 'github-light', dark: 'github-dark-dimmed' } }
  → rehype-sanitize (커스텀 스키마: shiki 클래스/스타일 허용)
- → rehype-react (컴포넌트 매핑: pre→CodeBlock, img→MdImage(next/image), a→외부링크 target=_blank rel=noopener)
+ → rehype-react (컴포넌트 매핑: pre→CodeBlock, img→MdImage(`<img>`, 아래 참고), a→외부링크 target=_blank rel=noopener)
 ```
 - 같은 파이프라인을 **공개 상세 페이지(RSC)와 관리자 에디터 프리뷰(Client)** 가 함께 쓴다. 프리뷰에서는 shiki를 lazy-load하고 300ms debounce를 건다.
 - 헤딩 목록은 `extractHeadings()`로 따로 뽑아 TOC에 전달한다.
-- `MdImage`: 공개 페이지는 `next/image` 최적화를 쓴다. M7에서 비공개 미디어가 도입되면 **관리자 에디터 프리뷰·미리보기에서는 `unoptimized`** 로 렌더링해 브라우저가 관리자 쿠키를 붙여 원본을 직접 받게 한다 (최적화기는 원본 요청에 쿠키를 전달하지 않음).
+- `MdImage`: **일반 `<img loading="lazy" decoding="async">`를 쓴다**(2026-11-26 개발자 결정, M2-05 G2). `/uploads/*`는 운영에서 Nginx가 직접 제공하므로 Next 이미지 최적화기가 상대 경로 원본을 가져올 수 없다(standalone·E2E에서 404 확인). 이미지 최적화는 업로드할 때 백엔드가 만드는 WebP(백엔드 §5.5, M3)로 대신한다. 카드 썸네일 등 `/uploads/*` 이미지 전체에 같은 방식을 쓴다. M7 비공개 미디어도 브라우저가 원본을 직접 받으므로 이 방식과 맞는다.
 - 본문 스타일은 `.prose-jblog` 클래스에 정의한다: UI 기획서 §7.3 (Source Serif 20/32, h2 Work Sans 24/28, Quote 스타일, 문단 간격 32, 이미지 radius 12, 코드블록 스타일).
 
 ---
@@ -435,7 +435,7 @@ lib/api/client.ts: 모든 요청 credentials:'include', 'X-Requested-With: jblog
 
 - 브레이크포인트: `tablet 768` / `laptop 1024` / `desktop 1280` (UI 기획서 §4.2). 모바일 우선으로 작성한다.
 - 모바일 Navbar: 햄버거 → 전체화면 시트(`Dialog`), 포커스 트랩, ESC로 닫기, 열린 동안 body 스크롤 잠금
-- 썸네일은 `aspect-ratio` + `next/image`의 `sizes`(예: `(min-width:1280px) 360px, (min-width:768px) 50vw, 100vw`)
+- 썸네일은 `aspect-ratio`로 자리를 먼저 잡고(레이아웃 흔들림 방지) `<img loading="lazy">`로 받는다(§5.3 MdImage 결정과 같음). 화면 폭별 크기 변형은 백엔드 WebP 변형(M3)이 생기면 `srcset`으로 붙인다
 - 테마: `next-themes` `defaultTheme="system"`, `enableSystem`, `disableTransitionOnChange=false`. `<html suppressHydrationWarning>`. 토글 아이콘은 hydration 이후 렌더한다 (`mounted` 체크)
 - 로고와 Shiki 코드블록은 CSS 변수와 `[data-theme]` 선택자로 Light/Dark 전환 (JS 불필요)
 
