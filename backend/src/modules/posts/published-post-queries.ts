@@ -8,6 +8,12 @@ import { NEWEST_FIRST, publishedPostWhere } from './published-post';
 // 어느 쪽이든 받는 최소한의 클라이언트 형태. 호출하는 쪽이 어느 시점을 읽을지 정한다.
 export type PostDb = PrismaClient | Prisma.TransactionClient;
 
+// direction: older = 목록에서 바로 뒤, newer = 바로 앞. asOf: 요청 전체가 공유하는 공개 기준 시각.
+export interface NeighborOptions {
+  direction: 'older' | 'newer';
+  asOf: Date;
+}
+
 export interface PostPosition {
   id: number;
   publishedAt: Date | null;
@@ -15,19 +21,23 @@ export interface PostPosition {
 }
 
 // 현재 slug가 아닌 예약 slug(이전 slug)면 현재 slug를 찾는다. 대상 글이 비공개이거나 삭제됐으면 null이다.
-export async function findCurrentSlugOfOldSlug(db: PostDb, slug: string): Promise<string | null> {
+export async function findCurrentSlugOfOldSlug(
+  db: PostDb,
+  slug: string,
+  asOf: Date,
+): Promise<string | null> {
   const oldSlug = await db.postSlug.findFirst({
-    where: { slug, isCurrent: false, post: publishedPostWhere() },
+    where: { slug, isCurrent: false, post: publishedPostWhere(asOf) },
     select: { post: { select: { slug: true } } },
   });
   return oldSlug?.post?.slug ?? null;
 }
 
-// 정렬(publishedAt desc, id desc)에서 바로 이웃한 공개 글. older = 목록에서 바로 뒤, newer = 바로 앞.
+// 정렬(publishedAt desc, id desc)에서 바로 이웃한 공개 글.
 export async function findNeighbor(
   db: PostDb,
   post: PostPosition,
-  direction: 'older' | 'newer',
+  { direction, asOf }: NeighborOptions,
 ): Promise<{ slug: string; title: string } | null> {
   const { publishedAt, id } = post;
   if (publishedAt === null) return null;
@@ -36,7 +46,7 @@ export async function findNeighbor(
   return db.post.findFirst({
     where: {
       AND: [
-        publishedPostWhere(),
+        publishedPostWhere(asOf),
         {
           OR: [
             { publishedAt: { [comparison]: publishedAt } },
@@ -50,10 +60,14 @@ export async function findNeighbor(
   });
 }
 
-export async function findRelated(db: PostDb, post: PostPosition): Promise<PostSummaryDto[]> {
+export async function findRelated(
+  db: PostDb,
+  post: PostPosition,
+  asOf: Date,
+): Promise<PostSummaryDto[]> {
   if (post.categoryId === null) return [];
   const rows = await db.post.findMany({
-    where: { ...publishedPostWhere(), categoryId: post.categoryId, id: { not: post.id } },
+    where: { ...publishedPostWhere(asOf), categoryId: post.categoryId, id: { not: post.id } },
     orderBy: NEWEST_FIRST,
     take: MAX_RELATED_POSTS,
     select: POST_SUMMARY_SELECT,

@@ -24,9 +24,11 @@ export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(query: PostListQueryDto): Promise<PostListResponseDto> {
+    // 공개 기준 시각은 요청당 한 번만 정해 count·목록 조회가 같은 글 집합을 보게 한다.
+    const asOf = new Date();
     const pageRequest = resolvePageRequest(query);
     const where = {
-      ...publishedPostWhere(),
+      ...publishedPostWhere(asOf),
       ...(query.category === undefined ? {} : { category: { slug: query.category } }),
       ...(query.tag === undefined ? {} : { tags: { some: { tag: { slug: query.tag } } } }),
       ...(query.featured === true ? { isFeatured: true } : {}),
@@ -46,22 +48,23 @@ export class PostsService {
   }
 
   async getDetail(slug: string): Promise<PostDetailResult> {
+    const asOf = new Date();
     const post = await this.prisma.post.findFirst({
-      where: { slug, ...publishedPostWhere() },
+      where: { slug, ...publishedPostWhere(asOf) },
       select: { ...POST_DETAIL_SELECT, id: true, categoryId: true },
     });
-    if (post === null) return this.findMovedPost(slug);
+    if (post === null) return this.findMovedPost(slug, asOf);
 
     const [prev, next, related] = await Promise.all([
-      findNeighbor(this.prisma, post, 'older'),
-      findNeighbor(this.prisma, post, 'newer'),
-      findRelated(this.prisma, post),
+      findNeighbor(this.prisma, post, { direction: 'older', asOf }),
+      findNeighbor(this.prisma, post, { direction: 'newer', asOf }),
+      findRelated(this.prisma, post, asOf),
     ]);
     return { kind: 'found', detail: { post: toPostDetail(post), prev, next, related } };
   }
 
-  private async findMovedPost(slug: string): Promise<PostDetailResult> {
-    const currentSlug = await findCurrentSlugOfOldSlug(this.prisma, slug);
+  private async findMovedPost(slug: string, asOf: Date): Promise<PostDetailResult> {
+    const currentSlug = await findCurrentSlugOfOldSlug(this.prisma, slug, asOf);
     return currentSlug === null ? { kind: 'missing' } : { kind: 'moved', currentSlug };
   }
 }

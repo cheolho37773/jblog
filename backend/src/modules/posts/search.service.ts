@@ -12,7 +12,7 @@ import {
   toPostList,
 } from './pagination';
 import { POST_SUMMARY_SELECT, toPostSummary } from './post-mapper';
-import { PUBLISHED_POST_SQL, publishedPostWhere } from './published-post';
+import { publishedPostSql, publishedPostWhere } from './published-post';
 
 // LIKE 와일드카드(%, _)와 이스케이프 문자(\)를 글자 그대로 찾도록 앞에 \를 붙인다.
 // PostgreSQL LIKE의 기본 이스케이프 문자가 \ 이다.
@@ -26,9 +26,11 @@ export class SearchService {
 
   // 백엔드 §5.4. 모든 값은 $queryRaw 템플릿의 바인딩 파라미터로만 들어간다(문자열 이어 붙이기 없음).
   async search(query: SearchQueryDto): Promise<PostListResponseDto> {
+    // 공개 기준 시각은 요청당 한 번만 정해 count·ID 조회·재조회가 같은 공개 집합을 보게 한다.
+    const asOf = new Date();
     const pageRequest = resolvePageRequest(query);
     const pattern = `%${escapeLikePattern(query.q)}%`;
-    const matches = Prisma.sql`${PUBLISHED_POST_SQL}
+    const matches = Prisma.sql`${publishedPostSql(asOf)}
       AND (title ILIKE ${pattern} OR excerpt ILIKE ${pattern} OR "contentMd" ILIKE ${pattern})`;
 
     const totalItems = await this.countMatches(matches);
@@ -36,7 +38,7 @@ export class SearchService {
     if (!hasItemsOnPage(totalItems, pageRequest)) return toPostList([], totalItems, pageRequest);
 
     const ids = await this.findPageIds(matches, pattern, pageRequest);
-    const items = await this.loadInOrder(ids);
+    const items = await this.loadInOrder(ids, asOf);
     return toPostList(items, totalItems, pageRequest);
   }
 
@@ -63,9 +65,9 @@ export class SearchService {
   // 목록과 같은 형태로 만들기 위해 Prisma로 다시 읽고, raw 쿼리가 정한 순서를 되살린다.
   // ID 조회와 이 재조회 사이에 비공개로 바뀐 글이 응답에 새지 않도록 공개 조건을 다시 건다.
   // 그 경합이 있으면 totalItems보다 items가 적을 수 있다. 비공개 글을 노출하는 것보다 안전하다.
-  private async loadInOrder(ids: number[]): Promise<PostSummaryDto[]> {
+  private async loadInOrder(ids: number[], asOf: Date): Promise<PostSummaryDto[]> {
     const rows = await this.prisma.post.findMany({
-      where: { id: { in: ids }, ...publishedPostWhere() },
+      where: { id: { in: ids }, ...publishedPostWhere(asOf) },
       select: { id: true, ...POST_SUMMARY_SELECT },
     });
     const byId = new Map(rows.map((row) => [row.id, row]));
