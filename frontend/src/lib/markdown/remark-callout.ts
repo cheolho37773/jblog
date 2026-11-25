@@ -18,7 +18,8 @@ type CalloutKind = keyof typeof CALLOUT_LABELS;
 const CALLOUT_MARKER = /^\[!([A-Za-z]+)\][ \t]*(?:\r?\n)?/;
 
 function isCalloutKind(value: string): value is CalloutKind {
-  return value in CALLOUT_LABELS;
+  // `in`은 constructor·toString 같은 상속 이름도 참이 되므로 자기 속성만 허용한다.
+  return Object.hasOwn(CALLOUT_LABELS, value);
 }
 
 function findMarker(blockquote: Blockquote) {
