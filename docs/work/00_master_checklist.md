@@ -140,6 +140,8 @@
 **백엔드**
 - [x] BE-03 Posts/Categories/Tags 공개 조회 + 검색(`pg_trgm`) — 계약 #53, 구현 #59 (2026-11-25)
 - [ ] BE-04a / SEC-05 내부 API `/internal/posts/:slug`·`/internal/projects/:slug`(메타+원문 단일 응답, 스냅샷 조회) + `InternalKeyGuard`, 응답 유형별 `Cache-Control`
+  - [x] BE-04a-1 `/internal/posts/:slug` + `InternalKeyGuard`(상수 시간 비교) + 읽기 전용 REPEATABLE READ 스냅샷 + `private, no-store` + 키 로그 마스킹 — 계약 #53, 구현 #64 (2026-11-25)
+  - [ ] BE-04a-2 `/internal/projects/:slug` ⏸ 보류: 프로젝트 공개 API와 함께 M4(BE-08)에서 (M2 계획 G1 결정 4)
 
 **프론트엔드**
 - [ ] FE-04 `frontend/src/lib/markdown` 파이프라인 + `.prose-jblog` + 한글 본문 폰트(Noto Serif KR)
