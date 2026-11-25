@@ -123,6 +123,23 @@ const VISUAL_EXPECT = {
   maxDiffPixels: 15,
 } as const;
 
+// 시각 회귀 전용 Chromium 실행 플래그(M2-VR, Issue #62). 같은 이미지·같은 digest인데 CI 러너 CPU가 달라지면
+// 글자 가장자리(안티앨리어싱)가 어긋난 것이 원인으로 추정되어, CPU·GPU·시스템 설정에 따른 렌더링 분기를 없앤다.
+// visual 프로젝트에만 적용하며 일반 E2E(prod·components)에는 주지 않는다.
+// 근거 위치는 이 환경에서 소스를 직접 열어 확인하지 못했다. 아래 설명은 Chromium 스위치 이름과 일반적으로 알려진 동작이다.
+// - --disable-skia-runtime-opts: Skia가 실행 중 CPU 기능(SSE4·AVX2 등)을 감지해 고르는 최적화 경로를 끈다. 경로마다
+//   부동소수점 반올림이 달라 CPU 모델에 따라 픽셀이 1~2단계 달라질 수 있다. (스위치 정의 파일 위치: 확인 못 함)
+// - --font-render-hinting=none: 글꼴 힌팅을 끄고 글리프 윤곽을 그대로 그린다. 시스템 fontconfig·FreeType 힌팅 설정 차이를 없앤다.
+//   (Playwright·Puppeteer 이슈에서 헤드리스 스크린샷 안정화 용도로 흔히 쓰인다. 공식 문서 위치: 확인 못 함)
+// - --disable-gpu: GPU 래스터화를 끄고 소프트웨어 래스터화로 고정한다. 러너의 GPU·드라이버 유무에 따른 차이를 막는다.
+// - --force-color-profile=srgb: 디스플레이 색 프로필 감지를 건너뛰고 sRGB로 고정해 색 변환 차이를 막는다.
+const VISUAL_CHROMIUM_ARGS = [
+  '--disable-skia-runtime-opts',
+  '--font-render-hinting=none',
+  '--disable-gpu',
+  '--force-color-profile=srgb',
+];
+
 const visualProjects = [
   {
     name: 'visual',
@@ -130,7 +147,11 @@ const visualProjects = [
     // 기준 이미지는 Linux 하나뿐이라 파일 이름에 플랫폼·프로젝트 접미사를 붙이지 않는다.
     snapshotPathTemplate: `${VISUAL_TEST_DIR}/__screenshots__/{testFilePath}/{arg}{ext}`,
     expect: { toHaveScreenshot: VISUAL_EXPECT },
-    use: { ...devices['Desktop Chrome'], baseURL: originOf(COMPONENTS_SERVER) },
+    use: {
+      ...devices['Desktop Chrome'],
+      baseURL: originOf(COMPONENTS_SERVER),
+      launchOptions: { args: VISUAL_CHROMIUM_ARGS },
+    },
   },
 ];
 

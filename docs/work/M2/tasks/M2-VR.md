@@ -54,3 +54,18 @@
 ## 인계 노트
 
 (단계별로 덧붙인다)
+
+### ① 렌더링 고정 (devops-engineer)
+
+- 넣은 곳: `frontend/playwright.config.ts`의 `VISUAL_CHROMIUM_ARGS`를 visual 프로젝트 `use.launchOptions.args`에만 적용했다. prod·components 프로젝트는 그대로다.
+- 플래그와 이유 (근거 위치는 소스를 직접 열어 확인하지 못했다. config 주석에도 "확인 못 함"으로 적었다)
+  - `--disable-skia-runtime-opts`: Skia의 실행 중 CPU 기능 감지(SSE·AVX 등) 최적화 경로를 끈다. CPU마다 반올림이 달라 안티앨리어싱이 어긋나는 추정 원인에 직접 대응한다
+  - `--font-render-hinting=none`: 힌팅 설정 차이를 없앤다
+  - `--disable-gpu`: 소프트웨어 래스터화로 고정한다
+  - `--force-color-profile=srgb`: 색 프로필 감지를 sRGB로 고정한다
+- CI: `e2e` 잡의 "시각 회귀 (고정 컨테이너)" 단계 앞에 "러너 CPU 모델 기록" 단계(`lscpu | grep 'Model name'`)를 추가했다. 잡 이름·개수는 그대로고 외부 액션도 추가하지 않았다. 별도 잡이 아니라 같은 잡 안의 단계다
+- 확인 결과
+  - 플래그 적용 후 옛 기준 이미지로 `pnpm test:visual`: 24건 모두 실패했다. 플래그가 렌더링을 바꾼 것이므로 예상한 결과다. 기준 이미지 재생성은 test-engineer가 한다
+  - `pnpm test:e2e`: 228건 통과, 일반 E2E 영향 없음
+  - `pnpm verify`: 통과
+- test-engineer 참고: `pnpm test:visual:update`로 24장을 다시 만들 때 `frontend/playwright.config.ts`는 수정하지 않는다. 고정 컨테이너에서 연속 3회 통과와 시험용 변경 2종 검출을 확인한다.
