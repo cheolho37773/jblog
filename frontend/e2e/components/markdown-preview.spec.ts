@@ -112,11 +112,18 @@ for (const theme of THEMES) {
       expect(await style(first, 'color')).toBe(color.body);
       expect(await style(first, 'font-family')).toContain('Source Serif');
 
-      const pair = preview(page).locator(':scope > p + p').first();
-      const previous = preview(page).locator(':scope > p:has(+ p)').first();
-      const gap = await pair.evaluate((el) => el.getBoundingClientRect().top);
-      const above = await previous.evaluate((el) => el.getBoundingClientRect().bottom);
-      expect(Math.abs(gap - above - 32), `문단 간격 ${gap - above}`).toBeLessThanOrEqual(TOLERANCE);
+      // Playwright 엔진은 `:scope > p:has(+ p)`를 0건으로 돌려주므로 브라우저에서 직접 직계 연속 문단을 찾는다.
+      const gap = await preview(page).evaluate((root) => {
+        const children = Array.from(root.children);
+        const index = children.findIndex(
+          (el, i) => el.tagName === 'P' && children[i + 1]?.tagName === 'P',
+        );
+        const upper = children[index];
+        const lower = children[index + 1];
+        if (!upper || !lower) return Number.NaN;
+        return lower.getBoundingClientRect().top - upper.getBoundingClientRect().bottom;
+      });
+      expect(Math.abs(gap - 32), `문단 간격 ${gap}`).toBeLessThanOrEqual(TOLERANCE);
     });
 
     test('h2: Work Sans 600 24/28 text-strong, 아래 본문과 간격 16', async ({ page }) => {

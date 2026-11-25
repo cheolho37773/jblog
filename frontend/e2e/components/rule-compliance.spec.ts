@@ -163,6 +163,9 @@ async function collectFindings(
         for (const pseudo of pseudos) {
           if (pseudo === '::placeholder' && !['INPUT', 'TEXTAREA'].includes(element.tagName))
             continue;
+          // pre 안 코드 토큰 span에는 ::marker가 실재하지 않는데(목록 항목이 아님),
+          // 계산값은 currentColor(shiki 글자색)로 읽혀 위반처럼 보인다. 검사할 대상이 없으므로 건너뛴다.
+          if (pseudo === '::marker' && element.closest('pre') !== null) continue;
           check(element, pseudo);
         }
       }

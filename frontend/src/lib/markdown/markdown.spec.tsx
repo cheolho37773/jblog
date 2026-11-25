@@ -164,9 +164,12 @@ describe('이미지', () => {
     expect(img).toHaveAttribute('alt', '');
   });
 
-  it('이미지는 지연 로딩이다', async () => {
+  it('이미지는 지연 로딩·비동기 디코딩이다(next/image가 아닌 일반 img, G2)', async () => {
     const { container } = await renderMd('![x](/uploads/a.png)');
-    expect(container.querySelector('img')).toHaveAttribute('loading', 'lazy');
+    const img = container.querySelector('img');
+    expect(img).toHaveAttribute('loading', 'lazy');
+    expect(img).toHaveAttribute('decoding', 'async');
+    expect(img).toHaveAttribute('src', '/uploads/a.png');
   });
 });
 
