@@ -3,6 +3,7 @@ import { Writable } from 'node:stream';
 import request from 'supertest';
 import { createApiDocument, createApp } from '../src/bootstrap';
 import { buildUnreachableDatabaseUrl } from './fixtures/database-url';
+import { TEST_INTERNAL_KEY } from './fixtures/internal-key';
 import { ERROR_BODY_KEYS } from './fixtures/error-body';
 
 // OpenAPI 계약과 실제 실패 응답의 일치 (M0-07 Codex r1 #1, 백엔드 §4.1).
@@ -18,6 +19,7 @@ const UNREACHABLE_DB_ENV = {
   NODE_ENV: 'test',
   API_PORT: '4000',
   DATABASE_URL: buildUnreachableDatabaseUrl(),
+  INTERNAL_API_KEY: TEST_INTERNAL_KEY,
 };
 
 // OpenAPI 스키마 중 이 테스트가 읽는 부분만. 참조($ref)와 합성(allOf)을 풀어 한 객체로 본다.

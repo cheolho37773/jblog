@@ -2,7 +2,15 @@ import { validateEnv } from './env.validation';
 
 // 명백한 더미 접속 URL. 닫힌 포트(1)를 가리키며 사용자·비밀번호가 없다.
 const DUMMY_DATABASE_URL = 'postgresql://127.0.0.1:1/jblog_dummy_db';
-const VALID_ENV = { NODE_ENV: 'development', API_PORT: '4000', DATABASE_URL: DUMMY_DATABASE_URL };
+// 비밀이 아닌 더미 키. INTERNAL_API_KEY는 16자 이상이어야 한다(M2-04 규약 1).
+const DUMMY_INTERNAL_KEY = 'test-internal-key-not-secret';
+const MIN_INTERNAL_KEY_LENGTH = 16;
+const VALID_ENV = {
+  NODE_ENV: 'development',
+  API_PORT: '4000',
+  DATABASE_URL: DUMMY_DATABASE_URL,
+  INTERNAL_API_KEY: DUMMY_INTERNAL_KEY,
+};
 
 // 값이 에러 메시지로 새지 않는지 확인하기 위해 눈에 띄는 더미 값을 쓴다.
 const LEAK_CHECK_VALUE = 'leak-check-9f3a';
@@ -45,7 +53,7 @@ describe('validateEnv (환경변수 검증)', () => {
   });
 
   describe('거부', () => {
-    it.each(['NODE_ENV', 'API_PORT', 'DATABASE_URL'])(
+    it.each(['NODE_ENV', 'API_PORT', 'DATABASE_URL', 'INTERNAL_API_KEY'])(
       '%s 이 없으면 거부하고 메시지에 변수 이름이 있다',
       (name) => {
         expect(errorMessageOf(envWithout(name))).toContain(name);
@@ -58,6 +66,7 @@ describe('validateEnv (환경변수 검증)', () => {
       expect(message).toContain('NODE_ENV');
       expect(message).toContain('API_PORT');
       expect(message).toContain('DATABASE_URL');
+      expect(message).toContain('INTERNAL_API_KEY');
     });
 
     it.each(['abc', '0', '65536', '-1', '40.5', ''])('API_PORT=%j 는 거부한다', (port) => {
@@ -136,6 +145,42 @@ describe('validateEnv (환경변수 검증)', () => {
       });
 
       expect(message.includes(LEAK_CHECK_VALUE)).toBe(false);
+    });
+  });
+
+  describe('INTERNAL_API_KEY (M2-04)', () => {
+    const keyOfLength = (length: number): string => 'k'.repeat(length);
+
+    it(`${MIN_INTERNAL_KEY_LENGTH}자 이상이면 통과한다 (경계 ${MIN_INTERNAL_KEY_LENGTH}자, 긴 값)`, () => {
+      expect(() =>
+        validateEnv({ ...VALID_ENV, INTERNAL_API_KEY: keyOfLength(MIN_INTERNAL_KEY_LENGTH) }),
+      ).not.toThrow();
+      expect(() => validateEnv({ ...VALID_ENV, INTERNAL_API_KEY: keyOfLength(64) })).not.toThrow();
+    });
+
+    it.each([
+      ['15자', keyOfLength(MIN_INTERNAL_KEY_LENGTH - 1)],
+      ['빈 문자열', ''],
+      ['숫자', 1234567890123456],
+    ])('INTERNAL_API_KEY가 %s이면 거부하고 메시지에 이름이 있다', (_label, value) => {
+      expect(errorMessageOf({ ...VALID_ENV, INTERNAL_API_KEY: value })).toContain(
+        'INTERNAL_API_KEY',
+      );
+    });
+
+    it('거부 메시지에 키 값을 담지 않는다 (15자 값)', () => {
+      const shortKey = `${LEAK_CHECK_VALUE}x`.slice(0, MIN_INTERNAL_KEY_LENGTH - 1);
+
+      const message = errorMessageOf({ ...VALID_ENV, INTERNAL_API_KEY: shortKey });
+
+      expect(message).toContain('INTERNAL_API_KEY');
+      expect(message.includes(shortKey)).toBe(false);
+    });
+
+    it('다른 변수가 틀려 실패해도 올바른 키 값을 메시지에 넣지 않는다', () => {
+      const message = errorMessageOf({ ...VALID_ENV, NODE_ENV: 'staging' });
+
+      expect(message.includes(DUMMY_INTERNAL_KEY)).toBe(false);
     });
   });
 });
