@@ -127,6 +127,10 @@ jobs:
 
       # M1-05: 시각 회귀. 기준 이미지를 만든 것과 같은 컨테이너 이미지(scripts/visual/Dockerfile, 태그+digest 고정)에서 비교한다.
       # 러너(Ubuntu)에서 직접 돌리지 않는 이유: 폰트 렌더링이 달라 기준 이미지와 어긋난다. 필수 검사 이름은 e2e 그대로다.
+      # M2-VR: 러너 CPU 모델 기록. 시각 회귀가 러너에 따라 흔들릴 때 CPU 차이를 원인으로 확정하기 위한 로그다.
+      - name: 러너 CPU 모델 기록
+        run: lscpu | grep 'Model name'
+
       - name: 시각 회귀 (고정 컨테이너)
         run: pnpm test:visual
 

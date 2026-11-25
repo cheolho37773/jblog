@@ -123,6 +123,25 @@ const VISUAL_EXPECT = {
   maxDiffPixels: 15,
 } as const;
 
+// 시각 회귀 전용 Chromium 실행 플래그(M2-VR, Issue #62). 같은 이미지·같은 digest인데 CI 러너 CPU가 달라지면
+// 글자 가장자리(안티앨리어싱)가 어긋난 것이 원인으로 추정되어, CPU·GPU·시스템 설정에 따른 렌더링 분기를 없앤다.
+// visual 프로젝트에만 적용하며 일반 E2E(prod·components)에는 주지 않는다.
+// 출처는 Chromium 소스(main 브랜치)다. "확인된 동작"은 소스 주석 내용이고, "추정"은 이번 문제에 대한 우리의 가설이다.
+// - --disable-skia-runtime-opts: content/public/common/content_switches.cc의 kDisableSkiaRuntimeOpts.
+//   확인된 동작: 소스 주석은 "Do not use runtime-detected high-end CPU optimizations in Skia. This is useful for
+//   forcing a baseline code path for e.g. web tests."이다. 즉 CPU 기능 감지에 따른 최적화 경로를 끄고 기본 경로로 고정한다.
+//   추정: CPU 모델마다 경로가 달라 글자 가장자리 픽셀이 1~2단계 어긋났다.
+// - --disable-gpu: 같은 파일의 kDisableGpu. 확인된 동작: GPU 하드웨어 가속을 끈다.
+//   추정: 러너의 GPU·드라이버 유무에 따른 래스터화 차이를 막는다.
+// - --force-color-profile=srgb: ui/display/display_switches.cc의 kForceDisplayColorProfile. 확인된 동작: 허용 값에 srgb가 있고
+//   디스플레이 색 프로필을 지정한 값으로 강제한다. 추정: 러너별 색 변환 차이를 막는다.
+// --font-render-hinting은 소스에서 정의 위치를 찾지 못해 넣지 않는다.
+const VISUAL_CHROMIUM_ARGS = [
+  '--disable-skia-runtime-opts',
+  '--disable-gpu',
+  '--force-color-profile=srgb',
+];
+
 const visualProjects = [
   {
     name: 'visual',
@@ -130,7 +149,11 @@ const visualProjects = [
     // 기준 이미지는 Linux 하나뿐이라 파일 이름에 플랫폼·프로젝트 접미사를 붙이지 않는다.
     snapshotPathTemplate: `${VISUAL_TEST_DIR}/__screenshots__/{testFilePath}/{arg}{ext}`,
     expect: { toHaveScreenshot: VISUAL_EXPECT },
-    use: { ...devices['Desktop Chrome'], baseURL: originOf(COMPONENTS_SERVER) },
+    use: {
+      ...devices['Desktop Chrome'],
+      baseURL: originOf(COMPONENTS_SERVER),
+      launchOptions: { args: VISUAL_CHROMIUM_ARGS },
+    },
   },
 ];
 
