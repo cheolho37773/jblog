@@ -81,6 +81,11 @@
 - 눈 확인: home-1920-light, components-1920-dark을 열어 레이아웃·색이 정상이다(헤더·Footer·컴포넌트 배치와 다크 토큰 그대로). 마젠타 막대는 기존 마스킹 영역이다. 글자 렌더링만 달라졌다
 - 정리: playwright-report, test-results 삭제
 
+### Codex r1 대응 ① (devops-engineer)
+
+- `--font-render-hinting=none`을 제거해 `VISUAL_CHROMIUM_ARGS`는 3개(`--disable-skia-runtime-opts`, `--disable-gpu`, `--force-color-profile=srgb`)다. config 주석에 Chromium 소스 위치(`kDisableSkiaRuntimeOpts`·`kDisableGpu`·`kForceDisplayColorProfile`)와 소스 주석 요지(확인된 동작)를 적고 이번 문제에 대한 추정과 나눴다
+- 확인: `pnpm verify` 통과, `pnpm test:e2e` 228건 통과. `pnpm test:visual`은 기준 이미지가 옛 렌더링이라 24건 실패(예상). 기준 이미지 재생성은 test-engineer 몫이다
+
 ### 오케스트레이터 독립 확인 (깨끗한 클론)
 
 - 대상: `0c9daff` (`git clone --branch fix/M2-VR-visual-determinism` → `pnpm install --frozen-lockfile`, Node 24)
