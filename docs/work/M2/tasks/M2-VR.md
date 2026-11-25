@@ -86,6 +86,17 @@
 - `--font-render-hinting=none`을 제거해 `VISUAL_CHROMIUM_ARGS`는 3개(`--disable-skia-runtime-opts`, `--disable-gpu`, `--force-color-profile=srgb`)다. config 주석에 Chromium 소스 위치(`kDisableSkiaRuntimeOpts`·`kDisableGpu`·`kForceDisplayColorProfile`)와 소스 주석 요지(확인된 동작)를 적고 이번 문제에 대한 추정과 나눴다
 - 확인: `pnpm verify` 통과, `pnpm test:e2e` 228건 통과. `pnpm test:visual`은 기준 이미지가 옛 렌더링이라 24건 실패(예상). 기준 이미지 재생성은 test-engineer 몫이다
 
+### Codex r1 대응 ② (test-engineer)
+
+- 재생성: `--font-render-hinting` 제거 상태(dec1e32)로 `pnpm test:visual:update`(고정 컨테이너) 24장 재생성. 설정·`src/**` 수정 없음
+- 반복 결과: `pnpm test:visual` 연속 3회 모두 24 passed. 재시도·flaky 0건
+- 시험용 변경 검출 (`maxDiffPixels` 15 유지, 실행 뒤 `git checkout`으로 되돌림, `src` 변경 없음 확인)
+  - Light `--border` `#e8e8ea` -> `#e4e4e6`: Light 12장 실패, Dark 12장 통과. 최소 diff 245(menu-open-375-light), 718(search-open-375-light), 1093(home-375-light)
+  - Footer `pt-16` -> `pt-20`: 24장 전부 실패. 최소 diff 1477(menu-open-375-dark), 1479(menu-open-375-light), 6375(home-375-dark)
+  - 가장 작은 245는 허용치 15의 약 16배
+- 눈 확인: home-1920-light, components-1920-dark 정상(마젠타 막대는 기존 마스킹 영역)
+- 정리: playwright-report, test-results 삭제
+
 ### 오케스트레이터 독립 확인 (깨끗한 클론)
 
 - 대상: `0c9daff` (`git clone --branch fix/M2-VR-visual-determinism` → `pnpm install --frozen-lockfile`, Node 24)
