@@ -61,9 +61,10 @@ describe('내부 원문 API (실제 PostgreSQL)', () => {
   const base = Date.now();
   const daysAgo = (days: number): Date => new Date(base - days * MS_PER_DAY);
 
-  const getInternal = (path: string, key: string | undefined = TEST_INTERNAL_KEY) => {
+  // key 를 생략하면 올바른 키를 보낸다. 헤더 자체를 보내지 않으려면 null 을 명시한다.
+  const getInternal = (path: string, key: string | null = TEST_INTERNAL_KEY) => {
     const call = request(app.getHttpServer()).get(path);
-    return key === undefined ? call : call.set(INTERNAL_KEY_HEADER_NAME, key);
+    return key === null ? call : call.set(INTERNAL_KEY_HEADER_NAME, key);
   };
 
   // 요청 로그는 응답이 끝난 뒤 쓰이므로, 해당 경로의 로그가 보일 때까지 짧게 기다린다.
@@ -137,8 +138,8 @@ describe('내부 원문 API (실제 PostgreSQL)', () => {
   }
 
   describe('InternalKeyGuard: 키 검증 (규약 2)', () => {
-    const wrongKeys: [string, string | undefined][] = [
-      ['헤더 없음', undefined],
+    const wrongKeys: [string, string | null][] = [
+      ['헤더 없음', null],
       ['빈 값', ''],
       ['불일치(같은 길이)', 'x'.repeat(TEST_INTERNAL_KEY.length)],
       ['길이가 짧음', TEST_INTERNAL_KEY.slice(0, -1)],
@@ -271,7 +272,7 @@ describe('내부 원문 API (실제 PostgreSQL)', () => {
     });
 
     it('/api/internal/posts/x 는 키가 없어도 404 다', async () => {
-      const response = await getInternal('/api/internal/posts/x', undefined);
+      const response = await getInternal('/api/internal/posts/x', null);
 
       expect(response.status).toBe(404);
     });
