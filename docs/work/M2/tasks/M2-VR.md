@@ -69,3 +69,14 @@
   - `pnpm test:e2e`: 228건 통과, 일반 E2E 영향 없음
   - `pnpm verify`: 통과
 - test-engineer 참고: `pnpm test:visual:update`로 24장을 다시 만들 때 `frontend/playwright.config.ts`는 수정하지 않는다. 고정 컨테이너에서 연속 3회 통과와 시험용 변경 2종 검출을 확인한다.
+
+### ② 기준 이미지 재생성 (test-engineer)
+
+- 재생성: 렌더링 고정 플래그(89cc65e) 상태로 `pnpm test:visual:update`(linux/amd64 고정 컨테이너)를 실행해 24장을 다시 만들었다. 설정·`src/**`는 수정하지 않았다.
+- 반복 결과: `pnpm test:visual` 연속 3회 모두 24 passed. 재시도·flaky 0건
+- 시험용 변경 검출 (`maxDiffPixels` 15 유지, 실행 뒤 되돌림, `git status`로 `src` 변경 없음 확인)
+  - Light `--border` `#e8e8ea` → `#e4e4e6`(4단계): Light 12장 전부 실패(검출), Dark 12장은 영향 없어 통과. 이미지별 diff 픽셀 최소 245(menu-open-375-light), 그다음 718(search-open-375-light), 1093(home-375-light). components Light는 18100~45680
+  - Footer `pt-16` → `pt-20`: 24장 전부 실패(검출). 최소 1477(menu-open-375-dark), 그다음 1479(menu-open-375-light), 6375(home-375·search-open-375). home 13056~32640, components 35만~61만
+  - 두 종류 모두 최소 diff가 허용치 15보다 충분히 크다(가장 작은 245가 15의 약 16배)
+- 눈 확인: home-1920-light, components-1920-dark을 열어 레이아웃·색이 정상이다(헤더·Footer·컴포넌트 배치와 다크 토큰 그대로). 마젠타 막대는 기존 마스킹 영역이다. 글자 렌더링만 달라졌다
+- 정리: playwright-report, test-results 삭제
