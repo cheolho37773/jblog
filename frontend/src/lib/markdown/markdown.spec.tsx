@@ -14,7 +14,7 @@ interface Heading {
   id: string;
 }
 interface MarkdownModule {
-  renderMarkdown: (md: string) => Promise<ReactNode>;
+  renderMarkdown: (md: string, options?: { siteOrigin?: string }) => Promise<ReactNode>;
   extractHeadings: (md: string) => Heading[];
 }
 
@@ -22,9 +22,9 @@ interface MarkdownModule {
 const MODULE_PATH = './index';
 const loadModule = () => import(/* @vite-ignore */ MODULE_PATH) as Promise<MarkdownModule>;
 
-async function renderMd(md: string) {
+async function renderMd(md: string, options?: { siteOrigin?: string }) {
   const { renderMarkdown } = await loadModule();
-  const node = await renderMarkdown(md);
+  const node = await renderMarkdown(md, options);
   return render(<div data-testid="root">{node}</div>);
 }
 
@@ -353,5 +353,68 @@ describe('extractHeadings', () => {
   it('헤딩이 없으면 빈 배열이다', async () => {
     const { extractHeadings } = await loadModule();
     expect(extractHeadings('그냥 문단')).toEqual([]);
+  });
+});
+
+describe('Codex r1 회귀', () => {
+  it.each(['constructor', '__proto__', 'toString'])(
+    '상속 이름 콜아웃 [!%s]는 예외 없이 일반 인용문이다',
+    async (name) => {
+      const { container } = await renderMd(`> [!${name}]\n> 본문입니다\n`);
+      expect(container.querySelector('blockquote')).not.toBeNull();
+      expect(container.querySelector('aside')).toBeNull();
+    },
+  );
+
+  it('문장 속 캡션 이미지는 앞뒤 글자를 보존하고 figure로 분리된다', async () => {
+    const { container } = await renderMd('앞 ![alt](/uploads/a.png "캡션") 뒤');
+    const figure = container.querySelector('figure');
+    expect(figure?.querySelector('img')).not.toBeNull();
+    expect(figure?.querySelector('figcaption')).toHaveTextContent('캡션');
+    expect(container.textContent).toContain('앞');
+    expect(container.textContent).toContain('뒤');
+  });
+
+  it('한 문단의 캡션 이미지 2개는 figure 2개이고 글자가 보존된다', async () => {
+    const { container } = await renderMd(
+      '가 ![a](/uploads/a.png "첫째") 나 ![b](/uploads/b.png "둘째") 다',
+    );
+    expect(container.querySelectorAll('figure')).toHaveLength(2);
+    for (const word of ['가', '나', '다']) expect(container.textContent).toContain(word);
+  });
+
+  it('캡션 없는 문장 속 이미지는 figure 없이 그대로 남는다', async () => {
+    const { container } = await renderMd('앞 ![alt](/uploads/a.png) 뒤');
+    expect(container.querySelector('figure')).toBeNull();
+    expect(container.querySelector('p img')).not.toBeNull();
+    expect(container.textContent).toContain('앞');
+    expect(container.textContent).toContain('뒤');
+  });
+
+  // 계약: renderMarkdown(md, { siteOrigin }) — 외부 링크 판정의 기준 오리진.
+  describe('사이트 오리진 기준 링크', () => {
+    const siteOrigin = 'https://blog.example.com';
+    const linkOf = async (url: string) => {
+      const { container } = await renderMd(`[링크](${url})`, { siteOrigin });
+      return container.querySelector('a') as HTMLAnchorElement;
+    };
+
+    it.each([
+      'https://blog.example.com/posts/a',
+      '//blog.example.com/posts/a',
+      '/posts/a',
+      'posts/a',
+    ])('내부 링크 %s는 target이 없다', async (url) => {
+      expect(await linkOf(url)).not.toHaveAttribute('target');
+    });
+
+    it.each(['https://other.example.org/x', '//other.example.org/x'])(
+      '외부 링크 %s는 새 탭과 noopener다',
+      async (url) => {
+        const a = await linkOf(url);
+        expect(a).toHaveAttribute('target', '_blank');
+        expect(a.getAttribute('rel') ?? '').toContain('noopener');
+      },
+    );
   });
 });
