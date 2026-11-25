@@ -10,6 +10,7 @@ const REDACTED = '[Redacted]';
 const REDACT_PATHS = [
   'req.headers.authorization',
   'req.headers.cookie',
+  'req.headers["x-internal-key"]',
   'res.headers["set-cookie"]',
 ];
 

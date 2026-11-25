@@ -2,7 +2,9 @@ import { plainToInstance, Transform } from 'class-transformer';
 import {
   IsIn,
   IsInt,
+  IsString,
   Max,
+  MinLength,
   Min,
   registerDecorator,
   type ValidationOptions,
@@ -14,6 +16,8 @@ export type NodeEnvironment = (typeof NODE_ENVIRONMENTS)[number];
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
+// 내부 API 키의 최소 길이. 추측하기 쉬운 짧은 값을 막는다.
+const MIN_INTERNAL_API_KEY_LENGTH = 16;
 const DIGITS_ONLY = /^\d+$/;
 
 // node-postgres(Prisma 드라이버 어댑터)가 받는 스킴. Testcontainers는 postgres://를 쓴다.
@@ -63,6 +67,11 @@ export class AppEnv {
   // 접속 정보(비밀번호 포함). 로그·에러 메시지에 출력하지 않는다 (개요 §6-b).
   @IsDatabaseUrl()
   DATABASE_URL!: string;
+
+  // 프론트 서버가 /internal/*을 부를 때 쓰는 공유 키(비밀값). 메시지에는 이름만 담는다(개요 §6-b).
+  @IsString()
+  @MinLength(MIN_INTERNAL_API_KEY_LENGTH)
+  INTERNAL_API_KEY!: string;
 }
 
 // 기본값을 채우지 않는다: 없거나 틀리면 부팅을 실패시킨다.

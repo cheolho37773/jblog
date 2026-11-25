@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CategoriesController } from './categories.controller';
 import { InternalPostsController } from './internal-posts.controller';
+import { InternalPostsService } from './internal-posts.service';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { SearchController } from './search.controller';
@@ -16,6 +17,6 @@ import { TaxonomyService } from './taxonomy.service';
     SearchController,
     InternalPostsController,
   ],
-  providers: [PostsService, TaxonomyService, SearchService],
+  providers: [PostsService, InternalPostsService, TaxonomyService, SearchService],
 })
 export class PostsModule {}

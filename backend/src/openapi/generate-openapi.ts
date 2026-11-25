@@ -3,11 +3,14 @@ import { join } from 'node:path';
 import { createApiDocument, createApp } from '../bootstrap';
 import { sortKeysDeep } from './sort-keys';
 
+const DUMMY_INTERNAL_KEY = 'openapi-generate-dummy-key';
+
 // 문서 출력용 더미 환경값. 서버를 띄우지 않고 DB에도 연결하지 않으므로 비밀값이 아니다.
 const OPENAPI_ENV = {
   NODE_ENV: 'development',
   API_PORT: '3000',
   DATABASE_URL: 'postgresql://localhost:5432/openapi_generate',
+  INTERNAL_API_KEY: DUMMY_INTERNAL_KEY,
 };
 
 const JSON_INDENT = 2;
