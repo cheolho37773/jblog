@@ -3,10 +3,11 @@ import { Writable } from 'node:stream';
 import request from 'supertest';
 import { createApiDocument, createApp } from '../src/bootstrap';
 import { buildUnreachableDatabaseUrl } from './fixtures/database-url';
+import { TEST_INTERNAL_KEY } from './fixtures/internal-key';
 import { expectErrorShape } from './fixtures/error-body';
 
 // M2-01 공개 글·카테고리·태그·검색 + 내부 원문 API 계약 (지시서 docs/work/M2/tasks/M2-01.md).
-// DB 없이 OpenAPI 문서와 "구현 전 501" 동작만 확인한다(조회 로직은 M2-03·04).
+// DB 없이 OpenAPI 문서와 내부 API의 키 거부(401)만 확인한다(조회 로직은 M2-03·04 통합 테스트).
 //
 // 해석 약속(구현이 지킬 것):
 //  - nullable 필드는 @nestjs/swagger 기본 출력대로 프로퍼티에 `nullable: true`를 둔다
@@ -24,6 +25,7 @@ const UNREACHABLE_DB_ENV = {
   NODE_ENV: 'test',
   API_PORT: '4000',
   DATABASE_URL: buildUnreachableDatabaseUrl(),
+  INTERNAL_API_KEY: TEST_INTERNAL_KEY,
 };
 
 interface SchemaNode {
@@ -449,14 +451,14 @@ describe('M2-01 계약: 공개 글·카테고리·태그·검색 + 내부 원문
     });
   });
 
-  describe('구현 전 핸들러는 공통 에러 형식의 501이다 (빈 200 금지)', () => {
-    // 공개 조회 5개는 M2-03에서 구현돼 DB 없는 e2e 로는 확인할 수 없다(통합 테스트가 맡는다)
-    it.each(['/internal/posts/some-slug'])('GET %s 는 501 NOT_IMPLEMENTED', async (url) => {
+  describe('내부 원문 API는 키 검증이 먼저 돈다 (M2-04, DB 없이 확인 가능한 부분)', () => {
+    // 공개 조회 5개는 통합 테스트가 맡는다. 내부 API의 키 거부는 DB에 닿기 전에 끝나므로 여기서도 확인한다.
+    it.each(['/internal/posts/some-slug'])('GET %s 는 키 없이 401 UNAUTHORIZED 다', async (url) => {
       const response = await request(app.getHttpServer()).get(url);
-      expect(response.status).toBe(501);
+      expect(response.status).toBe(401);
       expectErrorShape(response.body, {
-        statusCode: 501,
-        code: 'NOT_IMPLEMENTED',
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
         path: url.split('?')[0] ?? url,
       });
     });

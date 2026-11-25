@@ -3,6 +3,7 @@ import { Writable } from 'node:stream';
 import request from 'supertest';
 import { createApp } from '../src/bootstrap';
 import { buildUnreachableDatabaseUrl } from './fixtures/database-url';
+import { TEST_INTERNAL_KEY } from './fixtures/internal-key';
 
 // 보안 헤더의 모드별 차이 (M1-09, Issue #37).
 // Safari(WebKit)는 localhost에도 CSP upgrade-insecure-requests를 적용해 http://localhost의
@@ -31,7 +32,12 @@ const OTHER_HELMET_HEADERS = [
 type NodeEnvironment = 'development' | 'test' | 'production';
 
 function envFor(nodeEnv: NodeEnvironment): Record<string, unknown> {
-  return { NODE_ENV: nodeEnv, API_PORT: '4000', DATABASE_URL: buildUnreachableDatabaseUrl() };
+  return {
+    NODE_ENV: nodeEnv,
+    API_PORT: '4000',
+    DATABASE_URL: buildUnreachableDatabaseUrl(),
+    INTERNAL_API_KEY: TEST_INTERNAL_KEY,
+  };
 }
 
 function discardLogs(): Writable {

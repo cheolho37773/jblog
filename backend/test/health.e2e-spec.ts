@@ -3,6 +3,7 @@ import { Writable } from 'node:stream';
 import request from 'supertest';
 import { createApp } from '../src/bootstrap';
 import { buildUnreachableDatabaseUrl, UNREACHABLE_DATABASE } from './fixtures/database-url';
+import { TEST_INTERNAL_KEY } from './fixtures/internal-key';
 import { expectErrorShape } from './fixtures/error-body';
 
 // DB가 없는 상태의 헬스체크 (M0-06 규약 7·8). 실제 DB가 붙은 200 확인은 test/health.int-spec.ts.
@@ -14,6 +15,7 @@ const UNREACHABLE_DB_ENV = {
   NODE_ENV: 'test',
   API_PORT: '4000',
   DATABASE_URL: buildUnreachableDatabaseUrl(),
+  INTERNAL_API_KEY: TEST_INTERNAL_KEY,
 };
 
 function createLogCollector(): { stream: Writable; output: () => string } {

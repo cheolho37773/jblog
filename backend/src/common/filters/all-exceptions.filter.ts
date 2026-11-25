@@ -29,6 +29,10 @@ function resolveCode(exception: HttpException): string {
   return HttpStatus[status] ?? 'ERROR';
 }
 
+function isNoStore(header: unknown): boolean {
+  return typeof header === 'string' && header.includes(CACHE_CONTROL_NO_STORE);
+}
+
 function isServerError(status: number): boolean {
   return status >= HttpStatus.INTERNAL_SERVER_ERROR;
 }
@@ -48,7 +52,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const body = this.buildBody(exception, requestPath(request));
     // 핸들러가 성공용 Cache-Control을 미리 붙였더라도 오류 응답은 캐시하지 않는다.
-    response.setHeader('Cache-Control', CACHE_CONTROL_NO_STORE);
+    // 이미 no-store(내부 API의 private, no-store)면 더 구체적인 값을 지우지 않는다.
+    if (!isNoStore(response.getHeader('Cache-Control'))) {
+      response.setHeader('Cache-Control', CACHE_CONTROL_NO_STORE);
+    }
     response.status(body.statusCode).json(body);
   }
 

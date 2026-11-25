@@ -102,8 +102,16 @@ export async function runSeed(databaseUrl: string): Promise<void> {
 // createApp에 넘길 환경값. 포트는 listen하지 않으므로 의미 없는 더미 값이다.
 const DUMMY_API_PORT = '4000';
 
+// 비밀이 아닌 더미 내부 키(16자 이상).
+const DUMMY_INTERNAL_KEY = 'integration-dummy-internal-key';
+
 export function createIntegrationEnv(databaseUrl: string): Record<string, unknown> {
-  return { NODE_ENV: 'test', API_PORT: DUMMY_API_PORT, DATABASE_URL: databaseUrl };
+  return {
+    NODE_ENV: 'test',
+    API_PORT: DUMMY_API_PORT,
+    DATABASE_URL: databaseUrl,
+    INTERNAL_API_KEY: DUMMY_INTERNAL_KEY,
+  };
 }
 
 export async function closeIntegrationDatabase(db: IntegrationDatabase): Promise<void> {

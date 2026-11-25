@@ -3,6 +3,7 @@ import { Writable } from 'node:stream';
 import request from 'supertest';
 import { createApp } from '../src/bootstrap';
 import { buildUnreachableDatabaseUrl } from './fixtures/database-url';
+import { TEST_INTERNAL_KEY } from './fixtures/internal-key';
 import { expectErrorShape } from './fixtures/error-body';
 import {
   PROBE_APP_500_CODE,
@@ -15,11 +16,17 @@ import {
 
 // DB 없이 앱이 떠야 한다(M0-06 규약 7): 닫힌 포트를 가리키는 더미 DATABASE_URL을 쓴다.
 const DUMMY_DATABASE_URL = buildUnreachableDatabaseUrl();
-const DEV_ENV = { NODE_ENV: 'development', API_PORT: '4000', DATABASE_URL: DUMMY_DATABASE_URL };
+const DEV_ENV = {
+  NODE_ENV: 'development',
+  API_PORT: '4000',
+  DATABASE_URL: DUMMY_DATABASE_URL,
+  INTERNAL_API_KEY: TEST_INTERNAL_KEY,
+};
 const PRODUCTION_ENV = {
   NODE_ENV: 'production',
   API_PORT: '4000',
   DATABASE_URL: DUMMY_DATABASE_URL,
+  INTERNAL_API_KEY: TEST_INTERNAL_KEY,
 };
 const GENERIC_500_MESSAGE_MAX_LENGTH = 100;
 
