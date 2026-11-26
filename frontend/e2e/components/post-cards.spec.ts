@@ -951,3 +951,44 @@ test.describe('FeaturedHero 긴 제목 (dev-card-hero-long)', () => {
     });
   }
 });
+
+// Codex r2 #1: 흐름 배치 뒤 중복 하단 여백이 남아 루트가 664보다 커지던 문제 회귀 방지 (UI §5.5 "블록 총 높이 664").
+test.describe('FeaturedHero 루트 높이 (중복 하단 여백 없음)', () => {
+  const HERO_BLOCK_HEIGHT = 664;
+  const PIXEL_TOLERANCE = 1;
+
+  for (const width of [768, 1024, 1440] as const) {
+    test(`${width}px: 짧은 제목(1~3줄) Hero 루트 높이는 664(±1)이다`, async ({ page }) => {
+      await open(page, 'light', { width, height: 900 });
+      const rootHeight = await wrap(page, 'dev-card-hero').evaluate(
+        (w) => w.firstElementChild!.getBoundingClientRect().height,
+      );
+      expect(
+        Math.abs(rootHeight - HERO_BLOCK_HEIGHT),
+        `루트 높이 ${rootHeight}`,
+      ).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+    });
+
+    test(`${width}px: 긴 제목 Hero는 루트 하단이 패널 하단과 같고(±1) 664보다 커진다`, async ({
+      page,
+    }) => {
+      await open(page, 'light', { width, height: 900 });
+      const m = await wrap(page, 'dev-card-hero-long').evaluate((w) => {
+        const root = w.firstElementChild!;
+        let panelEl: Element | null = root.querySelector('h1, h2');
+        while (panelEl && parseFloat(getComputedStyle(panelEl).borderTopWidth) !== 1)
+          panelEl = panelEl.parentElement;
+        return {
+          rootHeight: root.getBoundingClientRect().height,
+          rootBottom: root.getBoundingClientRect().bottom,
+          panelBottom: panelEl!.getBoundingClientRect().bottom,
+        };
+      });
+      expect(m.rootHeight, '긴 제목이면 664보다 커야 한다').toBeGreaterThan(HERO_BLOCK_HEIGHT);
+      expect(
+        Math.abs(m.rootBottom - m.panelBottom),
+        `루트 하단 ${m.rootBottom} / 패널 하단 ${m.panelBottom}`,
+      ).toBeLessThanOrEqual(PIXEL_TOLERANCE);
+    });
+  }
+});
