@@ -8,19 +8,12 @@ import { MdLink } from './MdLink';
 import { markdownToSafeHast } from './processor';
 
 export interface RenderOptions {
-  /** 외부 링크 판정의 기준 오리진. 없으면 NEXT_PUBLIC_SITE_URL의 오리진을 쓴다. */
+  /**
+   * 외부 링크 판정의 기준 오리진(예: env.public.NEXT_PUBLIC_SITE_URL). 호출하는 쪽이 넘긴다.
+   * 이 모듈은 서버(RSC)와 관리자 프리뷰(M3, 브라우저)가 함께 쓰므로 server-only인 env를 직접 읽지 않는다.
+   * 없으면 명시적 호스트가 있는 주소(`http(s)://`, `//`)만 외부로 본다.
+   */
   siteOrigin?: string;
-}
-
-// env는 server-only라 서버 밖(브라우저 프리뷰·단위 테스트)에서는 불러올 수 없다.
-// 그때는 기준 없이 판정한다(명시적 호스트가 있는 주소만 외부). 브라우저 쪽은 siteOrigin을 직접 넘긴다.
-async function defaultSiteOrigin(): Promise<string | undefined> {
-  try {
-    const { env } = await import('@/lib/env');
-    return new URL(env.public.NEXT_PUBLIC_SITE_URL).origin;
-  } catch {
-    return undefined;
-  }
 }
 
 /**
@@ -32,7 +25,7 @@ export async function renderMarkdown(
   markdown: string,
   options: RenderOptions = {},
 ): Promise<ReactNode> {
-  const siteOrigin = options.siteOrigin ?? (await defaultSiteOrigin());
+  const { siteOrigin } = options;
   const tree = await markdownToSafeHast(markdown);
   const SiteLink = (props: ComponentProps<'a'>) => <MdLink {...props} siteOrigin={siteOrigin} />;
   return toJsxRuntime(tree, {
