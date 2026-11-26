@@ -1,14 +1,25 @@
-import type { Image, LinkReference, Link, Paragraph, PhrasingContent, Root } from 'mdast';
+import type {
+  Image,
+  LinkReference,
+  Link,
+  Paragraph,
+  PhrasingContent,
+  Root,
+  TableCell,
+} from 'mdast';
 import type { Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
 
-// `![alt](url "캡션")`: 제목 속성이 있으면 캡션이다 (지시서 "문법 확정").
-// 문단 안 phrasing 트리(링크·강조·취소선 중첩 포함)에서 캡션 이미지를 찾으면, 그 지점을 경계로
-// 트리를 나눈다. 앞뒤 조각은 원래 감싸던 링크·서식을 복제해 각자 문단으로 남기고,
-// 이미지는 블록 figure로 올린다. 이미지가 링크 안에 있었다면 figure 안에서 같은 링크로 감싼다.
+// `![alt](url "캡션")`: 제목 속성이 있으면 캡션이다 (지시서 "문법 확정", r4 "캡션 위치 일괄 점검표").
+// 위치별 규칙:
+// - 문단(최상위·목록·인용·콜아웃 안): 캡션 이미지를 경계로 문단을 나누고 이미지는 블록 figure로 올린다.
+// - 링크·참조 링크·강조·굵게·취소선 안(중첩 포함): 같은 경계에서 나누고, 앞뒤 조각은 감싸던 서식을
+//   복제해 남기며, 이미지가 링크 안이었다면 figure 안에서 같은 링크로 감싼다.
+// - 표 셀: 셀은 phrasing을 직접 갖지만 HTML `td`는 flow 콘텐츠(figure 포함)를 허용한다. 그래서 셀 안에서
+//   같은 분할을 하고 figure를 셀 안에 둔다. 앞뒤 글자는 셀 안 phrasing으로 유지해 행·열 구조는 그대로다.
+// - 헤딩: 제목 줄에 블록을 둘 수 없으므로 figure를 만들지 않는다. 캡션은 img title로 남는다(TOC·id 영향 없음).
+// - 각주 정의 등 문법 밖 위치: 건드리지 않는다(sanitize가 요소를 걷는 기존 동작 유지).
 // 캡션이 없는 이미지는 건드리지 않는다.
-// 표 셀은 문단이 아니라 phrasing을 직접 가지며 블록(figure)을 둘 수 없다. 이 플러그인은 문단만
-// 방문하므로 표 셀 안 이미지는 title이 그대로 남고 figure로 바뀌지 않는다(의도된 동작).
 
 type CaptionedImage = Image & { title: string };
 type Wrapper = Extract<
@@ -104,6 +115,14 @@ function splitParagraph(paragraph: Paragraph): Paragraph[] {
 
 const isFigure = (block: Paragraph) => block.data?.hName === 'figure';
 
+/** 표 셀의 조각을 셀 자식으로 되돌린다. 글줄은 셀 안 phrasing 그대로, 캡션 이미지는 셀 안 figure가 된다. */
+function cellChildrenOf(segments: Segment[]): TableCell['children'] {
+  return segments.flatMap((segment): TableCell['children'] =>
+    // figure 블록은 mdast상 셀의 phrasing 자리에 들어갈 수 없는 타입이지만, hast 변환은 hName으로 figure를 만든다.
+    'figure' in segment ? [figureBlock(segment.figure) as unknown as PhrasingContent] : segment.run,
+  );
+}
+
 /** 캡션 있는 이미지를 `<figure><img><figcaption>`로 바꾼다. 캡션이 없으면 이미지만 남긴다. */
 export const remarkImageCaption: Plugin<[], Root> = () => (tree) => {
   visit(tree, 'paragraph', (paragraph, index, parent) => {
@@ -114,5 +133,12 @@ export const remarkImageCaption: Plugin<[], Root> = () => (tree) => {
     parent.children.splice(index, 1, ...blocks);
     // 새로 만든 figure 안의 figcaption 문단을 다시 방문하지 않도록 건너뛴다.
     return index + blocks.length;
+  });
+  visit(tree, 'tableCell', (cell) => {
+    const segments = segmentsOf(cell.children);
+    // 캡션 이미지가 없으면 원본 셀을 그대로 둔다.
+    if (!segments.some((segment) => 'figure' in segment)) return;
+    cell.children = cellChildrenOf(segments);
+    return 'skip';
   });
 };
