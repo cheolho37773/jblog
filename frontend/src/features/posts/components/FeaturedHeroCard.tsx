@@ -14,9 +14,11 @@ type FeaturedHeroCardProps = {
 
 /**
  * Home 대표 글 카드 (UI §5.5). 데스크톱은 이미지 위에 플로팅 카드가 떠 있고(left 64·top 360),
- * 모바일은 카드가 이미지 아래로 48px 겹쳐 쌓인다 (UI §4.2). 이미지 아래로 64px 돌출하는 만큼 아래 여백을 둔다.
+ * 모바일은 카드가 이미지 아래로 48px 겹쳐 쌓인다 (UI §4.2).
  * 데스크톱 패널은 흐름 배치다: 이미지(600) 위로 -240px 끌어올려 top 360에 놓는다. 이렇게 하면 긴 제목으로
  * 패널이 커져도 카드 높이가 함께 늘어나 다음 블록과 겹치지 않는다. 링크 min-height 664는 이미지 600 + 돌출 64다.
+ * 아래 padding은 두지 않는다: 짧은 제목이면 min-height가 루트 높이(664)를 정하고, 긴 제목이면 패널 하단이 곧 루트 하단이 된다.
+ * min-height를 루트(article)가 아니라 링크에 두는 이유는 링크가 article 높이를 그대로 채우는 블록이라 클릭 영역과 루트가 어긋나지 않게 하려는 것이다.
  */
 export function FeaturedHeroCard({ post, headingLevel = 2 }: FeaturedHeroCardProps) {
   const Heading = `h${headingLevel}` as const;
@@ -27,7 +29,7 @@ export function FeaturedHeroCard({ post, headingLevel = 2 }: FeaturedHeroCardPro
       <Link
         href={`/blog/${post.slug}`}
         aria-labelledby={titleId}
-        className="relative block tablet:min-h-[664px] tablet:pb-16"
+        className="relative block tablet:min-h-[664px]"
       >
         <div className="bg-icon-button-bg relative h-60 overflow-hidden rounded-lg tablet:h-[600px]">
           <CoverBackdrop src={post.coverImageUrl} />
