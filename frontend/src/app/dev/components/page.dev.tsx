@@ -120,6 +120,18 @@ const EXAMPLE_POSTS = {
     likeCount: 0,
     viewCount: 0,
   },
+  heroLong: {
+    title:
+      '운영 중인 서비스에서 캐시 전략을 처음부터 다시 설계하며 겪은 무효화 문제와 일관성 보장, 그리고 장애를 줄이기 위해 도입한 단계별 롤아웃 과정에서 배운 점들을 정리한 아주 긴 제목의 예시 글',
+    slug: 'cache-strategy-long',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-amber.png',
+    category: { name: '인프라', slug: 'infra' },
+    publishedAt: '2026-03-15T03:00:00.000Z',
+    readingMinutes: 10,
+    likeCount: 0,
+    viewCount: 0,
+  },
 } satisfies Record<string, PostSummaryDto>;
 const EXAMPLE_CATEGORIES = [
   { name: '백엔드', slug: 'backend', postCount: 12 },
@@ -391,6 +403,9 @@ export default function ComponentsPage() {
         </div>
         <div data-testid="dev-card-hero">
           <FeaturedHeroCard post={EXAMPLE_POSTS.hero} />
+        </div>
+        <div data-testid="dev-card-hero-long">
+          <FeaturedHeroCard post={EXAMPLE_POSTS.heroLong} />
         </div>
         <div data-testid="dev-chips">
           <CategoryChips categories={EXAMPLE_CATEGORIES} activeSlug="frontend" />
