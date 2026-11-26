@@ -670,7 +670,7 @@ test.describe('스켈레톤', () => {
   });
 });
 
-test.describe('반응형: 가로 스크롤 없음·FeaturedHero 겹침 없음', () => {
+test.describe('반응형: 가로 스크롤 없음·FeaturedHero 플로팅 카드 범위', () => {
   for (const width of WIDTHS) {
     test(`${width}px: 문서에 가로 스크롤이 없고 섹션이 뷰포트를 넘지 않는다`, async ({ page }) => {
       await open(page, 'light', { width, height: 900 });
@@ -729,8 +729,6 @@ test.describe('반응형: 가로 스크롤 없음·FeaturedHero 겹침 없음', 
       expect(m.panel.right).toBeLessThanOrEqual(m.vw + 0.5);
       expect(m.panel.bottom).toBeLessThanOrEqual(m.root.bottom + 0.5);
       if (m.nextTop !== null) expect(m.panel.bottom).toBeLessThanOrEqual(m.nextTop + 0.5);
-      // 모바일(<768): 카드가 이미지 아래로 겹침 없이 쌓인다 (지시서 판정: UI §4.2의 -48 겹침 대신 쌓기)
-      if (width < 768) expect(m.panel.top).toBeGreaterThanOrEqual(m.imageBottom - 0.5);
     });
   }
 
@@ -757,6 +755,49 @@ test.describe('반응형: 가로 스크롤 없음·FeaturedHero 겹침 없음', 
     const hero = await measureCard(wrap(page, 'dev-card-hero').locator('> *').first());
     for (const p of hero.boxStyle.padding) near(p, 24, 'Hero 카드 padding');
     expect(hero.heading.fontSize).toBe(28);
+  });
+
+  test('375px: FeaturedHero 모바일 — 이미지 240, 카드가 이미지 아래로 48 겹침, 폭 섹션−32, 제목 28/34, 글자 안 잘림 (UI §4.2)', async ({
+    page,
+  }) => {
+    await open(page, 'light', { width: 375, height: 800 });
+    const m = await wrap(page, 'dev-card-hero').evaluate((w) => {
+      const root = w.firstElementChild!;
+      const heading = root.querySelector('h1, h2')!;
+      let panelEl: Element | null = heading;
+      while (panelEl && parseFloat(getComputedStyle(panelEl).borderTopWidth) !== 1)
+        panelEl = panelEl.parentElement;
+      const panel = panelEl!;
+      const panelRect = panel.getBoundingClientRect();
+      const image =
+        [root, ...root.querySelectorAll('*')].find(
+          (e) => e.querySelector('img') === null && getComputedStyle(e).backgroundImage !== 'none',
+        ) ?? root.querySelector('img');
+      const imgRect = (image ?? root).getBoundingClientRect();
+      const childrenBottom = Math.max(
+        ...[...panel.querySelectorAll('*')].map((e) => e.getBoundingClientRect().bottom),
+      );
+      return {
+        sectionWidth: w.getBoundingClientRect().width,
+        panelWidth: panelRect.width,
+        panelTop: panelRect.top,
+        panelBottom: panelRect.bottom,
+        imageHeight: imgRect.height,
+        imageBottom: imgRect.bottom,
+        headingSize: parseFloat(getComputedStyle(heading).fontSize),
+        headingLine: parseFloat(getComputedStyle(heading).lineHeight),
+        scrollHeight: panel.scrollHeight,
+        clientHeight: panel.clientHeight,
+        childrenBottom,
+      };
+    });
+    near(m.imageHeight, 240, 'Hero 이미지 높이');
+    near(m.panelTop, m.imageBottom - 48, 'Hero 카드는 이미지 아래로 48 겹침');
+    near(m.panelWidth, m.sectionWidth - 32, 'Hero 카드 폭(섹션 − 32)');
+    expect(m.headingSize).toBe(28);
+    expect(m.headingLine).toBe(34);
+    expect(m.scrollHeight, '카드 글자가 잘림').toBeLessThanOrEqual(m.clientHeight);
+    expect(m.childrenBottom).toBeLessThanOrEqual(m.panelBottom + 0.5);
   });
 });
 
