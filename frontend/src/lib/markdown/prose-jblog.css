@@ -1,0 +1,225 @@
+/*
+ * 글 본문 스타일 `.prose-jblog` (UI §7.3, 프론트엔드 §5.3). 색·글꼴·크기는 globals.css의 토큰·타이포 유틸만 쓴다.
+ * 이 파일은 Prose 컴포넌트가 import하므로 본문을 그리는 페이지에만 실린다.
+ */
+@reference "../../app/globals.css";
+
+.prose-jblog {
+  @apply text-body;
+  /* 긴 URL·영문 단어가 좁은 화면에서 가로로 넘치지 않게 한다 */
+  overflow-wrap: break-word;
+}
+
+/* 블록 간 gap 32 (UI §7.3: 문단 간격 = 빈 줄 1개 = 32) */
+.prose-jblog > * + * {
+  margin-top: 32px;
+}
+
+/* 헤딩은 아래 본문과 gap 16 */
+.prose-jblog > :is(h1, h2, h3, h4, h5, h6) + * {
+  margin-top: 16px;
+}
+
+/* ───── 텍스트 ───── */
+.prose-jblog p {
+  @apply type-article text-body;
+}
+
+.prose-jblog :is(h1, h2, h3, h4, h5, h6) {
+  @apply font-sans text-strong;
+}
+.prose-jblog h1 {
+  @apply text-h1;
+}
+.prose-jblog h2 {
+  @apply text-h3;
+}
+.prose-jblog h3 {
+  @apply text-h4;
+}
+.prose-jblog :is(h4, h5, h6) {
+  @apply text-b2;
+}
+
+/* 헤딩 앵커: 마우스를 쓰는 환경에서는 헤딩에 올리거나 포커스할 때만 보인다 */
+.prose-jblog .heading-anchor {
+  @apply text-muted ml-2 no-underline;
+}
+@media (hover: hover) {
+  .prose-jblog .heading-anchor {
+    opacity: 0;
+  }
+  .prose-jblog :is(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
+  .prose-jblog .heading-anchor:focus-visible {
+    opacity: 1;
+  }
+}
+
+.prose-jblog a {
+  @apply text-primary-text underline;
+  text-underline-offset: 3px;
+}
+
+.prose-jblog strong {
+  @apply text-strong;
+  font-weight: 700;
+}
+
+.prose-jblog hr {
+  @apply border-border border-t;
+}
+
+/* ───── 인용문 ───── */
+.prose-jblog blockquote {
+  @apply type-quote text-strong bg-bg-subtle border-border rounded-lg border-l-4 p-8;
+}
+.prose-jblog blockquote > * + * {
+  margin-top: 16px;
+}
+/* 인용문 안의 문단은 인용문 서체를 그대로 따른다 */
+.prose-jblog blockquote p {
+  font: inherit;
+  color: inherit;
+}
+
+/* ───── 콜아웃 ───── */
+.prose-jblog aside[data-callout] {
+  @apply bg-bg-subtle border-primary rounded-lg border-l-4;
+  padding: 20px 24px;
+}
+.prose-jblog aside[data-callout='warning'],
+.prose-jblog aside[data-callout='caution'] {
+  @apply border-danger;
+}
+.prose-jblog aside > * + * {
+  margin-top: 16px;
+}
+.prose-jblog aside > p[data-callout-title] {
+  @apply font-sans text-b4 text-strong;
+  font-weight: 600;
+}
+.prose-jblog aside > p[data-callout-title] + * {
+  margin-top: 8px;
+}
+
+/* ───── 이미지 ───── */
+.prose-jblog img {
+  @apply rounded-lg;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.prose-jblog figcaption {
+  @apply text-b5 text-muted text-center;
+  margin-top: 12px;
+}
+
+/* ───── 목록 ───── */
+.prose-jblog :is(ul, ol) {
+  @apply type-article;
+  padding-left: 28px;
+}
+.prose-jblog ul {
+  list-style: disc;
+}
+.prose-jblog ol {
+  list-style: decimal;
+}
+.prose-jblog li + li,
+.prose-jblog li > :is(ul, ol) {
+  margin-top: 8px;
+}
+/* 체크리스트: 글머리 대신 체크박스 */
+.prose-jblog .contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+.prose-jblog .task-list-item > input {
+  margin-right: 8px;
+}
+
+/* ───── 표 ───── */
+.prose-jblog table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.prose-jblog th,
+.prose-jblog td {
+  @apply border-border border-b;
+  padding: 12px 16px;
+  text-align: left;
+}
+.prose-jblog th {
+  @apply font-sans text-b4 text-strong bg-bg-subtle;
+  font-weight: 600;
+}
+.prose-jblog td {
+  @apply font-serif text-b3 text-body;
+}
+
+/* ───── 인라인 코드 ───── */
+.prose-jblog :not(pre) > code {
+  @apply bg-primary-soft text-primary-text font-mono;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* ───── 코드 블록 (UI §7.3) ───── */
+.prose-jblog .code-block-title {
+  @apply font-mono text-b5 text-muted;
+  margin-bottom: 8px;
+}
+.prose-jblog .code-block-body {
+  position: relative;
+}
+.prose-jblog pre {
+  @apply bg-code-bg border-border text-body rounded-lg border;
+  padding: 20px 24px;
+  /* 가로 스크롤은 블록 안에서만 생긴다 */
+  overflow-x: auto;
+}
+.prose-jblog pre code {
+  @apply font-mono;
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+/*
+ * shiki 토큰 색: 두 테마 값이 CSS 변수(--shiki-light·--shiki-dark)로 들어오고, data-theme이 쓸 쪽을 정한다.
+ * 그래서 테마 전환에 새로고침이 필요 없다. 글자색은 shiki 테마가 만든 값이라 토큰이 아니다(대비는 shiki-themes.ts가 보장).
+ */
+.prose-jblog pre span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+  /* 테두리·아웃라인 색은 기본값이 글자색(currentColor)이라 토큰 밖 색으로 읽힌다. 테두리가 없으므로 투명으로 고정한다 */
+  border-color: transparent;
+  outline-color: transparent;
+  /* 토큰이 수백 개라 색 전환(globals.css 200ms)을 걸면 테마 전환이 무거워진다. 코드 색은 바로 바꾼다 */
+  transition: none;
+}
+[data-theme='dark'] .prose-jblog pre span {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+.prose-jblog pre span::before,
+.prose-jblog pre span::after {
+  border-color: transparent;
+  outline-color: transparent;
+}
+
+/* 복사 버튼 자리 (동작은 M2-10). 보이는 크기 32, 터치 영역은 44 (UI §4.2) */
+.prose-jblog .code-block-copy {
+  @apply text-muted hover:text-strong hover:bg-border absolute top-2 right-2 inline-flex size-8 items-center justify-center rounded-md;
+}
+.prose-jblog .code-block-copy::after {
+  @apply absolute top-1/2 left-1/2 size-11 -translate-x-1/2 -translate-y-1/2;
+  content: '';
+}

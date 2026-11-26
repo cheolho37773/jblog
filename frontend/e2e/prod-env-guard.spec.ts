@@ -74,7 +74,9 @@ test.describe('운영 standalone 서버의 INTERNAL_API_KEY', () => {
   });
 
   test('키 없이 띄우면 기동 실패(종료 코드 != 0) 또는 첫 요청 실패이고, 출력에는 변수 이름만 있다', async () => {
-    const outcome = await runServer(baseEnv(GUARD_PORT_NO_KEY), GUARD_PORT_NO_KEY);
+    // 빈 값을 명시한다: standalone에 복사된 로컬 .env가 키를 채우지 못하게 한다(dotenv는 이미 정의된 변수를 덮지 않는다).
+    const env = { ...baseEnv(GUARD_PORT_NO_KEY), [KEY_NAME]: '' };
+    const outcome = await runServer(env, GUARD_PORT_NO_KEY);
 
     const startupFailed = outcome.exitCode !== null && outcome.exitCode !== 0;
     const firstRequestFailed = outcome.status !== undefined && outcome.status >= 500;

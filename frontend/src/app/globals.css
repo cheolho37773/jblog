@@ -124,7 +124,8 @@
 
   /* 한글은 영문 폰트 뒤 Pretendard로 fallback (프론트엔드 §5.1-a) */
   --font-sans: var(--font-work-sans), var(--font-pretendard), sans-serif;
-  --font-serif: var(--font-source-serif), serif;
+  /* Noto Serif KR는 글 상세 계열에서만 변수가 생긴다(lib/markdown/fonts.ts). 없는 페이지에서는 fallback(serif)이 쓰인다 (프론트엔드 §5.1-a) */
+  --font-serif: var(--font-source-serif), var(--font-noto-serif-kr, serif), serif;
   --font-jakarta: var(--font-plus-jakarta), var(--font-pretendard), sans-serif;
   --font-display: var(--font-poppins), var(--font-pretendard), sans-serif;
   --font-mono: var(--font-jetbrains-mono), monospace;

@@ -80,7 +80,18 @@ interface Finding {
   where: string;
   property: string;
   value: string;
+  /** 코드 블록(pre) 안의 요소인지. shiki 토큰 색 예외 판단에만 쓴다. */
+  insideCode?: boolean;
 }
+
+/**
+ * M2-05: 코드 블록(pre) 안의 글자색(color)만 예외로 둔다.
+ * 근거: 토큰 색은 shiki가 github-light·github-dark-dimmed 테마에서 만든 생성물이라 jblog §3 토큰이 아니다(지시서 규약 4).
+ * 예외 범위는 좁다: pre 안의 `color`만이며, 배경·테두리·outline·폰트는 코드 블록 안에서도 토큰 검사를 그대로 받는다.
+ * 코드 블록 배경이 code-bg 토큰인지는 markdown-preview.spec.ts가 따로 확인한다.
+ */
+const withoutShikiTokenColors = (findings: Finding[]) =>
+  findings.filter((finding) => !(finding.insideCode && finding.property === 'color'));
 
 async function collectFindings(
   page: Page,
@@ -120,7 +131,12 @@ async function collectFindings(
         const key = `${property}|${value}|${label}`;
         if (seen.has(key)) return;
         seen.add(key);
-        findings.push({ where: `${describe(element)}${label}`, property, value });
+        findings.push({
+          where: `${describe(element)}${label}`,
+          property,
+          value,
+          insideCode: element.closest('pre') !== null,
+        });
       };
 
       const check = (element: Element, pseudo: string | null) => {
@@ -147,6 +163,9 @@ async function collectFindings(
         for (const pseudo of pseudos) {
           if (pseudo === '::placeholder' && !['INPUT', 'TEXTAREA'].includes(element.tagName))
             continue;
+          // pre 안 코드 토큰 span에는 ::marker가 실재하지 않는데(목록 항목이 아님),
+          // 계산값은 currentColor(shiki 글자색)로 읽혀 위반처럼 보인다. 검사할 대상이 없으므로 건너뛴다.
+          if (pseudo === '::marker' && element.closest('pre') !== null) continue;
           check(element, pseudo);
         }
       }
@@ -186,6 +205,8 @@ async function collectFocusRingColors(page: Page, palette: Set<string>): Promise
   }
   return findings;
 }
+
+const MARKDOWN_ROUTE = '/dev/markdown';
 
 async function open(page: Page, route: string, view: { theme: Theme; size: typeof FRAME }) {
   const { theme, size } = view;
@@ -262,6 +283,46 @@ for (const theme of THEMES) {
         expect(await collectFindings(page, [...palette], fontTokenDeclarations())).toEqual([]);
       });
     }
+
+    test(`${MARKDOWN_ROUTE} 1440px: 코드 블록 토큰 글자색(shiki)만 예외이고 나머지는 토큰 색이다`, async ({
+      page,
+    }) => {
+      await open(page, MARKDOWN_ROUTE, { theme, size: FRAME });
+      expect(
+        withoutShikiTokenColors(await collectFindings(page, [...palette], fontTokenDeclarations())),
+      ).toEqual([]);
+    });
+
+    test(`${MARKDOWN_ROUTE} 375px: 모바일 배치에서도 코드 블록 토큰 글자색만 예외이다`, async ({
+      page,
+    }) => {
+      await open(page, MARKDOWN_ROUTE, { theme, size: MOBILE_FRAME });
+      expect(
+        withoutShikiTokenColors(await collectFindings(page, [...palette], fontTokenDeclarations())),
+      ).toEqual([]);
+    });
+
+    test(`대조: ${MARKDOWN_ROUTE} 코드 블록 안이라도 토큰 밖 배경색·폰트는 예외가 아니다`, async ({
+      page,
+    }) => {
+      await open(page, MARKDOWN_ROUTE, { theme, size: FRAME });
+      await page.evaluate(() => {
+        const token = document.querySelector('[data-testid="markdown-preview"] pre code span');
+        if (!(token instanceof HTMLElement)) throw new Error('코드 토큰 span이 없다');
+        token.style.backgroundColor = '#123456';
+        token.style.fontFamily = 'Courier New';
+      });
+      const properties = withoutShikiTokenColors(
+        await collectFindings(page, [...palette], fontTokenDeclarations()),
+      ).map((finding) => finding.property);
+      expect(properties).toContain('background-color');
+      expect(properties).toContain('font-family');
+    });
+
+    test(`${MARKDOWN_ROUTE} 키보드 포커스 링(outline-color)은 토큰 색이다`, async ({ page }) => {
+      await open(page, MARKDOWN_ROUTE, { theme, size: FRAME });
+      expect(await collectFocusRingColors(page, palette)).toEqual([]);
+    });
 
     test('/ 키보드 포커스 링(outline-color)은 토큰 색이다', async ({ page }) => {
       await open(page, '/', { theme, size: FRAME });
