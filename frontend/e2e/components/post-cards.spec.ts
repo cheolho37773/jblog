@@ -852,3 +852,102 @@ for (const theme of THEMES) {
     });
   });
 }
+
+// Codex r1 #1: 계산값(outline)만 있고 부모 overflow에 잘리면 사용자 눈에는 링이 없다.
+// 링을 그리는 요소(링크 자신·조상·자손)의 링 사각형이 overflow 잘림 조상 경계 안에 있어야 한다.
+function visibleFocusRing(link: Locator) {
+  return link.evaluate((linkEl) => {
+    const CLIP = /hidden|clip|auto|scroll/;
+    const px = (v: string) => parseFloat(v) || 0;
+    const wrapper = linkEl.closest('[data-testid^="dev-card-"]');
+    const candidates = [
+      ...(wrapper ? [wrapper, ...wrapper.querySelectorAll('*')] : [linkEl]),
+    ].filter((e) => {
+      const s = getComputedStyle(e);
+      return s.outlineStyle !== 'none' && px(s.outlineWidth) > 0;
+    });
+    const results = candidates.map((el) => {
+      const s = getComputedStyle(el);
+      const grow = px(s.outlineWidth) + px(s.outlineOffset);
+      const r = el.getBoundingClientRect();
+      const ring = {
+        left: r.left - grow,
+        top: r.top - grow,
+        right: r.right + grow,
+        bottom: r.bottom + grow,
+      };
+      let clipped = false;
+      for (let a = el.parentElement; a; a = a.parentElement) {
+        const as = getComputedStyle(a);
+        if (!CLIP.test(as.overflowX + as.overflowY)) continue;
+        const b = a.getBoundingClientRect();
+        if (
+          ring.left < b.left - 0.5 ||
+          ring.top < b.top - 0.5 ||
+          ring.right > b.right + 0.5 ||
+          ring.bottom > b.bottom + 0.5
+        )
+          clipped = true;
+      }
+      return { tag: el.tagName.toLowerCase(), clipped };
+    });
+    return { results, anyVisible: results.some((r) => !r.clipped) };
+  });
+}
+
+for (const theme of THEMES) {
+  test.describe(`카드 포커스 링이 잘리지 않는다 (${theme})`, () => {
+    for (const id of ['dev-card-overlay', 'dev-card-hero'] as const) {
+      test(`${id}: Tab 키보드 포커스 시 링이 overflow 조상 경계 안에서 실제로 보인다`, async ({
+        page,
+      }) => {
+        await open(page, theme, DESKTOP);
+        const link = wrap(page, id).getByRole('link');
+        await link.focus();
+        await page.keyboard.press('Tab');
+        await page.keyboard.press('Shift+Tab');
+        await expect(link).toBeFocused();
+        const ring = await visibleFocusRing(link);
+        expect(ring.results.length, '포커스 링을 그리는 요소가 있어야 한다').toBeGreaterThan(0);
+        expect(ring.anyVisible, `링이 잘림: ${JSON.stringify(ring.results)}`).toBe(true);
+      });
+    }
+  });
+}
+
+// Codex r1 #2: 긴 제목(4~5줄)에서도 패널이 루트·다음 블록을 넘지 않는다.
+// 구현자 요구: /dev/components 의 dev-posts-cards 안에 `dev-card-hero-long`(구조는 dev-card-hero와 동일,
+// 카테고리 있음, 제목이 768px 패널에서 4줄 이상이 되는 긴 제목)을 추가하고 다음 형제 요소가 있어야 한다.
+test.describe('FeaturedHero 긴 제목 (dev-card-hero-long)', () => {
+  for (const width of [768, 1024, 1440] as const) {
+    test(`${width}px: 패널 하단이 Hero 루트 안이고 다음 블록과 겹치지 않으며 패널 위치는 left 64·top 360이다`, async ({
+      page,
+    }) => {
+      await open(page, 'light', { width, height: 900 });
+      const long = wrap(page, 'dev-card-hero-long');
+      await expect(long, 'dev-card-hero-long 예시 필요').toBeVisible();
+      const m = await long.evaluate((w) => {
+        const root = w.firstElementChild!;
+        const heading = root.querySelector('h1, h2')!;
+        let panelEl: Element | null = heading;
+        while (panelEl && parseFloat(getComputedStyle(panelEl).borderTopWidth) !== 1)
+          panelEl = panelEl.parentElement;
+        const panel = panelEl!.getBoundingClientRect();
+        const rootRect = root.getBoundingClientRect();
+        const lh = parseFloat(getComputedStyle(heading).lineHeight);
+        return {
+          panel: { left: panel.left, top: panel.top, bottom: panel.bottom },
+          root: { left: rootRect.left, top: rootRect.top, bottom: rootRect.bottom },
+          headingLines: Math.round(heading.getBoundingClientRect().height / lh),
+          nextTop: w.nextElementSibling?.getBoundingClientRect().top ?? null,
+        };
+      });
+      expect(m.headingLines, '제목이 4줄 이상이어야 한다').toBeGreaterThanOrEqual(4);
+      near(m.panel.left - m.root.left, 64, '패널 left');
+      near(m.panel.top - m.root.top, 360, '패널 top');
+      expect(m.panel.bottom, '패널 하단 ≤ 루트 하단').toBeLessThanOrEqual(m.root.bottom + 0.5);
+      expect(m.nextTop, '다음 형제 요소가 있어야 한다').not.toBeNull();
+      expect(m.panel.bottom, '패널 하단 ≤ 다음 블록 상단').toBeLessThanOrEqual(m.nextTop! + 0.5);
+    });
+  }
+});
