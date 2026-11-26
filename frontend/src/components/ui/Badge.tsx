@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-const badgeVariants = cva('text-b5-medium inline-block rounded-md', {
+const badgeVariants = cva('text-b5-medium inline-block max-w-full rounded-md wrap-anywhere', {
   variants: {
     variant: {
       solid: 'bg-primary-strong text-on-primary',

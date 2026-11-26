@@ -36,7 +36,7 @@ export function FeaturedHeroCard({ post, headingLevel = 2 }: FeaturedHeroCardPro
         </div>
         <div className="border-border bg-surface relative mx-4 -mt-12 flex flex-col items-start gap-6 rounded-lg border p-6 [box-shadow:var(--shadow-md)] tablet:mt-[-240px] tablet:ml-16 tablet:w-[598px] tablet:p-10">
           {post.category && <Badge variant="solid">{post.category.name}</Badge>}
-          <Heading id={titleId} className="text-h1 text-strong">
+          <Heading id={titleId} className="text-h1 text-strong wrap-anywhere">
             {post.title}
           </Heading>
           <AuthorMeta publishedAt={post.publishedAt} readingMinutes={post.readingMinutes} />

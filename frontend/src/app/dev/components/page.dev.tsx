@@ -61,6 +61,9 @@ type CategoryWithCountDto = components['schemas']['CategoryWithCountDto'];
 
 // 카드 예시 데이터. 이미지는 E2E 픽스처 경로이고 개발 서버에서는 /uploads rewrite로 보인다.
 const BACKEND_CATEGORY = { name: '백엔드', slug: 'backend' };
+const MAX_TITLE_LENGTH = 200;
+const MAX_TITLE = '가나다라마바사아자차'.repeat(MAX_TITLE_LENGTH / 10);
+
 const EXAMPLE_POSTS = {
   // 제목이 2줄이라 스켈레톤(제목 2줄)과 높이가 같다
   withCover: {
@@ -127,6 +130,18 @@ const EXAMPLE_POSTS = {
     excerpt: '예시 요약',
     coverImageUrl: '/uploads/fixtures/cover-amber.png',
     category: { name: '인프라', slug: 'infra' },
+    publishedAt: '2026-03-15T03:00:00.000Z',
+    readingMinutes: 10,
+    likeCount: 0,
+    viewCount: 0,
+  },
+  // 백엔드 최대 길이(200자) 제목: 공백이 없어 줄바꿈 기회가 없는 최악의 경우
+  maxTitle: {
+    title: MAX_TITLE,
+    slug: 'max-title',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-indigo.png',
+    category: BACKEND_CATEGORY,
     publishedAt: '2026-03-15T03:00:00.000Z',
     readingMinutes: 10,
     likeCount: 0,
@@ -406,6 +421,15 @@ export default function ComponentsPage() {
         </div>
         <div data-testid="dev-card-hero-long">
           <FeaturedHeroCard post={EXAMPLE_POSTS.heroLong} />
+        </div>
+        <div data-testid="dev-card-overlay-long">
+          <PostCardOverlay post={EXAMPLE_POSTS.maxTitle} />
+        </div>
+        <div data-testid="dev-card-grid-long" className={CARD_GRID_CLASS}>
+          <PostCardGrid post={EXAMPLE_POSTS.maxTitle} />
+        </div>
+        <div data-testid="dev-card-hero-max">
+          <FeaturedHeroCard post={EXAMPLE_POSTS.maxTitle} />
         </div>
         <div data-testid="dev-chips">
           <CategoryChips categories={EXAMPLE_CATEGORIES} activeSlug="frontend" />

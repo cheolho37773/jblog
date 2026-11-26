@@ -40,7 +40,7 @@ export function PostCardGrid({ post, headingLevel = 3 }: PostCardGridProps) {
         <div className="flex flex-col gap-5 p-2">
           <div className="flex flex-col items-start gap-4">
             {post.category && <Badge variant="soft">{post.category.name}</Badge>}
-            <Heading id={titleId} className="text-h3 text-strong line-clamp-3">
+            <Heading id={titleId} className="text-h3 text-strong line-clamp-3 wrap-anywhere">
               {post.title}
             </Heading>
           </div>

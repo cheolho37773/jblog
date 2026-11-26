@@ -28,7 +28,10 @@ export function PostCardOverlay({ post, headingLevel = 2 }: PostCardOverlayProps
         className="relative flex h-full flex-col focus-visible:outline-offset-[-4px]! items-start justify-end gap-4 p-5 tablet:p-10"
       >
         {post.category && <Badge variant="solid">{post.category.name}</Badge>}
-        <Heading id={titleId} className="text-h1 text-on-primary max-w-[720px]">
+        <Heading
+          id={titleId}
+          className="text-h1 text-on-primary line-clamp-3 max-w-[720px] wrap-anywhere"
+        >
           {post.title}
         </Heading>
         <AuthorMeta publishedAt={post.publishedAt} readingMinutes={post.readingMinutes} onImage />
