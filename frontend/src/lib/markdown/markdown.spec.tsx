@@ -419,16 +419,56 @@ describe('Codex r1 회귀', () => {
       expect(emphasized.some((t) => t?.includes('앞'))).toBe(true);
       expect(emphasized.some((t) => t?.includes('뒤'))).toBe(true);
     });
+  });
 
-    it('링크 안에 글자와 이미지가 섞이면 링크를 나누지 않고 캡션을 img title로 보존한다', async () => {
+  describe('Codex r3: 링크 안 글자와 캡션 이미지', () => {
+    const hrefsOf = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+
+    it('링크 안 글자+캡션 이미지는 글자 링크 조각과 figure(링크 감싼 이미지+캡션)로 나뉜다', async () => {
       const { container } = await renderMd('[글자 ![alt](/uploads/a.png "캡션")](/blog/x)');
-      expect(container.querySelector('figure')).toBeNull();
-      const links = container.querySelectorAll('a[href="/blog/x"]');
-      expect(links).toHaveLength(1);
-      const link = links.item(0);
-      if (!link) throw new Error('링크가 렌더링되지 않았다');
-      expect(link.textContent).toContain('글자');
-      expect(link.querySelector('img')).toHaveAttribute('title', '캡션');
+      const textLink = Array.from(container.querySelectorAll('a[href="/blog/x"]')).find((a) =>
+        a.textContent?.includes('글자'),
+      );
+      expect(textLink).toBeDefined();
+      expect(container.querySelector('figure > a[href="/blog/x"] > img[alt="alt"]')).not.toBeNull();
+      expect(container.querySelector('figure figcaption')).toHaveTextContent('캡션');
+      expect(new Set(hrefsOf(container))).toEqual(new Set(['/blog/x']));
+    });
+
+    it('강조로 감싼 링크 안 캡션 이미지도 figure와 같은 목적지 링크로 나온다', async () => {
+      const { container } = await renderMd('[**![alt](/uploads/a.png "캡션")**](/blog/x)');
+      expect(container.querySelector('figure img[alt="alt"]')).not.toBeNull();
+      expect(container.querySelector('figure figcaption')).toHaveTextContent('캡션');
+      expect(container.querySelector('figure a[href="/blog/x"] img')).not.toBeNull();
+      expect(new Set(hrefsOf(container))).toEqual(new Set(['/blog/x']));
+    });
+
+    it('외부 링크 안에서 갈라진 글자 조각과 figure 안 링크 모두 target·rel을 유지한다', async () => {
+      const { container } = await renderMd(
+        '[앞 ![alt](/uploads/a.png "캡션") 뒤](https://example.com)',
+      );
+      const links = Array.from(container.querySelectorAll('a'));
+      const texts = links.map((a) => a.textContent ?? '');
+      expect(texts.some((t) => t.includes('앞'))).toBe(true);
+      expect(texts.some((t) => t.includes('뒤'))).toBe(true);
+      expect(container.querySelector('figure a img')).not.toBeNull();
+      expect(links.length).toBeGreaterThanOrEqual(3);
+      for (const link of links) {
+        expect(link).toHaveAttribute('href', 'https://example.com');
+        expect(link).toHaveAttribute('target', '_blank');
+        expect(link.getAttribute('rel')).toContain('noopener');
+      }
+    });
+
+    it.each([
+      '[글자 ![alt](/uploads/a.png "캡션")](/blog/x)',
+      '[**![alt](/uploads/a.png "캡션")**](/blog/x)',
+      '앞 ![alt](/uploads/a.png "캡션") 뒤',
+    ])('figure는 p 안에 들어가지 않는다: %s', async (md) => {
+      const { container } = await renderMd(md);
+      expect(container.querySelector('figure')).not.toBeNull();
+      expect(container.querySelectorAll('p figure')).toHaveLength(0);
     });
   });
 
