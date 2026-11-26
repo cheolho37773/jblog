@@ -992,3 +992,151 @@ test.describe('FeaturedHero 루트 높이 (중복 하단 여백 없음)', () => 
     });
   }
 });
+
+// Codex r3 #1: 제목 최대 길이(200자)에서도 고정 크기 카드 안에서 배지·제목·메타가 잘리지 않는다.
+// 구현자 요구: /dev/components 의 dev-posts-cards 안에 아래 래퍼를 추가한다. 모두 카테고리가 있고
+// 제목은 공백 없는 한글 200자(백엔드 §4.4 최대 길이)이며, 래퍼의 첫 자식이 카드 루트다.
+//   dev-card-overlay-long  PostCardOverlay 1장
+//   dev-card-grid-long     PostCardGrid 1장 (그리드 열 폭 기준 래퍼 안에 둔다)
+//   dev-card-hero-max      FeaturedHeroCard 1장 (기존 dev-card-hero-long과 별개)
+const MAX_TITLE_LINES = 3;
+const EDGE_TOLERANCE = 0.5;
+
+/** 배지·제목·메타가 "잘리는 경계" 안에 모두 보이는지 측정한다. Hero는 패널(1px 테두리), 그 외는 루트가 경계다. */
+function measureContentFit(wrapper: Locator, boundary: 'root' | 'panel') {
+  return wrapper.evaluate((w, boundaryKind) => {
+    const root = w.firstElementChild!;
+    const heading = root.querySelector('h1, h2, h3')!;
+    let box: Element = root;
+    if (boundaryKind === 'panel') {
+      let el: Element | null = heading;
+      while (el && parseFloat(getComputedStyle(el).borderTopWidth) !== 1) el = el.parentElement;
+      box = el!;
+    }
+    const clip = box.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect();
+    const badge = root.querySelector('[class*="text-b5-medium"]');
+    const meta = root.querySelector('time')!.parentElement!;
+    const style = getComputedStyle(heading);
+    const lines = Math.round(heading.getBoundingClientRect().height / parseFloat(style.lineHeight));
+    const inside = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      return {
+        top: r.top - clip.top,
+        bottom: clip.bottom - r.bottom,
+        left: r.left - clip.left,
+        right: clip.right - r.right,
+        visible: r.width > 0 && r.height > 0,
+      };
+    };
+    // overflow 조상(카드 루트 포함)이 실제로 가리는 영역도 확인한다
+    const clipAncestor = (el: Element) => {
+      for (let a: Element | null = el; a; a = a.parentElement) {
+        const o = getComputedStyle(a).overflow;
+        if (o !== 'visible') return a.getBoundingClientRect();
+      }
+      return null;
+    };
+    const clipped = (el: Element) => {
+      const c = clipAncestor(el);
+      const r = el.getBoundingClientRect();
+      return (
+        c !== null && (r.top < c.top || r.bottom > c.bottom || r.left < c.left || r.right > c.right)
+      );
+    };
+    return {
+      rootHeight: rootRect.height,
+      lines,
+      lineClamp: style.webkitLineClamp,
+      textOverflow: style.textOverflow,
+      overflow: style.overflow,
+      hasBadge: badge !== null,
+      badge: badge ? inside(badge) : null,
+      badgeClipped: badge ? clipped(badge) : false,
+      heading: inside(heading),
+      headingClipped: clipped(heading),
+      meta: inside(meta),
+      metaClipped: clipped(meta),
+      metaTextOverflowsX: meta.scrollWidth > meta.clientWidth + 1,
+    };
+  }, boundary);
+}
+
+type ContentFit = Awaited<ReturnType<typeof measureContentFit>>;
+
+function expectContentInside(m: ContentFit, label: string) {
+  expect(m.hasBadge, `${label}: 카테고리 배지가 있어야 한다`).toBe(true);
+  for (const [name, edges, clipped] of [
+    ['배지', m.badge!, m.badgeClipped],
+    ['제목', m.heading, m.headingClipped],
+    ['메타', m.meta, m.metaClipped],
+  ] as const) {
+    expect(edges.visible, `${label}: ${name}이 보여야 한다`).toBe(true);
+    for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+      expect(edges[side], `${label}: ${name} ${side} 여유`).toBeGreaterThanOrEqual(-EDGE_TOLERANCE);
+    }
+    expect(clipped, `${label}: ${name}이 overflow 조상에 잘리면 안 된다`).toBe(false);
+  }
+  expect(m.metaTextOverflowsX, `${label}: 메타 글자가 가로로 넘치면 안 된다`).toBe(false);
+}
+
+function expectTitleClamped(m: ContentFit, label: string) {
+  expect(m.lines, `${label}: 제목 ${m.lines}줄`).toBeLessThanOrEqual(MAX_TITLE_LINES);
+  const clamped = m.lineClamp === '3' || m.textOverflow === 'ellipsis';
+  expect(clamped, `${label}: line-clamp 3 또는 text-overflow ellipsis 필요`).toBe(true);
+}
+
+test.describe('최대 길이(200자) 제목 — Overlay (Codex r3 #1)', () => {
+  const EXPECTED_HEIGHT = { 375: 320, 768: 450, 1440: 450 } as const;
+  for (const width of [375, 768, 1440] as const) {
+    test(`${width}px: 배지·제목·메타가 카드 경계 안에 보이고 제목은 3줄 이하로 말줄임되며 높이는 ${EXPECTED_HEIGHT[width]}이다`, async ({
+      page,
+    }) => {
+      await open(page, 'light', { width, height: 900 });
+      const long = wrap(page, 'dev-card-overlay-long');
+      await expect(long, 'dev-card-overlay-long 예시 필요').toBeVisible();
+      const m = await measureContentFit(long, 'root');
+      near(m.rootHeight, EXPECTED_HEIGHT[width], '카드 높이');
+      expectTitleClamped(m, `Overlay ${width}`);
+      expectContentInside(m, `Overlay ${width}`);
+    });
+  }
+});
+
+test.describe('최대 길이(200자) 제목 — Grid·Hero (Codex r3 #1 같은 관점 점검)', () => {
+  for (const width of [375, 768, 1440] as const) {
+    test(`${width}px: Grid 카드는 제목 3줄 이하 말줄임이고 배지·제목·메타가 카드 안에 보인다`, async ({
+      page,
+    }) => {
+      await open(page, 'light', { width, height: 900 });
+      const long = wrap(page, 'dev-card-grid-long');
+      await expect(long, 'dev-card-grid-long 예시 필요').toBeVisible();
+      const m = await measureContentFit(long, 'root');
+      expectTitleClamped(m, `Grid ${width}`);
+      expectContentInside(m, `Grid ${width}`);
+    });
+
+    test(`${width}px: Hero 200자 제목도 배지·제목·메타가 패널 안에 다 보이고 패널은 루트 안이다`, async ({
+      page,
+    }) => {
+      await open(page, 'light', { width, height: 900 });
+      const long = wrap(page, 'dev-card-hero-max');
+      await expect(long, 'dev-card-hero-max 예시 필요').toBeVisible();
+      const m = await measureContentFit(long, 'panel');
+      expectContentInside(m, `Hero ${width}`);
+      const rootBounds = await long.evaluate((w) => {
+        const root = w.firstElementChild!.getBoundingClientRect();
+        let el: Element | null = w.querySelector('h1, h2');
+        while (el && parseFloat(getComputedStyle(el).borderTopWidth) !== 1) el = el.parentElement;
+        const panel = el!.getBoundingClientRect();
+        return { bottomGap: root.bottom - panel.bottom, rightGap: root.right - panel.right };
+      });
+      expect(rootBounds.bottomGap, 'Hero 패널 하단 ≤ 루트 하단').toBeGreaterThanOrEqual(
+        -EDGE_TOLERANCE,
+      );
+      expect(rootBounds.rightGap, 'Hero 패널 우측 ≤ 루트 우측').toBeGreaterThanOrEqual(
+        -EDGE_TOLERANCE,
+      );
+    });
+  }
+});
