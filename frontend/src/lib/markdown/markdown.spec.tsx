@@ -504,13 +504,20 @@ describe('Codex r1 회귀', () => {
       noFigureInParagraph(container);
     });
 
-    it('표 셀 안 캡션 이미지는 figure가 되지 않고 title이 남으며 표 구조가 유지된다', async () => {
-      const { container } = await renderMd(`| 이름 | 값 |\n| --- | --- |\n| ${IMG} | 1 |\n`);
-      expect(container.querySelector('figure')).toBeNull();
-      expect(container.querySelector('td img')).toHaveAttribute('title', '캡션');
+    it('표 셀 안 캡션 이미지는 셀 안 figure와 보이는 figcaption이 되고 표 구조와 셀 글자가 유지된다', async () => {
+      const { container } = await renderMd(
+        `| 이름 | 값 |\n| --- | --- |\n| 앞글 ${IMG} 뒷글 | 1 |\n`,
+      );
+      expect(container.querySelectorAll('td figure > img')).toHaveLength(1);
+      expect(container.querySelector('td figure > figcaption')).toHaveTextContent('캡션');
       const table = screen.getByRole('table');
       expect(within(table).getAllByRole('columnheader')).toHaveLength(2);
       expect(within(table).getAllByRole('row')).toHaveLength(2);
+      expect(within(table).getAllByRole('cell')).toHaveLength(2);
+      const cell = container.querySelector('td');
+      expect(cell).toHaveTextContent('앞글');
+      expect(cell).toHaveTextContent('뒷글');
+      noFigureInParagraph(container);
     });
 
     it('링크 참조 안 캡션 이미지도 글자 링크 조각과 figure(같은 링크)로 나뉜다', async () => {
@@ -532,6 +539,40 @@ describe('Codex r1 회귀', () => {
       expect(deleted.some((t) => t.includes('앞'))).toBe(true);
       expect(deleted.some((t) => t.includes('뒤'))).toBe(true);
       noFigureInParagraph(container);
+    });
+  });
+
+  describe('Codex r4: 캡션 위치 점검표 (표 셀·헤딩)', () => {
+    const IMG = '![a](/u.png "캡션")';
+
+    it('표 셀 안 링크로 감싼 캡션 이미지는 셀 안 figure에서 링크 목적지를 유지한다', async () => {
+      const { container } = await renderMd(
+        `| 이름 | 값 |\n| --- | --- |\n| [${IMG}](/blog/x) | 1 |\n`,
+      );
+      expect(container.querySelector('td figure a[href="/blog/x"] img')).not.toBeNull();
+      expect(container.querySelector('td figure figcaption')).toHaveTextContent('캡션');
+      expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2);
+      expect(container.querySelectorAll('p figure')).toHaveLength(0);
+    });
+
+    it('헤딩 안 캡션 이미지는 figure를 만들지 않고 img title로 캡션을 보존한다', async () => {
+      const { container } = await renderMd(`## 제목 ${IMG}\n`);
+      expect(container.querySelectorAll('figure')).toHaveLength(0);
+      expect(container.querySelectorAll('h2 figure')).toHaveLength(0);
+      expect(container.querySelectorAll('p figure')).toHaveLength(0);
+      expect(container.querySelector('h2 img')).toHaveAttribute('title', '캡션');
+    });
+
+    it('헤딩 안 캡션 이미지는 헤딩 id와 extractHeadings 결과를 바꾸지 않는다', async () => {
+      const { extractHeadings } = await loadModule();
+      const withImage = `## 제목 ${IMG}\n`;
+      const { container } = await renderMd(withImage);
+      const [heading] = extractHeadings(withImage);
+      const [plain] = extractHeadings('## 제목\n');
+      expect(extractHeadings(withImage)).toHaveLength(1);
+      expect(container.querySelector('h2')).toHaveAttribute('id', heading?.id);
+      expect(heading?.id.startsWith(plain?.id ?? '\0')).toBe(true);
+      expect(heading?.text).toContain('제목');
     });
   });
 
