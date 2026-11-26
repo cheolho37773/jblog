@@ -30,8 +30,9 @@ export const sanitizeSchema: Options = {
     ],
     aside: [['role', 'note'], 'ariaLabel', 'dataCallout'],
     p: ['dataCalloutTitle'],
-    // src는 아래 protocols로 http(s)·상대 경로만. title은 캡션이 되므로 속성으로는 남기지 않는다.
-    img: ['src', 'alt'],
+    // src는 아래 protocols로 http(s)·상대 경로만. title은 figure로 빠지지 못한 캡션 이미지(글자와 섞인 링크 안)의
+    // 캡션을 잃지 않게 남긴다. 값이 평범한 문자열이라 스크립트 실행 경로가 없다. figure 이미지에는 title을 붙이지 않는다.
+    img: ['src', 'alt', 'title'],
     pre: [
       ['class', SHIKI_PRE_CLASS],
       ['style', SHIKI_STYLE],
