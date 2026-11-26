@@ -472,6 +472,69 @@ describe('Codex r1 회귀', () => {
     });
   });
 
+  describe('Codex r3 ③: 캡션 이미지 경계', () => {
+    const IMG = '![a](/u.png "캡션")';
+    const noFigureInParagraph = (container: HTMLElement) =>
+      expect(container.querySelectorAll('p figure')).toHaveLength(0);
+
+    it('한 링크 안 캡션 이미지 2개는 figure 2개이고 목적지가 같으며 사이 글자 링크 조각이 남는다', async () => {
+      const { container } = await renderMd(`[앞 ${IMG} 가운데 ${IMG} 뒤](/blog/x)`);
+      expect(container.querySelectorAll('figure')).toHaveLength(2);
+      expect(container.querySelectorAll('figure a[href="/blog/x"] img')).toHaveLength(2);
+      const links = Array.from(container.querySelectorAll('a'));
+      expect(links.every((a) => a.getAttribute('href') === '/blog/x')).toBe(true);
+      const texts = links.map((a) => a.textContent ?? '');
+      for (const word of ['앞', '가운데', '뒤']) {
+        expect(texts.some((t) => t.includes(word))).toBe(true);
+      }
+      noFigureInParagraph(container);
+    });
+
+    it('목록 항목 안 문단의 캡션 이미지 figure는 li 안에 있고 p 밖이다', async () => {
+      const { container } = await renderMd(`- 항목 ${IMG} 끝\n`);
+      expect(container.querySelector('li figure')).not.toBeNull();
+      expect(container.querySelector('li figure figcaption')).toHaveTextContent('캡션');
+      noFigureInParagraph(container);
+    });
+
+    it('콜아웃 안 캡션 이미지 figure는 aside 안에 있다', async () => {
+      const { container } = await renderMd(`> [!NOTE]\n> 설명 ${IMG} 끝\n`);
+      expect(screen.getByRole('note', { name: '참고' }).querySelector('figure')).not.toBeNull();
+      expect(container.querySelector('aside figure figcaption')).toHaveTextContent('캡션');
+      noFigureInParagraph(container);
+    });
+
+    it('표 셀 안 캡션 이미지는 figure가 되지 않고 title이 남으며 표 구조가 유지된다', async () => {
+      const { container } = await renderMd(`| 이름 | 값 |\n| --- | --- |\n| ${IMG} | 1 |\n`);
+      expect(container.querySelector('figure')).toBeNull();
+      expect(container.querySelector('td img')).toHaveAttribute('title', '캡션');
+      const table = screen.getByRole('table');
+      expect(within(table).getAllByRole('columnheader')).toHaveLength(2);
+      expect(within(table).getAllByRole('row')).toHaveLength(2);
+    });
+
+    it('링크 참조 안 캡션 이미지도 글자 링크 조각과 figure(같은 링크)로 나뉜다', async () => {
+      const { container } = await renderMd(`[글자 ${IMG}][id]\n\n[id]: /blog/x\n`);
+      expect(container.querySelector('figure a[href="/blog/x"] img')).not.toBeNull();
+      expect(container.querySelector('figure figcaption')).toHaveTextContent('캡션');
+      const links = Array.from(container.querySelectorAll('a'));
+      expect(links.some((a) => a.textContent?.includes('글자'))).toBe(true);
+      expect(links.every((a) => a.getAttribute('href') === '/blog/x')).toBe(true);
+      noFigureInParagraph(container);
+    });
+
+    it('취소선 안 링크 안 캡션 이미지는 figure로 빠지고 남은 글자는 취소선을 유지한다', async () => {
+      const { container } = await renderMd(`~~앞 [글자 ${IMG}](/blog/x) 뒤~~`);
+      expect(container.querySelector('figure a[href="/blog/x"] img')).not.toBeNull();
+      expect(container.querySelector('figure figcaption')).toHaveTextContent('캡션');
+      const deleted = Array.from(container.querySelectorAll('del')).map((d) => d.textContent ?? '');
+      expect(deleted.some((t) => t.includes('글자'))).toBe(true);
+      expect(deleted.some((t) => t.includes('앞'))).toBe(true);
+      expect(deleted.some((t) => t.includes('뒤'))).toBe(true);
+      noFigureInParagraph(container);
+    });
+  });
+
   // 계약: renderMarkdown(md, { siteOrigin }) — 외부 링크 판정의 기준 오리진.
   describe('사이트 오리진 기준 링크', () => {
     const siteOrigin = 'https://blog.example.com';
