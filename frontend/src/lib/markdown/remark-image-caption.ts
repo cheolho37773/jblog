@@ -1,68 +1,68 @@
-import type { Image, Link, Paragraph, PhrasingContent, Root } from 'mdast';
+import type { Image, LinkReference, Link, Paragraph, PhrasingContent, Root } from 'mdast';
 import type { Plugin } from 'unified';
 import { visit } from 'unist-util-visit';
 
 // `![alt](url "캡션")`: 제목 속성이 있으면 캡션이다 (지시서 "문법 확정").
-// 캡션 이미지는 문장 속에 있어도 별도 figure 블록으로 분리하고, 앞뒤 본문은 각자 문단으로 보존한다.
+// 문단 안 phrasing 트리(링크·강조·취소선 중첩 포함)에서 캡션 이미지를 찾으면, 그 지점을 경계로
+// 트리를 나눈다. 앞뒤 조각은 원래 감싸던 링크·서식을 복제해 각자 문단으로 남기고,
+// 이미지는 블록 figure로 올린다. 이미지가 링크 안에 있었다면 figure 안에서 같은 링크로 감싼다.
 // 캡션이 없는 이미지는 건드리지 않는다.
+// 표 셀은 문단이 아니라 phrasing을 직접 가지며 블록(figure)을 둘 수 없다. 이 플러그인은 문단만
+// 방문하므로 표 셀 안 이미지는 title이 그대로 남고 figure로 바뀌지 않는다(의도된 동작).
 
 type CaptionedImage = Image & { title: string };
-type Emphasis = Extract<PhrasingContent, { type: 'emphasis' | 'strong' | 'delete' }>;
-// 문단을 쪼갠 조각: 본문 글줄(run) 또는 figure 블록
-type Segment = { figure: Paragraph } | { run: PhrasingContent[] };
+type Wrapper = Extract<
+  PhrasingContent,
+  { type: 'link' | 'linkReference' | 'emphasis' | 'strong' | 'delete' }
+>;
+type LinkLike = Link | LinkReference;
+// 문단을 쪼갠 조각: 본문 글줄(run) 또는 figure로 올릴 이미지(링크로 감싼 상태의 media + 캡션)
+type Segment = { figure: { media: PhrasingContent; caption: string } } | { run: PhrasingContent[] };
 
 const isCaptioned = (node: PhrasingContent): node is CaptionedImage =>
   node.type === 'image' && Boolean(node.title);
 
 const isBlank = (node: PhrasingContent) => node.type === 'text' && node.value.trim() === '';
 
-const isEmphasis = (node: PhrasingContent): node is Emphasis =>
-  node.type === 'emphasis' || node.type === 'strong' || node.type === 'delete';
+const isWrapper = (node: PhrasingContent): node is Wrapper =>
+  node.type === 'link' ||
+  node.type === 'linkReference' ||
+  node.type === 'emphasis' ||
+  node.type === 'strong' ||
+  node.type === 'delete';
 
-/** 링크가 캡션 이미지 하나만 감싸고 있으면(공백 제외) 그 이미지를 돌려준다. 글자가 섞이면 undefined. */
-function soleCaptionedImage(link: Link): CaptionedImage | undefined {
-  const content = link.children.filter((child) => !isBlank(child));
-  const [only] = content;
-  return content.length === 1 && only && isCaptioned(only) ? only : undefined;
+const isLinkLike = (node: Wrapper): node is LinkLike =>
+  node.type === 'link' || node.type === 'linkReference';
+
+/** 캡션 이미지 하나를 figure 조각으로. 캡션이 화면에 보이므로 title 속성(툴팁·중복 낭독)은 지운다. */
+function figureSegmentOf(image: CaptionedImage): Segment {
+  return { figure: { media: { ...image, title: null }, caption: image.title } };
 }
 
-/** figure 블록. 링크로 감싼 이미지는 `figure > a > img`로 목적지를 유지한다. */
-function figureOf(image: CaptionedImage, link?: Link): Paragraph {
-  // 캡션이 이미 화면에 보이므로 title 속성(툴팁·스크린리더 중복 낭독)은 남기지 않는다.
-  const imageWithoutTitle: Image = { ...image, title: null };
-  const media = link ? { ...link, children: [imageWithoutTitle] } : imageWithoutTitle;
-  return {
-    type: 'paragraph',
-    data: { hName: 'figure' },
-    children: [
-      media,
-      {
-        type: 'paragraph',
-        data: { hName: 'figcaption' },
-        children: [{ type: 'text', value: image.title }],
-      },
-    ] as Paragraph['children'],
-  };
+/** 감싸던 서식을 글줄 조각에 다시 입힌다. 공백뿐인 조각은 버린다. */
+function rewrapRun(wrapper: Wrapper, run: PhrasingContent[]): Segment[] {
+  if (run.every(isBlank)) return [];
+  return [{ run: [{ ...wrapper, children: run } as PhrasingContent] }];
 }
 
-/** 강조 안에서 나온 조각에 강조를 다시 입힌다. 글자는 서식을 유지하고 figure는 그대로 둔다. */
-function rewrapEmphasis(emphasis: Emphasis, inner: Segment[]): Segment[] {
-  return inner.flatMap((segment): Segment[] => {
-    if ('figure' in segment) return [segment];
-    if (segment.run.every(isBlank)) return [];
-    return [{ run: [{ ...emphasis, children: segment.run } as PhrasingContent] }];
-  });
+/** figure 조각의 이미지를 링크로 감싼다. 강조·취소선은 figure 밖 서식이라 입히지 않는다. */
+function rewrapFigure(wrapper: Wrapper, segment: Extract<Segment, { figure: unknown }>): Segment {
+  if (!isLinkLike(wrapper)) return segment;
+  const media = { ...wrapper, children: [segment.figure.media] } as PhrasingContent;
+  return { figure: { ...segment.figure, media } };
+}
+
+/** 감싸는 노드(링크·강조·취소선) 안을 재귀로 나눈 결과에 감싸던 노드를 다시 입힌다. */
+function segmentsOfWrapper(wrapper: Wrapper): Segment[] {
+  return segmentsOf(wrapper.children).flatMap((segment): Segment[] =>
+    'figure' in segment ? [rewrapFigure(wrapper, segment)] : rewrapRun(wrapper, segment.run),
+  );
 }
 
 /** 한 노드를 조각으로 바꾼다. figure로 뺄 이미지가 없으면 노드는 그대로 글줄에 남는다. */
 function segmentsOfNode(node: PhrasingContent): Segment[] {
-  if (isCaptioned(node)) return [{ figure: figureOf(node) }];
-  if (node.type === 'link') {
-    const image = soleCaptionedImage(node);
-    // 글자와 섞인 링크는 나누지 않는다. 이미지 title은 그대로 남아 캡션 정보가 보존된다.
-    return image ? [{ figure: figureOf(image, node) }] : [{ run: [node] }];
-  }
-  if (isEmphasis(node)) return rewrapEmphasis(node, segmentsOf(node.children));
+  if (isCaptioned(node)) return [figureSegmentOf(node)];
+  if (isWrapper(node)) return segmentsOfWrapper(node);
   return [{ run: [node] }];
 }
 
@@ -77,10 +77,26 @@ function segmentsOf(children: PhrasingContent[]): Segment[] {
   return segments;
 }
 
+/** `<figure>{media}<figcaption>캡션</figcaption></figure>`에 해당하는 mdast 블록. */
+function figureBlock({ media, caption }: { media: PhrasingContent; caption: string }): Paragraph {
+  return {
+    type: 'paragraph',
+    data: { hName: 'figure' },
+    children: [
+      media,
+      {
+        type: 'paragraph',
+        data: { hName: 'figcaption' },
+        children: [{ type: 'text', value: caption }],
+      },
+    ] as Paragraph['children'],
+  };
+}
+
 /** 문단을 캡션 이미지 기준으로 쪼갠다. 본문 조각은 문단, 캡션 이미지는 figure가 된다. */
 function splitParagraph(paragraph: Paragraph): Paragraph[] {
   return segmentsOf(paragraph.children).flatMap((segment): Paragraph[] => {
-    if ('figure' in segment) return [segment.figure];
+    if ('figure' in segment) return [figureBlock(segment.figure)];
     if (segment.run.every(isBlank)) return [];
     return [{ type: 'paragraph', children: segment.run }];
   });
