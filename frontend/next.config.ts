@@ -26,13 +26,17 @@ export default function createNextConfig(phase: string): NextConfig {
     outputFileTracingRoot: REPOSITORY_ROOT,
   };
 
-  // 프론트엔드 §4: 로컬 개발에서만 Next가 /api/*를 백엔드로 넘긴다. 운영은 Nginx가 맡는다.
+  // 프론트엔드 §4 경로 표: 로컬 개발에서만 Next가 /api/*와 /uploads/*를 백엔드로 넘긴다.
+  // 운영은 Nginx가 맡는다(/api → Nest, /uploads → 정적 파일).
   if (phase !== PHASE_DEVELOPMENT_SERVER) return baseConfig;
 
   return {
     ...baseConfig,
     async rewrites() {
-      return [{ source: '/api/:path*', destination: `${server.API_INTERNAL_URL}/api/:path*` }];
+      return [
+        { source: '/api/:path*', destination: `${server.API_INTERNAL_URL}/api/:path*` },
+        { source: '/uploads/:path*', destination: `${server.API_INTERNAL_URL}/uploads/:path*` },
+      ];
     },
   };
 }
