@@ -425,8 +425,10 @@ describe('Codex r1 회귀', () => {
       expect(container.querySelector('figure')).toBeNull();
       const links = container.querySelectorAll('a[href="/blog/x"]');
       expect(links).toHaveLength(1);
-      expect(links[0].textContent).toContain('글자');
-      expect(links[0].querySelector('img')).toHaveAttribute('title', '캡션');
+      const link = links.item(0);
+      if (!link) throw new Error('링크가 렌더링되지 않았다');
+      expect(link.textContent).toContain('글자');
+      expect(link.querySelector('img')).toHaveAttribute('title', '캡션');
     });
   });
 
