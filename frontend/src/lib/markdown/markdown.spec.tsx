@@ -391,6 +391,45 @@ describe('Codex r1 회귀', () => {
     expect(container.textContent).toContain('뒤');
   });
 
+  describe('Codex r2: 링크·강조 안의 캡션 이미지', () => {
+    it('이미지만 감싼 링크는 figure 안에서 링크 목적지를 유지하고 캡션을 보여 준다', async () => {
+      const { container } = await renderMd('[![alt](/uploads/a.png "캡션")](https://example.com)');
+      const figure = container.querySelector('figure');
+      const link = figure?.querySelector('a[href="https://example.com"]');
+      expect(link).not.toBeNull();
+      expect(link?.querySelector('img[alt="alt"]')).not.toBeNull();
+      expect(figure?.querySelector('figcaption')).toHaveTextContent('캡션');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link?.getAttribute('rel')).toContain('noopener');
+    });
+
+    it('굵게 안의 캡션 이미지는 figure로 빠진다', async () => {
+      const { container } = await renderMd('**![alt](/uploads/a.png "캡션")**');
+      const figure = container.querySelector('figure');
+      expect(figure?.querySelector('img')).not.toBeNull();
+      expect(figure?.querySelector('figcaption')).toHaveTextContent('캡션');
+    });
+
+    it('기울임 안의 캡션 이미지는 figure로 빠지고 남은 글자는 강조 서식을 유지한다', async () => {
+      const { container } = await renderMd('*앞 ![alt](/uploads/a.png "캡션") 뒤*');
+      const figure = container.querySelector('figure');
+      expect(figure?.querySelector('img')).not.toBeNull();
+      expect(figure?.querySelector('figcaption')).toHaveTextContent('캡션');
+      const emphasized = Array.from(container.querySelectorAll('em')).map((e) => e.textContent);
+      expect(emphasized.some((t) => t?.includes('앞'))).toBe(true);
+      expect(emphasized.some((t) => t?.includes('뒤'))).toBe(true);
+    });
+
+    it('링크 안에 글자와 이미지가 섞이면 링크를 나누지 않고 캡션을 img title로 보존한다', async () => {
+      const { container } = await renderMd('[글자 ![alt](/uploads/a.png "캡션")](/blog/x)');
+      expect(container.querySelector('figure')).toBeNull();
+      const links = container.querySelectorAll('a[href="/blog/x"]');
+      expect(links).toHaveLength(1);
+      expect(links[0].textContent).toContain('글자');
+      expect(links[0].querySelector('img')).toHaveAttribute('title', '캡션');
+    });
+  });
+
   // 계약: renderMarkdown(md, { siteOrigin }) — 외부 링크 판정의 기준 오리진.
   describe('사이트 오리진 기준 링크', () => {
     const siteOrigin = 'https://blog.example.com';
