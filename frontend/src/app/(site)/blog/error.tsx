@@ -3,7 +3,10 @@
 import { Container } from '@/components/layout/Container';
 import { Button } from '@/components/ui/Button';
 
-/** 목록 조회 실패는 빈 목록으로 숨기지 않고 오류로 보여 준다 (프론트엔드 §4 "빌드와 데이터"). */
+/**
+ * 목록 조회 실패는 빈 목록으로 숨기지 않고 오류로 보여 준다 (프론트엔드 §4 "빌드와 데이터").
+ * `/blog` 목록 전용이다. 하위 상세(`blog/[slug]`)는 자기 error.tsx(공통 오류 화면)가 먼저 잡는다.
+ */
 export default function BlogError({ reset }: { error: Error; reset: () => void }) {
   return (
     <Container className="pt-6 pb-16">
