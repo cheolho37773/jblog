@@ -10,6 +10,7 @@ import {
   MISSING_SLUG,
   OLD_SLUG,
   OLD_SLUG_TARGET,
+  SLOW_CATEGORIES,
   createFixtureServer,
 } from '../e2e/fixtures/server';
 
@@ -198,8 +199,12 @@ describe('GET /api/categories · /api/tags', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toBe(CACHE_CONTROL.public);
-    expect(body.length).toBeGreaterThanOrEqual(MIN_CATEGORIES);
-    expect(body.reduce((sum, c) => sum + c.postCount, 0)).toBe(
+    // 지연 카테고리(칩 전환 중 스켈레톤 시험용, postCount 1)는 실제 글에 연결돼 있지 않아 글 수 규칙에서 따로 본다.
+    const slowSlugs = SLOW_CATEGORIES.map((c) => c.slug);
+    const real = body.filter((c) => !slowSlugs.includes(c.slug));
+    expect(body.filter((c) => slowSlugs.includes(c.slug)).map((c) => c.slug)).toEqual(slowSlugs);
+    expect(real.length).toBeGreaterThanOrEqual(MIN_CATEGORIES);
+    expect(real.reduce((sum, c) => sum + c.postCount, 0)).toBe(
       all.filter((p) => p.category).length,
     );
   });
