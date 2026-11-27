@@ -120,11 +120,19 @@ test.describe('Load More 실패·진행 중', () => {
 });
 
 test.describe('서버 조회 실패', () => {
-  test('글 목록 조회가 5xx면 빈 목록이 아니라 오류 응답(5xx)이다', async ({ request }) => {
+  test('글 목록 조회가 5xx면 빈 목록이 아니라 5xx 응답이거나 /blog 오류 경계(blog-error)가 보인다', async ({
+    page,
+  }) => {
     // 픽스처 서버는 시험용 태그의 글 조회에만 500을 준다(목록·태그 목록은 정상이라 404가 아니다).
-    const response = await request.get(`/blog?tag=${ERROR_TAG.slug}`);
-    expect(response.status()).toBeGreaterThanOrEqual(SERVER_ERROR_STATUS);
-    expect(await response.text()).not.toContain('아직 글이 없습니다');
+    // loading.tsx 스트리밍으로 상태가 200으로 굳을 수 있어 "5xx 또는 오류 경계"를 통과로 본다(프론트 §4).
+    const response = await page.goto(`/blog?tag=${ERROR_TAG.slug}`);
+    if ((response?.status() ?? 0) >= SERVER_ERROR_STATUS) return;
+
+    const boundary = page.getByTestId('blog-error');
+    await expect(boundary).toBeVisible();
+    await expect(boundary).toHaveAttribute('role', 'alert');
+    await expect(page.locator(GRID_SELECTOR)).toHaveCount(0);
+    await expect(page.getByTestId('blog-empty')).toHaveCount(0);
   });
 });
 
