@@ -9,8 +9,14 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Input } from '@/components/ui/Input';
+import { CategoryChips } from '@/features/posts/components/CategoryChips';
+import { FeaturedHeroCard } from '@/features/posts/components/FeaturedHeroCard';
+import { PostCardGrid } from '@/features/posts/components/PostCardGrid';
+import { PostCardOverlay } from '@/features/posts/components/PostCardOverlay';
+import { PostCardSkeleton } from '@/features/posts/components/PostCardSkeleton';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import type { components } from '@/generated/api-types';
 
 // 개발 전용 페이지다. JBLOG_DEV_PAGES=1 빌드에서만 라우트가 되고 운영 빌드에는 들어가지 않는다 (next.config.ts).
 export const metadata: Metadata = {
@@ -49,6 +55,109 @@ const EXAMPLE_FOOTER = {
 const AVATAR_SIZES = [28, 40, 80];
 // 외부 URL·실제 인물 사진을 쓰지 않는 단색 더미 이미지
 const AVATAR_IMAGE = '/dev/avatar-dummy.png';
+
+type PostSummaryDto = components['schemas']['PostSummaryDto'];
+type CategoryWithCountDto = components['schemas']['CategoryWithCountDto'];
+
+// 카드 예시 데이터. 이미지는 E2E 픽스처 경로이고 개발 서버에서는 /uploads rewrite로 보인다.
+const BACKEND_CATEGORY = { name: '백엔드', slug: 'backend' };
+const MAX_TITLE_LENGTH = 200;
+const MAX_TITLE = '가나다라마바사아자차'.repeat(MAX_TITLE_LENGTH / 10);
+
+const EXAMPLE_POSTS = {
+  // 제목이 2줄이라 스켈레톤(제목 2줄)과 높이가 같다
+  withCover: {
+    title: 'Prisma 마이그레이션을 무중단으로 적용하는 방법',
+    slug: 'prisma-zero-downtime',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-indigo.png',
+    category: BACKEND_CATEGORY,
+    publishedAt: '2026-01-04T15:00:00.000Z',
+    readingMinutes: 5,
+    likeCount: 0,
+    viewCount: 0,
+  },
+  // 커버 없음 + 카테고리 없음 + 3줄을 넘는 긴 제목(3줄 clamp 확인용)
+  noCoverNoCategory: {
+    title:
+      '아주 긴 제목의 글은 카드 안에서 세 줄까지만 보이고 그 뒤는 말줄임표로 잘려야 하므로 이 예시는 일부러 길게 적었습니다',
+    slug: 'very-long-title',
+    excerpt: '예시 요약',
+    coverImageUrl: null,
+    category: null,
+    publishedAt: '2025-12-31T15:00:00.000Z',
+    readingMinutes: 1,
+    likeCount: 0,
+    viewCount: 0,
+  },
+  another: {
+    title: 'React 서버 컴포넌트 경계 정하기',
+    slug: 'rsc-boundary',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-rose.png',
+    category: { name: '프론트엔드', slug: 'frontend' },
+    publishedAt: '2026-02-10T03:00:00.000Z',
+    readingMinutes: 8,
+    likeCount: 0,
+    viewCount: 0,
+  },
+  overlay: {
+    title: '개인 블로그를 직접 만들며 배운 것들',
+    slug: 'building-jblog',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-emerald.png',
+    category: BACKEND_CATEGORY,
+    publishedAt: '2026-03-01T03:00:00.000Z',
+    readingMinutes: 6,
+    likeCount: 0,
+    viewCount: 0,
+  },
+  hero: {
+    title: '운영 중인 서비스의 캐시 전략',
+    slug: 'cache-strategy',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-amber.png',
+    category: { name: '인프라', slug: 'infra' },
+    publishedAt: '2026-03-15T03:00:00.000Z',
+    readingMinutes: 10,
+    likeCount: 0,
+    viewCount: 0,
+  },
+  heroLong: {
+    title:
+      '운영 중인 서비스에서 캐시 전략을 처음부터 다시 설계하며 겪은 무효화 문제와 일관성 보장, 그리고 장애를 줄이기 위해 도입한 단계별 롤아웃 과정에서 배운 점들을 정리한 아주 긴 제목의 예시 글',
+    slug: 'cache-strategy-long',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-amber.png',
+    category: { name: '인프라', slug: 'infra' },
+    publishedAt: '2026-03-15T03:00:00.000Z',
+    readingMinutes: 10,
+    likeCount: 0,
+    viewCount: 0,
+  },
+  // 백엔드 최대 길이(200자) 제목: 공백이 없어 줄바꿈 기회가 없는 최악의 경우
+  maxTitle: {
+    title: MAX_TITLE,
+    slug: 'max-title',
+    excerpt: '예시 요약',
+    coverImageUrl: '/uploads/fixtures/cover-indigo.png',
+    category: BACKEND_CATEGORY,
+    publishedAt: '2026-03-15T03:00:00.000Z',
+    readingMinutes: 10,
+    likeCount: 0,
+    viewCount: 0,
+  },
+} satisfies Record<string, PostSummaryDto>;
+const EXAMPLE_CATEGORIES = [
+  { name: '백엔드', slug: 'backend', postCount: 12 },
+  { name: '프론트엔드', slug: 'frontend', postCount: 8 },
+  { name: '인프라', slug: 'infra', postCount: 5 },
+  { name: '데이터베이스', slug: 'database', postCount: 4 },
+  { name: '커리어', slug: 'career', postCount: 2 },
+] satisfies CategoryWithCountDto[];
+const SKELETON_COUNT = 3;
+const CARD_GRID_CLASS =
+  'grid grid-cols-1 items-start gap-4 tablet:grid-cols-2 tablet:gap-5 laptop:grid-cols-3';
 
 const COLOR_SWATCHES = [
   'bg-bg',
@@ -295,6 +404,40 @@ export default function ComponentsPage() {
           <LayoutSection title="제목 있는 Section" data-example="section-titled">
             <p>Section 내용</p>
           </LayoutSection>
+        </div>
+      </Section>
+
+      <Section id="dev-posts-cards" title="Post cards">
+        <div data-testid="dev-card-grid" className={CARD_GRID_CLASS}>
+          <PostCardGrid post={EXAMPLE_POSTS.withCover} />
+          <PostCardGrid post={EXAMPLE_POSTS.noCoverNoCategory} />
+          <PostCardGrid post={EXAMPLE_POSTS.another} />
+        </div>
+        <div data-testid="dev-card-overlay">
+          <PostCardOverlay post={EXAMPLE_POSTS.overlay} />
+        </div>
+        <div data-testid="dev-card-hero">
+          <FeaturedHeroCard post={EXAMPLE_POSTS.hero} />
+        </div>
+        <div data-testid="dev-card-hero-long">
+          <FeaturedHeroCard post={EXAMPLE_POSTS.heroLong} />
+        </div>
+        <div data-testid="dev-card-overlay-long">
+          <PostCardOverlay post={EXAMPLE_POSTS.maxTitle} />
+        </div>
+        <div data-testid="dev-card-grid-long" className={CARD_GRID_CLASS}>
+          <PostCardGrid post={EXAMPLE_POSTS.maxTitle} />
+        </div>
+        <div data-testid="dev-card-hero-max">
+          <FeaturedHeroCard post={EXAMPLE_POSTS.maxTitle} />
+        </div>
+        <div data-testid="dev-chips">
+          <CategoryChips categories={EXAMPLE_CATEGORIES} activeSlug="frontend" />
+        </div>
+        <div data-testid="dev-card-skeleton" className={CARD_GRID_CLASS}>
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+            <PostCardSkeleton key={index} />
+          ))}
         </div>
       </Section>
 

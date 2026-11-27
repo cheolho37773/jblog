@@ -18,7 +18,23 @@ export async function openForCapture(
   await page.goto(route);
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
   await waitForFonts(page);
+  await loadAllImages(page);
   await waitForTransitionsToSettle(page, theme);
+}
+
+/**
+ * 지연 로딩(`loading="lazy"`) 이미지는 전체 페이지 캡처 중에 늦게 도착해 연속 캡처가 달라질 수 있다.
+ * 모두 즉시 로딩으로 바꾸고 디코딩까지 기다려, 캡처 시점의 이미지 상태를 고정한다.
+ */
+async function loadAllImages(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      [...document.images].map((image) => {
+        image.loading = 'eager';
+        return image.decode().catch(() => undefined);
+      }),
+    ),
+  );
 }
 
 /**
@@ -30,9 +46,13 @@ async function waitForTransitionsToSettle(page: Page, theme: Theme): Promise<voi
   for (const toggle of await page.getByRole('switch', { name: '다크 모드' }).all()) {
     await expect(toggle).toHaveAttribute('aria-checked', expectedChecked);
   }
+  // 무한 반복 애니메이션(스켈레톤 pulse)은 끝나지 않으므로 기다리지 않는다. 캡처 때 Playwright가 처음 상태로 되돌린다.
   await page.evaluate(() =>
     Promise.all(
-      document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
     ),
   );
 }
