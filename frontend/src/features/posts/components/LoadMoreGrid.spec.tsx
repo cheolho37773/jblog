@@ -12,6 +12,10 @@ import { makePost, type PostSummaryDto } from './post-card.test-data';
 
 const getMock = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/api/client', () => ({ browserApi: { GET: getMock } }));
+// 실제 Next는 history.replaceState·이동으로 바뀐 주소를 useSearchParams에 반영한다. 목은 그릴 때마다 현재 주소의 쿼리를 읽어 같은 효과를 낸다.
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
 
 type Filter = { category?: string } | { tag?: string };
 interface GridProps {
@@ -316,17 +320,33 @@ describe('LoadMoreGrid: 같은 필터에서 서버 props가 바뀔 때', () => {
     return (next: Partial<GridProps>) => view.rerender(<LoadMoreGrid {...base} {...next} />);
   }
 
-  it('Load More로 늘어난 뒤 1페이지 props가 다시 오면 처음 목록으로 돌아오고 버튼이 다시 나온다 (/blog?page=2 → /blog)', async () => {
+  it('Load More로 늘어난 뒤 주소가 Load More가 바꾼 것이 아닌 값으로 바뀌면(서버 props는 처음과 같아도) 처음 목록과 버튼으로 돌아간다 (13개 → Navbar Blog → /blog)', async () => {
     getMock.mockResolvedValue(pageOf(posts('c', 'd'), 2, 2));
     const rerender = await renderGridWithRerender({});
     await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
     await waitFor(() => expect(loadMoreButton()).toBeNull());
     expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']);
+    expect(window.location.search).toBe('?page=2');
 
+    // 이동: 주소가 /blog로 바뀌고 서버는 처음과 같은 값을 다시 넘긴다.
+    window.history.replaceState(null, '', '/blog');
     rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 });
 
     await waitFor(() => expect(slugsInList()).toEqual(['a', 'b']));
     expect(loadMoreButton()).not.toBeNull();
+  });
+
+  it('Load More로 늘어난 뒤 주소가 바뀌지 않았다면 같은 서버 props로 다시 그려도 카드를 유지한다(Load More 자신의 주소 변경은 이동이 아니다)', async () => {
+    getMock.mockResolvedValue(pageOf(posts('c', 'd'), 2, 2));
+    const rerender = await renderGridWithRerender({});
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']));
+
+    rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 });
+
+    expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']);
+    expect(loadMoreButton()).toBeNull();
+    expect(window.location.search).toBe('?page=2');
   });
 
   it('서버가 2페이지까지 그린 props(initialPage 2)로 바뀌면 그 목록을 보여 주고 버튼이 없다 (/blog → /blog?page=2)', async () => {
@@ -348,17 +368,6 @@ describe('LoadMoreGrid: 같은 필터에서 서버 props가 바뀔 때', () => {
 
     await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd', 'e']));
     expect(lastQuery().page).toBe(3);
-  });
-
-  it('props가 그대로면(같은 값으로 다시 그려도) 불러온 카드를 지우지 않는다', async () => {
-    getMock.mockResolvedValue(pageOf(posts('c'), 2, 2));
-    const rerender = await renderGridWithRerender({});
-    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
-    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c']));
-
-    rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 });
-    // 같은 내용의 새 배열이라도 서버가 넘긴 값이 실제로 달라진 것이 아니면 상태를 되돌리지 않는다.
-    expect(slugsInList()).toEqual(['a', 'b', 'c']);
   });
 });
 
