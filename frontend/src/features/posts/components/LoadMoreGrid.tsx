@@ -1,6 +1,5 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import type { components } from '@/generated/api-types';
@@ -24,70 +23,45 @@ const FILL_ROW_CLASS = '[&>article]:h-full [&>article>a]:h-full';
 const FAILURE_MESSAGE = '글을 더 불러오지 못했습니다. 다시 시도해 주세요.';
 
 // 성공하면 주소의 ?page=만 바꾼다(다른 쿼리 유지). 새로고침하면 서버가 그 페이지까지 다시 그린다.
-// 바뀐 쿼리 문자열(? 없이)을 돌려줘, 우리가 바꾼 주소와 이동으로 바뀐 주소를 구분하는 데 쓴다.
-function replacePageInUrl(page: number): string {
+// Next는 history.replaceState를 라우터에 반영한다(공식 방식). 상태 인자는 null로 넘긴다: 기존 history.state를 그대로 넘기면 Next가 자기 상태로 보고 무시한다.
+function replacePageInUrl(page: number) {
   const url = new URL(window.location.href);
   url.searchParams.set('page', String(page));
-  // state를 null로 넘겨야 Next 라우터가 이 변경을 알아채고 useSearchParams에 반영한다(기존 state를 그대로 넘기면 무시된다)
   window.history.replaceState(null, '', url);
-  return url.searchParams.toString();
 }
 
-async function fetchPage(page: number, filter: LoadMoreGridProps['filter']) {
+async function fetchPage(page: number, filter: LoadMoreGridProps['filter'], signal: AbortSignal) {
   const { data: postPage } = await browserApi.GET('/api/posts', {
     params: { query: { page, size: PAGE_SIZE, ...filter } },
+    signal,
   });
   return postPage ?? null;
 }
 
 /** 글 카드 격자와 Load More. 첫 페이지(들)는 서버가 그리고 이후 페이지만 브라우저가 `/api/posts`로 받는다. */
 export function LoadMoreGrid({ initialPosts, initialPage, totalPages, filter }: LoadMoreGridProps) {
-  // 서버가 넘긴 값(페이지·글 순서·전체 페이지 수)의 요약. 새 배열이어도 값이 같으면 같은 요약이다
-  const serverSignature = `${initialPage}/${totalPages}:${initialPosts.map((post) => post.slug).join(',')}`;
   const [posts, setPosts] = useState(initialPosts);
   const [page, setPage] = useState(initialPage);
   const [isLoading, setIsLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [announcement, setAnnouncement] = useState('');
-  const [syncedSignature, setSyncedSignature] = useState(serverSignature);
-  // 주소 쿼리: Next는 replaceState도 반영한다. 같은 서버 값으로 돌아오는 이동(Load More 뒤 Navbar Blog)은 props가 안 변해 이것으로 알아챈다
-  const search = useSearchParams()?.toString() ?? '';
-  const [seenSearch, setSeenSearch] = useState(search);
-  // Load More가 직접 바꾼 쿼리. 이것과 같은 변화는 이동이 아니다
-  const [ownSearch, setOwnSearch] = useState(search);
   // 버튼이 사라질 때 포커스를 받을 카드(새로 붙은 첫 글). 렌더에 쓰이지 않아 ref에 둔다
   const pendingFocusSlug = useRef<string | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
   // state는 다음 렌더에야 반영되므로 연속 클릭을 막는 데는 ref를 쓴다
   const requestInFlight = useRef(false);
-
-  // 진행 중인 요청이 어느 서버 값 기준으로 시작됐는지 비교해, 서버 값이 바뀐 뒤 늦게 온 응답을 버린다
-  const currentSignature = useRef(serverSignature);
-
-  // 같은 필터에서 page만 바뀌는 이동(/blog?page=2 -> /blog)이나 뒤로가기로 서버 값이 바뀌면, 불러온 상태를 버리고 새 값으로 맞춘다.
-  // Load More 자신의 replaceState는 라우터를 거치지 않아 서버 값이 안 바뀌므로 불러온 카드는 유지된다.
-  // effect에서 setState하면 한 번 틀린 화면이 그려지므로, React 권장대로 렌더 중에 맞춘다.
-  const searchChanged = search !== seenSearch;
-  if (searchChanged) setSeenSearch(search);
-  const navigatedByUser = searchChanged && search !== ownSearch;
-  if (syncedSignature !== serverSignature || navigatedByUser) {
-    setSyncedSignature(serverSignature);
-    setOwnSearch(search);
-    setPosts(initialPosts);
-    setPage(initialPage);
-    setIsLoading(false);
-    setFailed(false);
-    setAnnouncement('');
-  }
+  // 컴포넌트가 사라질 때(이동·새 서버 렌더) 진행 중 요청을 취소해, 늦게 온 응답이 다른 목록·주소를 바꾸지 못하게 한다.
+  // Strict Mode가 effect를 두 번 돌려도 매번 새 컨트롤러를 만든다
+  const abortController = useRef<AbortController | null>(null);
 
   const hasMore = page < totalPages;
 
   useEffect(() => {
-    currentSignature.current = serverSignature;
-    pendingFocusSlug.current = null;
-    requestInFlight.current = false;
-  }, [serverSignature]);
+    abortController.current = new AbortController();
+    return () => abortController.current?.abort();
+  }, []);
 
+  // posts가 바뀐 직후에만 실행되고, 사라진 뒤에는 실행되지 않는다(언마운트하면 effect가 돌지 않는다)
   useEffect(() => {
     const focusSlug = pendingFocusSlug.current;
     if (!focusSlug) return;
@@ -97,37 +71,37 @@ export function LoadMoreGrid({ initialPosts, initialPage, totalPages, filter }: 
     target?.focus();
   }, [posts]);
 
+  // 응답을 목록·페이지·안내·주소에 반영한다
+  function showLoadedPage(nextPage: number, loaded: PostSummaryDto[]) {
+    const merged = mergePostsBySlug(posts, loaded);
+    const added = merged.slice(posts.length);
+    if (nextPage >= totalPages && added[0]) pendingFocusSlug.current = added[0].slug;
+    setPosts(merged);
+    setPage(nextPage);
+    // 중복을 뺀 실제 추가 개수를 알린다. 0개면 이전 안내까지 비운다
+    setAnnouncement(added.length > 0 ? `글 ${added.length}개를 더 불러왔습니다.` : '');
+    replacePageInUrl(nextPage);
+  }
+
   async function loadMore() {
-    if (requestInFlight.current) return;
+    const signal = abortController.current?.signal;
+    if (requestInFlight.current || !signal) return;
     requestInFlight.current = true;
     setIsLoading(true);
     setFailed(false);
 
     const nextPage = page + 1;
-    const startedWith = serverSignature;
     try {
-      const result = await fetchPage(nextPage, filter);
-      if (currentSignature.current !== startedWith) return;
-      if (!result) {
-        setFailed(true);
-        return;
-      }
-      const merged = mergePostsBySlug(posts, result.items);
-      const added = merged.slice(posts.length);
-      if (nextPage >= totalPages && added[0]) pendingFocusSlug.current = added[0].slug;
-      setPosts(merged);
-      setPage(nextPage);
-      // 중복을 뺀 실제 추가 개수를 알린다. 0개면 이전 안내까지 비운다
-      setAnnouncement(added.length > 0 ? `글 ${added.length}개를 더 불러왔습니다.` : '');
-      setOwnSearch(replacePageInUrl(nextPage));
+      const result = await fetchPage(nextPage, filter, signal);
+      // 취소된 요청(사라진 컴포넌트)의 결과는 어디에도 반영하지 않는다
+      if (signal.aborted) return;
+      if (result) showLoadedPage(nextPage, result.items);
+      else setFailed(true);
     } catch {
-      if (currentSignature.current === startedWith) setFailed(true);
+      if (!signal.aborted) setFailed(true);
     } finally {
-      // 서버 값이 바뀌었다면 상태는 이미 정리됐고, 새 요청이 진행 중일 수 있어 건드리지 않는다
-      if (currentSignature.current === startedWith) {
-        requestInFlight.current = false;
-        setIsLoading(false);
-      }
+      requestInFlight.current = false;
+      if (!signal.aborted) setIsLoading(false);
     }
   }
 
