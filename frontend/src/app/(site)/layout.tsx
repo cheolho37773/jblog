@@ -1,9 +1,19 @@
+import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import { Footer } from '@/components/layout/Footer';
 import { Navbar } from '@/components/layout/Navbar';
+import { loadCategories } from '@/features/posts/lib/blog-list-api';
 
-// body가 세로 flex라 Navbar(sticky)·main·Footer를 body의 직계 자식으로 둔다. Footer에는 값을 넘기지 않는다. 소개·연락처·카테고리는 API가 붙는 M2~M3에서 연결한다.
-export default function SiteLayout({ children }: { children: ReactNode }) {
+const FOOTER_CATEGORY_LIMIT = 6;
+
+// body가 세로 flex라 Navbar(sticky)·main·Footer를 body의 직계 자식으로 둔다. 소개·연락처는 M3에서 연결한다.
+// Footer 카테고리는 요청 시 조회한다(빌드 중 API 호출 금지). 조회가 실패하면 (site)의 모든 페이지가 오류로 끝난다.
+export default async function SiteLayout({ children }: { children: ReactNode }) {
+  await connection();
+  const categories = (await loadCategories())
+    .filter((category) => category.postCount > 0)
+    .slice(0, FOOTER_CATEGORY_LIMIT);
+
   return (
     <>
       <a
@@ -16,7 +26,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       <main id="main" className="flex-1">
         {children}
       </main>
-      <Footer />
+      <Footer categories={categories} />
     </>
   );
 }
