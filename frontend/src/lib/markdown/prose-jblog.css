@@ -27,6 +27,9 @@
 
 .prose-jblog :is(h1, h2, h3, h4, h5, h6) {
   @apply font-sans text-strong;
+  /* #id로 이동(목차·앵커)할 때 sticky Navbar(≥1024 높이 100 + 테두리 1)에 가리지 않게 그 아래 32에 멈춘다.
+     목차(TableOfContents)의 현재 항목 판정선과 같은 값이다. */
+  scroll-margin-top: 133px;
 }
 .prose-jblog h1 {
   @apply text-h1;

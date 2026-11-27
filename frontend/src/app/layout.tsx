@@ -7,7 +7,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.public.NEXT_PUBLIC_SITE_URL),
-  title: 'jblog',
+  // 하위 페이지 title에 사이트 이름을 붙인다 (프론트엔드 §9). title이 없는 페이지는 default를 쓴다.
+  title: { default: 'jblog', template: '%s | jblog' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

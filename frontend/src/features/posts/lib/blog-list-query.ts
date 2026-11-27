@@ -33,3 +33,14 @@ export function parseBlogQuery(raw: RawBlogQuery): BlogQuery {
 export function clampPage(page: number, totalPages: number): number {
   return Math.min(page, Math.max(totalPages, FIRST_PAGE));
 }
+
+const BLOG_PATH = '/blog';
+
+/**
+ * 목록 canonical 경로. 필터(tag 또는 category)만 남기고 page는 뺀다: 같은 목록의 n페이지를 별도 문서로 보지 않게 한다.
+ */
+export function blogCanonicalPath({ tag, category }: BlogQuery): string {
+  if (tag) return `${BLOG_PATH}?${new URLSearchParams({ tag })}`;
+  if (category) return `${BLOG_PATH}?${new URLSearchParams({ category })}`;
+  return BLOG_PATH;
+}
