@@ -47,12 +47,17 @@ export const CACHE_CONTROL = {
 // ───────────────────────── 데이터 ─────────────────────────
 
 const category = (name: string, slug: string) => ({ name, slug });
+
+export const EMPTY_CATEGORY_SLUG = 'empty-category';
 const tag = (name: string, slug: string) => ({ name, slug });
 
 export const CATEGORIES = {
   backend: category('백엔드', 'backend'),
   frontend: category('프론트엔드', 'frontend'),
   devops: category('DevOps', 'devops'),
+  // 글이 0개인 카테고리(M2-07). 목록 칩·Footer에서 빠지고, 주소로 들어가면 빈 상태가 되는지 본다.
+  // Footer "postCount 0 제외"가 단순 slice(0, 6)과 구분되도록 순서 가운데에 둔다.
+  empty: category('빈 카테고리', EMPTY_CATEGORY_SLUG),
   database: category('데이터베이스', 'database'),
   architecture: category('아키텍처', 'architecture'),
   career: category('커리어', 'career'),
@@ -67,6 +72,20 @@ export const TAGS = {
   testing: tag('테스트', 'testing'),
   security: tag('보안', 'security'),
 } satisfies Record<string, Schemas['TagRefDto']>;
+
+// 서버 조회 실패를 재현하는 시험용 태그(M2-07). 태그 목록에는 보이지만 글 조회가 500으로 답한다.
+export const ERROR_TAG = tag('서버 오류 재현', 'fixture-error');
+const HOOK_TAGS = [ERROR_TAG];
+
+// 칩 클릭 전환 중 스켈레톤(M2-07 G2)을 보려는 지연 카테고리. 글 조회가 3초 걸린 뒤 frontend 카테고리 글을 돌려준다.
+// 칩 순서의 맨 뒤에 둔다(글이 있는 카테고리로 보인다). Footer는 앞 6개만 보여 영향이 없고, 칩 목록 단언은 CATEGORIES_RESPONSE를 그대로 쓴다.
+// 같은 주소는 서버 fetch 캐시가 재사용하므로 재시도(retry)마다 다른 것을 쓴다.
+export const SLOW_CATEGORIES = [
+  category('느린 조회 0', 'fixture-slow-0'),
+  category('느린 조회 1', 'fixture-slow-1'),
+];
+export const SLOW_CATEGORY_DELAY_MS = 3000;
+const isSlowCategory = (slug: string | null) => SLOW_CATEGORIES.some((hook) => hook.slug === slug);
 
 /** 목록 응답의 정렬 순서(sortOrder)와 같다. */
 const CATEGORY_ORDER = Object.values(CATEGORIES);
@@ -275,15 +294,23 @@ function toPublicDetail(post: InternalPost): PostDetail {
 
 export const POST_SUMMARIES: PostSummary[] = INTERNAL_POSTS.map(toSummary);
 
-export const CATEGORIES_RESPONSE: CategoryWithCount[] = CATEGORY_ORDER.map((ref) => ({
-  ...ref,
-  postCount: INTERNAL_POSTS.filter((post) => post.category?.slug === ref.slug).length,
-}));
+export const CATEGORIES_RESPONSE: CategoryWithCount[] = [
+  ...CATEGORY_ORDER.map((ref) => ({
+    ...ref,
+    postCount: INTERNAL_POSTS.filter((post) => post.category?.slug === ref.slug).length,
+  })),
+  // 지연 카테고리는 목록에 있는 slug(404 아님)여야 해서 postCount를 1로 둔다. 글 조회는 handleHookTag가 가로챈다.
+  ...SLOW_CATEGORIES.map((ref) => ({ ...ref, postCount: 1 })),
+];
 
-export const TAGS_RESPONSE: TagWithCount[] = TAG_ORDER.map((ref) => ({
-  ...ref,
-  postCount: INTERNAL_POSTS.filter((post) => post.tags.some((t) => t.slug === ref.slug)).length,
-}));
+export const TAGS_RESPONSE: TagWithCount[] = [
+  ...TAG_ORDER.map((ref) => ({
+    ...ref,
+    postCount: INTERNAL_POSTS.filter((post) => post.tags.some((t) => t.slug === ref.slug)).length,
+  })),
+  // 시험용 태그는 목록에 있는 slug(404 아님)여야 해서 postCount를 1로 둔다. 글 조회는 아래 handlePublicApi가 가로챈다.
+  ...HOOK_TAGS.map((ref) => ({ ...ref, postCount: 1 })),
+];
 
 // ───────────────────────── 조회 규칙 ─────────────────────────
 
@@ -470,11 +497,31 @@ function handlePublicPost(exchange: Exchange, slug: string) {
   return sendJson(exchange.res, { status: 200, body, cacheControl: CACHE_CONTROL.public });
 }
 
+// 시험용 태그(오류)·지연 카테고리의 글 조회를 가로챈다. 가로챘으면 true.
+function handleHookTag(exchange: Exchange, query: URLSearchParams): boolean {
+  const tagSlug = query.get('tag');
+  if (tagSlug === ERROR_TAG.slug) {
+    sendError(exchange, INTERNAL_ERROR);
+    return true;
+  }
+  if (tagSlug !== null || !isSlowCategory(query.get('category'))) return false;
+  const slowPosts = INTERNAL_POSTS.filter(
+    (post) => post.category?.slug === CATEGORIES.frontend.slug,
+  );
+  const list = paginate(slowPosts, pagingOf(query) ?? { page: 1, size: DEFAULT_PAGE_SIZE });
+  setTimeout(
+    () => sendJson(exchange.res, { status: 200, body: list, cacheControl: CACHE_CONTROL.public }),
+    SLOW_CATEGORY_DELAY_MS,
+  );
+  return true;
+}
+
 function handlePublicApi(exchange: Exchange, pathname: string, query: URLSearchParams) {
   const { res } = exchange;
   const ok = (body: unknown, cacheControl: string = CACHE_CONTROL.public) =>
     sendJson(res, { status: 200, body, cacheControl });
 
+  if (pathname === '/api/posts' && handleHookTag(exchange, query)) return;
   if (pathname === '/api/posts') {
     const list = listPosts(query);
     return list ? ok(list) : sendError(exchange, INVALID_QUERY);

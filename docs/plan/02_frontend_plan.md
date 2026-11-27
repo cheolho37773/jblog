@@ -1,6 +1,6 @@
 # jblog 프론트엔드 기획서
 
-> 버전 v0.4 · 작성일 2026-11-20 · 개정 2026-11-26: §5.3·§8 `/uploads` 이미지는 일반 `<img>` + 서버 WebP(M2-05 G2, 개발자 결정) · 개정 2026-11-24: §4 빌드와 데이터 — 빌드는 API 무의존, 상세 사전 생성 제거(M2 G1 결정 6, 개발자 승인) · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26), `revalidateTag` 시그니처 확인 완료 (§4, 개요 Q5)
+> 버전 v0.5 · 작성일 2026-11-20 · 개정 2026-11-27: §6.2 목록 로딩 UI — `loading.tsx` 대신 필터 전환 중 그리드 스켈레톤(M2-07 G2, 개발자 결정) · 개정 2026-11-26: §5.3·§8 `/uploads` 이미지는 일반 `<img>` + 서버 WebP(M2-05 G2, 개발자 결정) · 개정 2026-11-24: §4 빌드와 데이터 — 빌드는 API 무의존, 상세 사전 생성 제거(M2 G1 결정 6, 개발자 승인) · 개정 2026-11-21: 디렉터리 구조를 기능별(`features/`)로 전환 (§3, 개요 D26), `revalidateTag` 시그니처 확인 완료 (§4, 개요 Q5)
 > 스택: **Next.js (App Router) + React + TypeScript + Tailwind CSS v4**
 > 화면/토큰/컴포넌트 스펙의 기준: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · API 계약: [백엔드 기획서 §4](./01_backend_plan.md#4-api-명세)
 
@@ -287,7 +287,8 @@ contentMd
 - `PageInfo` → `CategoryChips`(링크, `?category=`) → `PostCardOverlay`(featured 또는 최신 1개, 필터 없는 1페이지에만) → `PostGrid`(9) → `LoadMoreGrid`
 - **태그 탐색**: 상세 페이지와 카드의 태그 Badge는 `/blog?tag=<slug>`로 연결한다. 태그 필터 상태에서는 PageInfo 제목을 `#태그명`으로, Breadcrumb을 `Home / Blog / #태그명`으로 표시하고 Overlay 카드는 숨긴다. `category`와 `tag`는 동시에 쓰지 않는다 (마지막 선택이 우선).
 - Load More를 누르면 URL에 `?page=n`을 `replaceState`로 반영한다. 새로고침하면 1~n 페이지를 SSR로 다시 그린다.
-- 로딩 UI: `loading.tsx`에 카드 스켈레톤 9개
+- 로딩 UI: **`loading.tsx`를 두지 않는다.** 카테고리 칩·태그 링크로 목록을 바꾸는 클라이언트 전환 중에만 그리드 자리에 카드 스켈레톤 9개를 보여 준다. 주소로 바로 들어오는 첫 요청은 완성된 HTML을 받는다 (2026-11-27 개발자 결정, M2-07 G2)
+  - 이유: 경로 단위 `loading.tsx`는 응답을 먼저 보내기 시작하므로 ① `notFound()`가 상태 코드를 바꾸지 못해 없는 카테고리·태그가 404가 아니라 200으로 나가고 ② 자바스크립트가 꺼진 환경(일부 검색 로봇 포함)에서는 목록 대신 스켈레톤만 보인다
 
 ### 6.3 Blog 상세
 - `generateMetadata`: title, description(excerpt), OG(이미지 = cover 또는 동적 OG), canonical, `article:published_time`
