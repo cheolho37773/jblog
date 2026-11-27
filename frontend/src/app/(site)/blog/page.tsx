@@ -11,7 +11,7 @@ import {
   FilterTransitionProvider,
   PendingListSlot,
 } from '@/features/posts/components/FilterTransition';
-import { LoadMoreGrid } from '@/features/posts/components/LoadMoreGrid';
+import { LoadMoreGridBoundary } from '@/features/posts/components/LoadMoreGridBoundary';
 import { PostCardOverlay } from '@/features/posts/components/PostCardOverlay';
 import { TagFilterChip } from '@/features/posts/components/TagFilterChip';
 import {
@@ -126,7 +126,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
     assertCategoryExists(query.category),
   ]);
 
-  // 서버가 이 페이지를 그릴 때마다 새 값. 라우터 이동·같은 주소 재요청처럼 서버가 다시 그리면 LoadMoreGrid가 새로 만들어져
+  // 서버가 이 페이지를 그릴 때마다 새 값. 라우터 이동·같은 주소 재요청처럼 서버가 다시 그리면 경계(LoadMoreGridBoundary)가 새로 만들어져
   // 서버 값(글 내용 포함)을 그대로 쓴다. props 값을 비교해 상태를 버릴지 추측하지 않는다. Load More의 replaceState는 서버 렌더가 아니라 상태가 유지된다.
   // connection() 뒤라 요청 시 렌더되므로 캐시된 값이 아니다.
   const renderId = crypto.randomUUID();
@@ -146,7 +146,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
             <EmptyState />
           ) : (
             // 필터가 바뀌면 다른 목록이라 key로 상태를 새로 시작한다(클라이언트 이동 시 이전 필터의 글이 남지 않게)
-            <LoadMoreGrid
+            <LoadMoreGridBoundary
               key={`${renderId}|${query.tag ?? ''}|${query.category ?? ''}`}
               initialPosts={listing.posts}
               initialPage={listing.page}

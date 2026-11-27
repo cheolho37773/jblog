@@ -15,6 +15,8 @@ type LoadMoreGridProps = {
   initialPage: number;
   totalPages: number;
   filter: { category?: string } | { tag?: string };
+  /** 주소를 바꾸기 직전에 "내가 만든 쿼리 문자열"을 알린다. 바깥 경계가 내 변경과 이동을 구분하는 데 쓴다 */
+  onUrlReplace?: (search: string) => void;
 };
 
 const PAGE_SIZE = 9;
@@ -24,9 +26,10 @@ const FAILURE_MESSAGE = '글을 더 불러오지 못했습니다. 다시 시도�
 
 // 성공하면 주소의 ?page=만 바꾼다(다른 쿼리 유지). 새로고침하면 서버가 그 페이지까지 다시 그린다.
 // Next는 history.replaceState를 라우터에 반영한다(공식 방식). 상태 인자는 null로 넘긴다: 기존 history.state를 그대로 넘기면 Next가 자기 상태로 보고 무시한다.
-function replacePageInUrl(page: number) {
+function replacePageInUrl(page: number, onUrlReplace?: (search: string) => void) {
   const url = new URL(window.location.href);
   url.searchParams.set('page', String(page));
+  onUrlReplace?.(url.searchParams.toString());
   window.history.replaceState(null, '', url);
 }
 
@@ -39,7 +42,13 @@ async function fetchPage(page: number, filter: LoadMoreGridProps['filter'], sign
 }
 
 /** 글 카드 격자와 Load More. 첫 페이지(들)는 서버가 그리고 이후 페이지만 브라우저가 `/api/posts`로 받는다. */
-export function LoadMoreGrid({ initialPosts, initialPage, totalPages, filter }: LoadMoreGridProps) {
+export function LoadMoreGrid({
+  initialPosts,
+  initialPage,
+  totalPages,
+  filter,
+  onUrlReplace,
+}: LoadMoreGridProps) {
   const [posts, setPosts] = useState(initialPosts);
   const [page, setPage] = useState(initialPage);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +89,7 @@ export function LoadMoreGrid({ initialPosts, initialPage, totalPages, filter }: 
     setPage(nextPage);
     // 중복을 뺀 실제 추가 개수를 알린다. 0개면 이전 안내까지 비운다
     setAnnouncement(added.length > 0 ? `글 ${added.length}개를 더 불러왔습니다.` : '');
-    replacePageInUrl(nextPage);
+    replacePageInUrl(nextPage, onUrlReplace);
   }
 
   async function loadMore() {
