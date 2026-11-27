@@ -6,6 +6,11 @@ import { Container } from '@/components/layout/Container';
 import { PageInfo } from '@/components/layout/PageInfo';
 import { Button } from '@/components/ui/Button';
 import { CategoryChips } from '@/features/posts/components/CategoryChips';
+import {
+  FilterLinks,
+  FilterTransitionProvider,
+  PendingListSlot,
+} from '@/features/posts/components/FilterTransition';
 import { LoadMoreGrid } from '@/features/posts/components/LoadMoreGrid';
 import { PostCardOverlay } from '@/features/posts/components/PostCardOverlay';
 import { TagFilterChip } from '@/features/posts/components/TagFilterChip';
@@ -126,21 +131,27 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
   return (
     <Container className="pt-6 pb-16">
-      <PageInfo title={tagName ? `#${tagName}` : 'Blog'} breadcrumb={breadcrumbOf(tagName)} />
-      <FilterChips query={query} tagName={tagName} />
-      <Overlay query={query} fallback={listing.firstPost} />
-      {listing.posts.length === 0 ? (
-        <EmptyState />
-      ) : (
-        // 필터가 바뀌면 다른 목록이라 key로 상태를 새로 시작한다(클라이언트 이동 시 이전 필터의 글이 남지 않게)
-        <LoadMoreGrid
-          key={`${query.tag ?? ''}|${query.category ?? ''}`}
-          initialPosts={listing.posts}
-          initialPage={listing.page}
-          totalPages={listing.totalPages}
-          filter={filter}
-        />
-      )}
+      <FilterTransitionProvider>
+        <PageInfo title={tagName ? `#${tagName}` : 'Blog'} breadcrumb={breadcrumbOf(tagName)} />
+        <FilterLinks>
+          <FilterChips query={query} tagName={tagName} />
+        </FilterLinks>
+        <PendingListSlot>
+          <Overlay query={query} fallback={listing.firstPost} />
+          {listing.posts.length === 0 ? (
+            <EmptyState />
+          ) : (
+            // 필터가 바뀌면 다른 목록이라 key로 상태를 새로 시작한다(클라이언트 이동 시 이전 필터의 글이 남지 않게)
+            <LoadMoreGrid
+              key={`${query.tag ?? ''}|${query.category ?? ''}`}
+              initialPosts={listing.posts}
+              initialPage={listing.page}
+              totalPages={listing.totalPages}
+              filter={filter}
+            />
+          )}
+        </PendingListSlot>
+      </FilterTransitionProvider>
     </Container>
   );
 }
