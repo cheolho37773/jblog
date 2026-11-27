@@ -553,3 +553,61 @@ test.describe('Footer Category', () => {
     });
   }
 });
+
+// Codex r1 대응: 같은 필터에서 서버가 넘긴 page·목록이 바뀌는 이동(주소만 바뀌는 이동)은 화면 상태도 따라가야 한다.
+test.describe('같은 필터에서 page만 바뀌는 이동', () => {
+  const navbarBlog = (page: Page) =>
+    page.getByRole('banner').getByRole('link', { name: 'Blog', exact: true });
+
+  test('/blog?page=2에서 Navbar Blog를 누르면 /blog에서 카드 9개·Overlay·Load More가 복원된다', async ({
+    page,
+  }) => {
+    await openBlog(page, '/blog?page=2');
+    await expect(gridCards(page)).toHaveCount(TOTAL_POSTS);
+
+    await navbarBlog(page).click();
+
+    await expect(page).toHaveURL(/\/blog$/);
+    await expect(gridCards(page)).toHaveCount(PAGE_SIZE);
+    expect(await gridSlugs(page)).toEqual(FIRST_PAGE.map(slugOf));
+    await expect(loadMoreButton(page)).toBeVisible();
+    await expect(overlayCard(page)).toHaveCount(1);
+  });
+
+  test('Load More로 13개가 된 뒤 Navbar Blog를 누르면 다시 9개와 Load More다', async ({ page }) => {
+    await openBlog(page, '/blog');
+    await loadMoreButton(page).click();
+    await expect(gridCards(page)).toHaveCount(TOTAL_POSTS);
+
+    await navbarBlog(page).click();
+
+    await expect(page).toHaveURL(/\/blog$/);
+    await expect(gridCards(page)).toHaveCount(PAGE_SIZE);
+    await expect(loadMoreButton(page)).toBeVisible();
+  });
+
+  test('같은 카테고리 칩을 다시 눌러도 목록이 그 카테고리의 글로 맞는다', async ({ page }) => {
+    const frontend = POST_SUMMARIES.filter((p) => p.category?.slug === 'frontend').map(slugOf);
+    await openBlog(page, '/blog?category=frontend&page=2');
+    await categoryNav(page).getByRole('link', { name: '프론트엔드', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/blog\?category=frontend$/);
+    expect(await gridSlugs(page)).toEqual(frontend);
+  });
+
+  test('이동 뒤 브라우저 뒤로가기·앞으로가기도 주소에 맞는 목록이다', async ({ page }) => {
+    await openBlog(page, '/blog?page=2');
+    await navbarBlog(page).click();
+    await expect(gridCards(page)).toHaveCount(PAGE_SIZE);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/blog\?page=2$/);
+    await expect(gridCards(page)).toHaveCount(TOTAL_POSTS);
+    await expect(loadMoreButton(page)).toHaveCount(0);
+
+    await page.goForward();
+    await expect(page).toHaveURL(/\/blog$/);
+    await expect(gridCards(page)).toHaveCount(PAGE_SIZE);
+    await expect(loadMoreButton(page)).toBeVisible();
+  });
+});

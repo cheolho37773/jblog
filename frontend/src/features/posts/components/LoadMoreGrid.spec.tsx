@@ -298,3 +298,107 @@ describe('LoadMoreGrid: 포커스', () => {
     await waitFor(() => expect(screen.getByRole('link', { name: '제목 c' })).toHaveFocus());
   });
 });
+
+// Codex r1 대응: 서버가 같은 필터에서 넘긴 page·목록이 바뀌면(주소만 바뀌는 이동) 안의 상태도 맞춰야 한다.
+describe('LoadMoreGrid: 같은 필터에서 서버 props가 바뀔 때', () => {
+  async function renderGridWithRerender(first: Partial<GridProps>) {
+    const path = './LoadMoreGrid';
+    const { LoadMoreGrid } = (await import(/* @vite-ignore */ path)) as {
+      LoadMoreGrid: ComponentType<GridProps>;
+    };
+    const base: GridProps = {
+      initialPosts: posts('a', 'b'),
+      initialPage: 1,
+      totalPages: 2,
+      filter: {},
+    };
+    const view = render(<LoadMoreGrid {...base} {...first} />);
+    return (next: Partial<GridProps>) => view.rerender(<LoadMoreGrid {...base} {...next} />);
+  }
+
+  it('Load More로 늘어난 뒤 1페이지 props가 다시 오면 처음 목록으로 돌아오고 버튼이 다시 나온다 (/blog?page=2 → /blog)', async () => {
+    getMock.mockResolvedValue(pageOf(posts('c', 'd'), 2, 2));
+    const rerender = await renderGridWithRerender({});
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+    await waitFor(() => expect(loadMoreButton()).toBeNull());
+    expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']);
+
+    rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 });
+
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b']));
+    expect(loadMoreButton()).not.toBeNull();
+  });
+
+  it('서버가 2페이지까지 그린 props(initialPage 2)로 바뀌면 그 목록을 보여 주고 버튼이 없다 (/blog → /blog?page=2)', async () => {
+    const rerender = await renderGridWithRerender({});
+    expect(loadMoreButton()).not.toBeNull();
+
+    rerender({ initialPosts: posts('a', 'b', 'c', 'd'), initialPage: 2, totalPages: 2 });
+
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']));
+    expect(loadMoreButton()).toBeNull();
+  });
+
+  it('바뀐 props 뒤의 Load More는 새 initialPage 다음 페이지를 요청한다', async () => {
+    getMock.mockResolvedValue(pageOf(posts('e'), 3, 3));
+    const rerender = await renderGridWithRerender({});
+
+    rerender({ initialPosts: posts('a', 'b', 'c', 'd'), initialPage: 2, totalPages: 3 });
+    await userEvent.click(await screen.findByRole('button', { name: /Load More/ }));
+
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd', 'e']));
+    expect(lastQuery().page).toBe(3);
+  });
+
+  it('props가 그대로면(같은 값으로 다시 그려도) 불러온 카드를 지우지 않는다', async () => {
+    getMock.mockResolvedValue(pageOf(posts('c'), 2, 2));
+    const rerender = await renderGridWithRerender({});
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c']));
+
+    rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 });
+    // 같은 내용의 새 배열이라도 서버가 넘긴 값이 실제로 달라진 것이 아니면 상태를 되돌리지 않는다.
+    expect(slugsInList()).toEqual(['a', 'b', 'c']);
+  });
+});
+
+// Codex r1 대응: 성공 안내는 중복 제거 후 실제로 붙은 카드 수를 말한다.
+// 기대값(지시서에 없어 정한 기본값): 0개가 붙으면 "0개를 더 불러왔습니다"라고 하지 않고 안내를 생략(빈 문자열)한다.
+describe('LoadMoreGrid: 성공 안내 개수 = 실제로 붙은 카드 수', () => {
+  const liveRegion = (container: HTMLElement) =>
+    container.querySelector('[aria-live="polite"]') as HTMLElement;
+
+  it('응답 [b, c]가 기존 [a, b]와 겹치면 카드는 1개 늘고 안내도 "글 1개"다', async () => {
+    getMock.mockResolvedValue(pageOf(posts('b', 'c'), 2, 2));
+    const { container } = await renderGrid({ initialPosts: posts('a', 'b') });
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c']));
+    expect(liveRegion(container)).toHaveTextContent('글 1개를 더 불러왔습니다.');
+    expect(liveRegion(container)).not.toHaveTextContent('글 2개');
+  });
+
+  it('응답이 전부 중복이라 0개가 붙으면 "0개"를 말하지 않고 안내를 비운다(카드·주소 진행은 그대로)', async () => {
+    getMock.mockResolvedValue(pageOf(posts('a', 'b'), 2, 3));
+    const { container } = await renderGrid({ initialPosts: posts('a', 'b'), totalPages: 3 });
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+
+    await waitFor(() => expect(window.location.search).toBe('?page=2'));
+    expect(slugsInList()).toEqual(['a', 'b']);
+    expect(liveRegion(container)).not.toHaveTextContent('0개');
+    expect(liveRegion(container)).toBeEmptyDOMElement();
+  });
+
+  it('앞선 성공 안내가 남아 있어도 다음 요청이 0개면 이전 안내를 지운다', async () => {
+    getMock
+      .mockResolvedValueOnce(pageOf(posts('c', 'd'), 2, 3))
+      .mockResolvedValueOnce(pageOf(posts('c', 'd'), 3, 3));
+    const { container } = await renderGrid({ initialPosts: posts('a', 'b'), totalPages: 3 });
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+    await waitFor(() => expect(liveRegion(container)).toHaveTextContent('글 2개'));
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+
+    await waitFor(() => expect(window.location.search).toBe('?page=3'));
+    expect(liveRegion(container)).toBeEmptyDOMElement();
+  });
+});
