@@ -611,3 +611,44 @@ test.describe('같은 필터에서 page만 바뀌는 이동', () => {
     await expect(loadMoreButton(page)).toBeVisible();
   });
 });
+
+// Codex r2 대응: 서버 렌더 한 번 = 목록 상태 한 벌. 이동 전에 시작한 Load More 요청은 이동 뒤 목록·주소를 바꾸지 못한다.
+// (같은 slug 글의 제목이 바뀐 서버 값이 이동 뒤 반영되는지는 E2E로 재현하지 못한다. 서버 fetch 캐시(revalidate 3600)가 같은 주소의
+// 응답을 재사용해 한 서버 실행 안에서 같은 주소의 목록 내용을 바꿀 수 없다. 단위 테스트가 새 키 + 제목 변경으로 확인한다.)
+test.describe('지연된 Load More 중 이동', () => {
+  const navbarBlog = (page: Page) =>
+    page.getByRole('banner').getByRole('link', { name: 'Blog', exact: true });
+  const LATE_RESPONSE_MS = 1500;
+  const isPostsPage2 = (url: URL) =>
+    url.pathname === '/api/posts' && url.searchParams.get('page') === '2';
+
+  test('/blog에서 Load More를 누른 뒤 응답이 오기 전에 Navbar Blog로 이동하면, 늦은 응답이 카드·주소를 바꾸지 않고 새 Load More가 동작한다', async ({
+    page,
+  }) => {
+    await openBlog(page, '/blog');
+    let requests = 0;
+    await page.route(isPostsPage2, async (route) => {
+      requests += 1;
+      // 첫 요청만 늦게 보낸다. 이동한 뒤의 새 요청은 바로 진행한다.
+      if (requests === 1) await new Promise((resolve) => setTimeout(resolve, LATE_RESPONSE_MS));
+      await route.continue().catch(() => {});
+    });
+
+    await loadMoreButton(page).click();
+    await navbarBlog(page).click();
+    await expect(page).toHaveURL(/\/blog$/);
+    await expect(gridCards(page)).toHaveCount(PAGE_SIZE);
+
+    // 늦은 응답이 도착할 시간을 충분히 기다린 뒤에도 목록·주소가 이동한 상태 그대로다.
+    await page.waitForTimeout(LATE_RESPONSE_MS + 500);
+    await expect(gridCards(page)).toHaveCount(PAGE_SIZE);
+    await expect(page).toHaveURL(/\/blog$/);
+
+    // 새 Load More는 눌리고(요청 중 상태가 남지 않음) 13개가 된다.
+    const button = loadMoreButton(page);
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect(gridCards(page)).toHaveCount(TOTAL_POSTS);
+    await expect(page).toHaveURL(/\/blog\?page=2$/);
+  });
+});

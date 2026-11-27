@@ -12,10 +12,6 @@ import { makePost, type PostSummaryDto } from './post-card.test-data';
 
 const getMock = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/api/client', () => ({ browserApi: { GET: getMock } }));
-// 실제 Next는 history.replaceState·이동으로 바뀐 주소를 useSearchParams에 반영한다. 목은 그릴 때마다 현재 주소의 쿼리를 읽어 같은 효과를 낸다.
-vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(window.location.search),
-}));
 
 type Filter = { category?: string } | { tag?: string };
 interface GridProps {
@@ -303,9 +299,11 @@ describe('LoadMoreGrid: 포커스', () => {
   });
 });
 
-// Codex r1 대응: 서버가 같은 필터에서 넘긴 page·목록이 바뀌면(주소만 바뀌는 이동) 안의 상태도 맞춰야 한다.
-describe('LoadMoreGrid: 같은 필터에서 서버 props가 바뀔 때', () => {
-  async function renderGridWithRerender(first: Partial<GridProps>) {
+// Codex r2 대응 구조: 서버 렌더 한 번 = 목록 상태 한 벌. 페이지가 서버 렌더마다 만드는 렌더 식별자를 LoadMoreGrid의 React `key`로 넣는다.
+// 키가 바뀌면(이동·새로고침·같은 주소 재요청으로 서버가 다시 그림) 새 서버 값으로 새로 시작하고, 키가 같으면 다시 그려도 불러온 카드를 유지한다.
+// 값 비교(slug 순서 등)나 주소(useSearchParams) 비교로 상태를 버리지 않는다.
+describe('LoadMoreGrid: 서버 렌더 식별자(key)', () => {
+  async function renderKeyed(first: Partial<GridProps> = {}, firstKey = 'render-1') {
     const path = './LoadMoreGrid';
     const { LoadMoreGrid } = (await import(/* @vite-ignore */ path)) as {
       LoadMoreGrid: ComponentType<GridProps>;
@@ -316,58 +314,160 @@ describe('LoadMoreGrid: 같은 필터에서 서버 props가 바뀔 때', () => {
       totalPages: 2,
       filter: {},
     };
-    const view = render(<LoadMoreGrid {...base} {...first} />);
-    return (next: Partial<GridProps>) => view.rerender(<LoadMoreGrid {...base} {...next} />);
+    const view = render(<LoadMoreGrid key={firstKey} {...base} {...first} />);
+    return {
+      rerender: (next: Partial<GridProps>, key: string) =>
+        view.rerender(<LoadMoreGrid key={key} {...base} {...next} />),
+      unmount: view.unmount,
+    };
   }
 
-  it('Load More로 늘어난 뒤 주소가 Load More가 바꾼 것이 아닌 값으로 바뀌면(서버 props는 처음과 같아도) 처음 목록과 버튼으로 돌아간다 (13개 → Navbar Blog → /blog)', async () => {
+  it('키가 바뀌면 Load More로 늘어난 뒤에도 서버가 준 처음 목록·버튼으로 돌아간다 (13개 → Navbar Blog → /blog)', async () => {
     getMock.mockResolvedValue(pageOf(posts('c', 'd'), 2, 2));
-    const rerender = await renderGridWithRerender({});
+    const view = await renderKeyed();
     await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
-    await waitFor(() => expect(loadMoreButton()).toBeNull());
-    expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']);
-    expect(window.location.search).toBe('?page=2');
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']));
 
-    // 이동: 주소가 /blog로 바뀌고 서버는 처음과 같은 값을 다시 넘긴다.
-    window.history.replaceState(null, '', '/blog');
-    rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 });
+    // 서버 값이 처음과 똑같아도 서버가 다시 그렸다면(새 키) 새로 시작한다.
+    view.rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 }, 'render-2');
 
     await waitFor(() => expect(slugsInList()).toEqual(['a', 'b']));
     expect(loadMoreButton()).not.toBeNull();
   });
 
-  it('Load More로 늘어난 뒤 주소가 바뀌지 않았다면 같은 서버 props로 다시 그려도 카드를 유지한다(Load More 자신의 주소 변경은 이동이 아니다)', async () => {
+  it('키가 같으면 같은 서버 props로 다시 그려도 불러온 카드를 유지한다(Load More 자신의 주소 변경은 상태를 버리지 않는다)', async () => {
     getMock.mockResolvedValue(pageOf(posts('c', 'd'), 2, 2));
-    const rerender = await renderGridWithRerender({});
+    const view = await renderKeyed();
     await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
     await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']));
 
-    rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 });
+    view.rerender({ initialPosts: posts('a', 'b'), initialPage: 1, totalPages: 2 }, 'render-1');
 
     expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']);
     expect(loadMoreButton()).toBeNull();
     expect(window.location.search).toBe('?page=2');
   });
 
-  it('서버가 2페이지까지 그린 props(initialPage 2)로 바뀌면 그 목록을 보여 주고 버튼이 없다 (/blog → /blog?page=2)', async () => {
-    const rerender = await renderGridWithRerender({});
+  it('같은 slug의 제목이 바뀐 서버 값이 새 키로 오면 새 제목이 보인다 (글 수정 후 같은 주소로 이동)', async () => {
+    const view = await renderKeyed({
+      initialPosts: [makePost({ slug: 'a', title: 'Before' }), post('b')],
+    });
+    expect(screen.getByRole('link', { name: 'Before' })).toBeInTheDocument();
+
+    view.rerender(
+      { initialPosts: [makePost({ slug: 'a', title: 'After' }), post('b')] },
+      'render-2',
+    );
+
+    expect(await screen.findByRole('link', { name: 'After' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Before' })).not.toBeInTheDocument();
+  });
+
+  it('새 키로 2페이지까지 그린 props(initialPage 2)가 오면 그 목록을 보여 주고 버튼이 없다 (/blog → /blog?page=2)', async () => {
+    const view = await renderKeyed();
     expect(loadMoreButton()).not.toBeNull();
 
-    rerender({ initialPosts: posts('a', 'b', 'c', 'd'), initialPage: 2, totalPages: 2 });
+    view.rerender(
+      { initialPosts: posts('a', 'b', 'c', 'd'), initialPage: 2, totalPages: 2 },
+      'render-2',
+    );
 
     await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd']));
     expect(loadMoreButton()).toBeNull();
   });
 
-  it('바뀐 props 뒤의 Load More는 새 initialPage 다음 페이지를 요청한다', async () => {
+  it('새 키 뒤의 Load More는 새 initialPage 다음 페이지를 요청한다', async () => {
     getMock.mockResolvedValue(pageOf(posts('e'), 3, 3));
-    const rerender = await renderGridWithRerender({});
+    const view = await renderKeyed();
 
-    rerender({ initialPosts: posts('a', 'b', 'c', 'd'), initialPage: 2, totalPages: 3 });
+    view.rerender(
+      { initialPosts: posts('a', 'b', 'c', 'd'), initialPage: 2, totalPages: 3 },
+      'render-2',
+    );
     await userEvent.click(await screen.findByRole('button', { name: /Load More/ }));
 
     await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c', 'd', 'e']));
     expect(lastQuery().page).toBe(3);
+  });
+});
+
+// 진행 중 요청은 컴포넌트가 사라질 때(새 키·언마운트) 취소한다. 취소된 응답은 목록·주소·안내를 바꾸지 않는다.
+describe('LoadMoreGrid: 사라질 때 진행 중 요청 취소', () => {
+  const signalOfLastCall = () =>
+    (getMock.mock.calls.at(-1)?.[1] as { signal?: AbortSignal } | undefined)?.signal;
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((done) => (resolve = done));
+    return { promise, resolve };
+  }
+
+  async function renderKeyed() {
+    const path = './LoadMoreGrid';
+    const { LoadMoreGrid } = (await import(/* @vite-ignore */ path)) as {
+      LoadMoreGrid: ComponentType<GridProps>;
+    };
+    const props: GridProps = {
+      initialPosts: posts('a', 'b'),
+      initialPage: 1,
+      totalPages: 2,
+      filter: {},
+    };
+    const view = render(<LoadMoreGrid key="render-1" {...props} />);
+    return {
+      rerenderWithKey: (key: string) => view.rerender(<LoadMoreGrid key={key} {...props} />),
+      unmount: view.unmount,
+    };
+  }
+
+  it('요청은 두 번째 인자의 signal(AbortSignal)을 함께 보낸다', async () => {
+    const pending = deferred<ReturnType<typeof pageOf>>();
+    getMock.mockReturnValue(pending.promise);
+    await renderKeyed();
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+
+    expect(signalOfLastCall()).toBeInstanceOf(AbortSignal);
+    expect(signalOfLastCall()?.aborted).toBe(false);
+    pending.resolve(pageOf(posts('c'), 2, 2));
+  });
+
+  it('언마운트하면 진행 중 요청을 취소하고, 늦게 온 응답은 주소를 바꾸지 않는다', async () => {
+    const pending = deferred<ReturnType<typeof pageOf>>();
+    getMock.mockReturnValue(pending.promise);
+    const view = await renderKeyed();
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+    const signal = signalOfLastCall();
+
+    view.unmount();
+    expect(signal?.aborted).toBe(true);
+    pending.resolve(pageOf(posts('c', 'd'), 2, 2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.location.search).toBe('');
+  });
+
+  it('새 키로 바뀌면 진행 중 요청을 취소하고, 늦은 응답이 새 목록·주소를 바꾸지 않으며, 새 Load More가 동작한다', async () => {
+    const stale = deferred<ReturnType<typeof pageOf>>();
+    getMock.mockReturnValueOnce(stale.promise);
+    const view = await renderKeyed();
+    await userEvent.click(screen.getByRole('button', { name: /Load More/ }));
+    const staleSignal = signalOfLastCall();
+
+    view.rerenderWithKey('render-2');
+    expect(staleSignal?.aborted).toBe(true);
+    stale.resolve(pageOf(posts('late'), 2, 2));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(slugsInList()).toEqual(['a', 'b']);
+    expect(window.location.search).toBe('');
+
+    // 새 상태의 버튼은 눌려 있지 않고(요청 중 아님) 새 요청이 보내진다.
+    getMock.mockResolvedValueOnce(pageOf(posts('c'), 2, 2));
+    const button = screen.getByRole('button', { name: /Load More/ });
+    expect(button).toBeEnabled();
+    await userEvent.click(button);
+    await waitFor(() => expect(slugsInList()).toEqual(['a', 'b', 'c']));
+    expect(signalOfLastCall()?.aborted).toBe(false);
+    expect(window.location.search).toBe('?page=2');
   });
 });
 
