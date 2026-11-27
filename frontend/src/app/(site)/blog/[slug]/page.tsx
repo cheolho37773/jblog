@@ -30,16 +30,6 @@ const BODY_ROW = 'desktop:grid desktop:grid-cols-[1fr_minmax(0,800px)_1fr]';
 const TOC_PLACEMENT =
   'desktop:col-start-3 desktop:row-start-1 sticky top-[133px] self-start justify-self-end';
 
-// 빌드는 API 없이 통과해야 해서 미리 만드는 글이 없다(M2 결정 6). 모든 글은 요청 시 그린다(dynamicParams 기본값 true).
-export function generateStaticParams(): Array<{ slug: string }> {
-  return [];
-}
-
-// generateStaticParams가 있으면 Next는 처음 보는 slug를 "첫 요청 때 정적 생성"으로 그리려 한다.
-// 그런데 (site)/layout·이 페이지는 connection()으로 요청 시 렌더라 그대로 두면 정적 생성 중 동적 사용 오류(DYNAMIC_SERVER_USAGE)로 끝난다.
-// 0은 이 라우트를 항상 요청 시 렌더로 고정한다. fetch에 건 revalidate 3600 + 태그(데이터 캐시)는 그대로 둔다(양수 revalidate는 덮어쓰지 않는다).
-export const revalidate = 0;
-
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const { slug } = await params;
   const { post } = await loadPostDetail(slug);
