@@ -468,13 +468,17 @@ test.describe('목차(TOC)', () => {
 
   test('현재 항목은 primary-text 색, 나머지는 muted 색이다', async ({ page }) => {
     await openPost(page, LONG_SLUG, { size: DESKTOP });
-    await heading(page, '긴 글 섹션 3').evaluate((el) => el.scrollIntoView());
+    const target = heading(page, '긴 글 섹션 3');
+    const id = await target.getAttribute('id');
+    await target.evaluate((el) => el.scrollIntoView());
     const current = tocNav(page).locator('[aria-current="location"]');
+    // 스크롤 이벤트는 다음 프레임에 오므로 현재 항목이 목표 섹션으로 바뀐 뒤에 색을 읽는다.
+    await expect(current).toHaveAttribute('href', `#${id}`);
     await expect(current).toHaveCount(1);
     const others = tocNav(page).locator('a:not([aria-current])');
     const colorOf = (locator: ReturnType<Page['locator']>) =>
       locator.first().evaluate((el) => getComputedStyle(el).color);
-    expect(await colorOf(current)).not.toBe(await colorOf(others));
+    await expect.poll(async () => (await colorOf(current)) !== (await colorOf(others))).toBe(true);
   });
 
   test('링크를 누르면 해당 헤딩으로 이동하고 주소에 #id가 붙는다', async ({ page }) => {
