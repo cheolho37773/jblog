@@ -73,16 +73,19 @@ export const TAGS = {
   security: tag('보안', 'security'),
 } satisfies Record<string, Schemas['TagRefDto']>;
 
-// 서버 조회 실패·지연을 재현하는 시험용 태그(M2-07). 태그 목록에는 보이지만 글 조회가 각각 500·지연으로 답한다.
-// Next 서버의 fetch 캐시(revalidate 3600)가 같은 주소의 응답을 재사용하므로, 지연 태그는 재시도(retry)마다 다른 것을 쓴다.
+// 서버 조회 실패를 재현하는 시험용 태그(M2-07). 태그 목록에는 보이지만 글 조회가 500으로 답한다.
 export const ERROR_TAG = tag('서버 오류 재현', 'fixture-error');
-export const SLOW_TAGS = [
-  tag('느린 조회 0', 'fixture-slow-0'),
-  tag('느린 조회 1', 'fixture-slow-1'),
+const HOOK_TAGS = [ERROR_TAG];
+
+// 칩 클릭 전환 중 스켈레톤(M2-07 G2)을 보려는 지연 카테고리. 글 조회가 3초 걸린 뒤 frontend 카테고리 글을 돌려준다.
+// 칩 순서의 맨 뒤에 둔다(글이 있는 카테고리로 보인다). Footer는 앞 6개만 보여 영향이 없고, 칩 목록 단언은 CATEGORIES_RESPONSE를 그대로 쓴다.
+// 같은 주소는 서버 fetch 캐시가 재사용하므로 재시도(retry)마다 다른 것을 쓴다.
+export const SLOW_CATEGORIES = [
+  category('느린 조회 0', 'fixture-slow-0'),
+  category('느린 조회 1', 'fixture-slow-1'),
 ];
-export const SLOW_TAG_DELAY_MS = 3000;
-const HOOK_TAGS = [ERROR_TAG, ...SLOW_TAGS];
-const isSlowTag = (slug: string | null) => SLOW_TAGS.some((hook) => hook.slug === slug);
+export const SLOW_CATEGORY_DELAY_MS = 3000;
+const isSlowCategory = (slug: string | null) => SLOW_CATEGORIES.some((hook) => hook.slug === slug);
 
 /** 목록 응답의 정렬 순서(sortOrder)와 같다. */
 const CATEGORY_ORDER = Object.values(CATEGORIES);
@@ -291,10 +294,14 @@ function toPublicDetail(post: InternalPost): PostDetail {
 
 export const POST_SUMMARIES: PostSummary[] = INTERNAL_POSTS.map(toSummary);
 
-export const CATEGORIES_RESPONSE: CategoryWithCount[] = CATEGORY_ORDER.map((ref) => ({
-  ...ref,
-  postCount: INTERNAL_POSTS.filter((post) => post.category?.slug === ref.slug).length,
-}));
+export const CATEGORIES_RESPONSE: CategoryWithCount[] = [
+  ...CATEGORY_ORDER.map((ref) => ({
+    ...ref,
+    postCount: INTERNAL_POSTS.filter((post) => post.category?.slug === ref.slug).length,
+  })),
+  // 지연 카테고리는 목록에 있는 slug(404 아님)여야 해서 postCount를 1로 둔다. 글 조회는 handleHookTag가 가로챈다.
+  ...SLOW_CATEGORIES.map((ref) => ({ ...ref, postCount: 1 })),
+];
 
 export const TAGS_RESPONSE: TagWithCount[] = [
   ...TAG_ORDER.map((ref) => ({
@@ -490,18 +497,21 @@ function handlePublicPost(exchange: Exchange, slug: string) {
   return sendJson(exchange.res, { status: 200, body, cacheControl: CACHE_CONTROL.public });
 }
 
-// 시험용 태그(오류·지연)의 글 조회를 가로챈다. 가로챘으면 true.
+// 시험용 태그(오류)·지연 카테고리의 글 조회를 가로챈다. 가로챘으면 true.
 function handleHookTag(exchange: Exchange, query: URLSearchParams): boolean {
   const tagSlug = query.get('tag');
   if (tagSlug === ERROR_TAG.slug) {
     sendError(exchange, INTERNAL_ERROR);
     return true;
   }
-  if (!isSlowTag(tagSlug)) return false;
-  const empty = paginate([], pagingOf(query) ?? { page: 1, size: DEFAULT_PAGE_SIZE });
+  if (tagSlug !== null || !isSlowCategory(query.get('category'))) return false;
+  const slowPosts = INTERNAL_POSTS.filter(
+    (post) => post.category?.slug === CATEGORIES.frontend.slug,
+  );
+  const list = paginate(slowPosts, pagingOf(query) ?? { page: 1, size: DEFAULT_PAGE_SIZE });
   setTimeout(
-    () => sendJson(exchange.res, { status: 200, body: empty, cacheControl: CACHE_CONTROL.public }),
-    SLOW_TAG_DELAY_MS,
+    () => sendJson(exchange.res, { status: 200, body: list, cacheControl: CACHE_CONTROL.public }),
+    SLOW_CATEGORY_DELAY_MS,
   );
   return true;
 }

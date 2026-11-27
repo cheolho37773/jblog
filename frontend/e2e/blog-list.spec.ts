@@ -5,8 +5,8 @@ import {
   FEATURED_SLUG,
   INTERNAL_POSTS,
   POST_SUMMARIES,
-  SLOW_TAGS,
-  SLOW_TAG_DELAY_MS,
+  SLOW_CATEGORIES,
+  SLOW_CATEGORY_DELAY_MS,
 } from './fixtures/server';
 import {
   DESKTOP,
@@ -476,18 +476,24 @@ test.describe('빈 카테고리', () => {
   });
 });
 
-test.describe('loading.tsx', () => {
-  test('조회가 느릴 때 PageInfo(Blog)와 스켈레톤 9개를 같은 그리드로 보여 준다', async ({
+test.describe('칩 전환 중 로딩 표시 (loading.tsx 없음, 프론트 §6.2 v0.5)', () => {
+  const FRONTEND_SLUGS = INTERNAL_POSTS.filter((post) => post.category?.slug === 'frontend').map(
+    slugOf,
+  );
+
+  test('카테고리 칩을 눌러 목록이 바뀌는 동안 그리드 자리에 스켈레톤 9개가 보이고, 끝나면 새 목록이 된다', async ({
     page,
   }, testInfo) => {
-    // 서버 fetch 캐시가 같은 주소를 재사용하므로 재시도마다 다른 느린 태그를 쓴다.
-    const slowTag = SLOW_TAGS[testInfo.retry % SLOW_TAGS.length]!.slug;
-    await page.setViewportSize(DESKTOP);
-    await page.goto(`/blog?tag=${slowTag}`, { waitUntil: 'commit' });
+    // 서버 fetch 캐시가 같은 주소를 재사용하므로 재시도마다 다른 지연 카테고리를 쓴다.
+    const slow = SLOW_CATEGORIES[testInfo.retry % SLOW_CATEGORIES.length]!;
+    await openBlog(page, '/blog');
+    await expect(gridCards(page)).toHaveCount(PAGE_SIZE);
 
+    await categoryNav(page).getByRole('link', { name: slow.name, exact: true }).click();
+
+    // 전환 중: 스켈레톤이 Overlay·그리드·Load More 자리를 대신하고 PageInfo·칩은 그대로다.
     const skeleton = page.getByTestId('blog-loading-grid');
-    await expect(skeleton).toBeVisible({ timeout: SLOW_TAG_DELAY_MS });
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Blog');
+    await expect(skeleton).toBeVisible({ timeout: SLOW_CATEGORY_DELAY_MS });
     const children = await skeleton.evaluate((el) =>
       [...el.children].map(
         (child) =>
@@ -496,12 +502,33 @@ test.describe('loading.tsx', () => {
     );
     expect(children).toHaveLength(PAGE_SIZE);
     expect(children.every(Boolean)).toBe(true);
-    await expect(categoryNav(page)).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Blog');
+    await expect(categoryNav(page)).toBeVisible();
+    await expect(page.locator(GRID_SELECTOR)).toHaveCount(0);
+    await expect(overlayCard(page)).toHaveCount(0);
     await expect(loadMoreButton(page)).toHaveCount(0);
 
-    // 조회가 끝나면 스켈레톤이 사라지고 (글 0개) 빈 상태가 된다.
-    await expect(page.getByTestId('blog-empty')).toBeVisible({ timeout: SLOW_TAG_DELAY_MS * 3 });
+    // 끝나면 스켈레톤이 사라지고 새 목록이 나온다.
+    await expect(gridCards(page)).toHaveCount(FRONTEND_SLUGS.length, {
+      timeout: SLOW_CATEGORY_DELAY_MS * 3,
+    });
     await expect(skeleton).toHaveCount(0);
+    expect(await gridSlugs(page)).toEqual(FRONTEND_SLUGS);
+    await expect(page).toHaveURL(new RegExp(`/blog\\?category=${slow.slug}$`));
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Blog');
+    await expect(categoryNav(page)).toBeVisible();
+  });
+
+  test('주소로 바로 들어온 /blog 첫 응답 HTML에는 스켈레톤이 없고 글 목록이 들어 있다', async ({
+    request,
+  }) => {
+    const response = await request.get('/blog');
+    expect(response.status()).toBe(200);
+    const html = await response.text();
+
+    expect(html).not.toContain('blog-loading-grid');
+    expect(html).toContain('aria-label="글 목록"');
+    for (const post of FIRST_PAGE) expect(html, post.slug).toContain(`/blog/${post.slug}`);
   });
 });
 

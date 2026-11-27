@@ -243,7 +243,7 @@ test.describe('UI §5.1 Navbar', () => {
   });
 });
 
-test.describe('UI §5.9 Footer (값 없는 공개 사이트 `/`)', () => {
+test.describe('UI §5.9 Footer (공개 사이트 `/`, Category만 값이 있다)', () => {
   test('칸 제목은 Plus Jakarta 600 18/28, 링크는 400 16/24이다', async ({ page }) => {
     const title = footer(page).getByRole('heading', { name: 'Quick Link' });
     const link = footer(page).getByRole('link', { name: 'Blog', exact: true });
@@ -310,11 +310,17 @@ test.describe('UI §5.9 Footer 저작권 줄 (로고 + 문구 묶음)', () => {
   });
 });
 
-// 자체 검사 수정 1: 값이 없는 Footer(Quick Link만)에서 Quick Link가 콘텐츠 왼쪽에서 시작해야 한다.
-// 수정 전에는 Links 묶음이 오른쪽에 붙어 1920에서 약 472에서 시작했다.
-test.describe('Footer 값 없음: Quick Link 제목은 콘텐츠 왼쪽에서 시작한다', () => {
+// 자체 검사 수정 1(M2-07에서 Category 칸이 생겨 갱신): Info·Contact Me가 없어도 Links 묶음(495px = Quick Link ─80─ Category 207.5px)이
+// 콘텐츠 왼쪽에서 시작해야 한다. 수정 전에는 Links 묶음이 오른쪽에 붙어 1920에서 약 472에서 시작했다.
+// Category가 있으면 Quick Link는 자기 칸(207.5px) 안에서 오른쪽에 붙어 Category 칸 80px 앞에서 끝난다.
+const QUICK_LINK_CATEGORY_GAP = 80;
+const LINKS_WIDTH = 495;
+const CATEGORY_COLUMN_WIDTH = (LINKS_WIDTH - QUICK_LINK_CATEGORY_GAP) / 2;
+test.describe('Footer Info·Contact 없음: Links 묶음(Quick Link ─80─ Category)은 콘텐츠 왼쪽에서 시작한다', () => {
   for (const width of [1920, 1280]) {
-    test(`${width}px에서 Quick Link 제목 왼쪽 = 콘텐츠 내용 상자 왼쪽`, async ({ page }) => {
+    test(`${width}px에서 Category 칸이 콘텐츠 왼쪽 + 287.5px에 있고 Quick Link는 그 80px 앞에서 끝난다`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width, height: FRAME_HEIGHT });
       await page.goto('/');
       const positions = await footer(page).evaluate((root) => {
@@ -324,14 +330,38 @@ test.describe('Footer 값 없음: Quick Link 제목은 콘텐츠 왼쪽에서 �
           container.getBoundingClientRect().left +
           parseFloat(style.paddingLeft) +
           parseFloat(style.borderLeftWidth);
-        const title = Array.from(root.querySelectorAll('h2')).find(
-          (h) => h.textContent?.trim() === 'Quick Link',
+        const heading = (name: string) => {
+          const title = Array.from(root.querySelectorAll('h2')).find(
+            (h) => h.textContent?.trim() === name,
+          );
+          if (!title) throw new Error(`${name} 제목을 찾을 수 없다`);
+          return title;
+        };
+        const quick = heading('Quick Link');
+        const category = heading('Category');
+        // Quick Link 칸의 오른쪽 끝 = 제목과 링크 중 가장 오른쪽 글자 상자
+        const quickRight = Math.max(
+          ...Array.from(quick.closest('div')!.querySelectorAll('h2, a')).map(
+            (el) => el.getBoundingClientRect().right,
+          ),
         );
-        if (!title) throw new Error('Quick Link 제목을 찾을 수 없다');
-        return { contentLeft, titleLeft: title.getBoundingClientRect().left };
+        return {
+          contentLeft,
+          categoryLeft: category.getBoundingClientRect().left,
+          quickRight,
+        };
       });
 
-      expectNear(positions.titleLeft, positions.contentLeft, `Quick Link 왼쪽(${width})`);
+      expectNear(
+        positions.categoryLeft - positions.contentLeft,
+        LINKS_WIDTH - CATEGORY_COLUMN_WIDTH,
+        `Links 묶음이 콘텐츠 왼쪽에서 시작(${width})`,
+      );
+      expectNear(
+        positions.categoryLeft - positions.quickRight,
+        QUICK_LINK_CATEGORY_GAP,
+        `Quick Link ↔ Category 간격(${width})`,
+      );
     });
   }
 });

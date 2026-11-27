@@ -138,8 +138,8 @@ test('Navbar의 현재 메뉴: / 에서는 Home만 aria-current="page"이다', a
   }
 });
 
-test.describe('값 없는 Footer (공개 사이트는 아직 값을 넘기지 않는다)', () => {
-  test('Quick Link 6개가 있고 Category 칸·Contact Me 카드·정책 링크는 없다', async ({ page }) => {
+test.describe('공개 사이트 Footer (Category만 값이 있다. Email·GitHub·Contact Me는 아직 없다)', () => {
+  test('Quick Link 6개와 Category 칸이 있고 Contact Me 카드·정책 링크는 없다', async ({ page }) => {
     await open(page, 1280);
     const footer = page.getByRole('contentinfo');
 
@@ -147,7 +147,8 @@ test.describe('값 없는 Footer (공개 사이트는 아직 값을 넘기지 �
       await expect(footer.getByRole('link', { name, exact: true }), name).toBeVisible();
     }
     await expect(footer.getByRole('link', { name: 'RSS' })).toHaveAttribute('href', '/feed.xml');
-    await expect(footer.getByRole('heading', { name: 'Category' })).toHaveCount(0);
+    await expect(footer.getByRole('heading', { name: 'Category' })).toBeVisible();
+    await expect(footer.locator('a[href^="/blog?category="]').first()).toBeVisible();
     await expect(footer.getByRole('heading', { name: 'Contact Me' })).toHaveCount(0);
     for (const policy of POLICY_LINKS)
       await expect(footer.getByRole('link', { name: policy })).toHaveCount(0);
