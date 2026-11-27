@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  DEFAULT_FIXTURE_INTERNAL_KEY,
   INTERNAL_POSTS,
   LONG_SLUG,
   NO_COVER_SLUG,
@@ -192,12 +193,21 @@ test.describe('본문 렌더', () => {
   });
 
   test('RSC 요청(RSC: 1) 응답에도 원문·contentMd가 없다', async ({ request }) => {
-    const response = await request.get(`/blog/${FULL_SLUG}`, {
-      headers: { RSC: '1', 'Next-Router-State-Tree': '%5B%22%22%5D' },
-    });
+    // Next 16은 `RSC: 1`만 보내면 `?_rsc=` 주소로 이동시킨 뒤 RSC 본문을 준다(리다이렉트를 따라간다).
+    // Next-Router-State-Tree 헤더는 Next 16이 해석하지 못해 500이므로 보내지 않는다.
+    const response = await request.get(`/blog/${FULL_SLUG}`, { headers: { RSC: '1' } });
+    expect(response.status()).toBe(200);
+    expect(response.headers()['content-type']).toContain('text/x-component');
     const text = await response.text();
     expect(text, '상세가 담긴 RSC 응답').toContain(full.title);
-    for (const raw of ['[!NOTE]', '```', '![픽스처 이미지]', 'contentMd']) {
+    expect(text).not.toContain('<html');
+    for (const raw of [
+      '[!NOTE]',
+      '```',
+      '![픽스처 이미지]',
+      'contentMd',
+      DEFAULT_FIXTURE_INTERNAL_KEY,
+    ]) {
       expect(text, `원문 조각: ${raw}`).not.toContain(raw);
     }
   });
@@ -427,7 +437,9 @@ test.describe('목차(TOC)', () => {
     );
     expect(headings).toHaveLength(6);
     expect(items.map((i) => i.href)).toEqual(headings.map((h) => `#${h.id}`));
-    expect(items.map((i) => i.text)).toEqual(headings.map((h) => h.text.replace(/^#\s*/, '')));
+    expect(items.map((i) => i.text)).toEqual(
+      headings.map((h) => h.text.replace(/^#\s*|\s*#$/g, '')),
+    );
   });
 
   test('스크롤하면 현재 항목(aria-current="location")이 바뀌고 한 번에 하나뿐이다', async ({
