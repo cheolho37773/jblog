@@ -3,6 +3,7 @@ import {
   CALLS_PATH,
   CALL_PROBE_PREFIX,
   DEFAULT_FIXTURE_INTERNAL_KEY,
+  ERROR_TAG,
   LONG_SLUG,
   MISSING_SLUG,
   NO_COVER_SLUG,
@@ -29,7 +30,8 @@ import { THEMES, pinTheme, waitForFonts } from './helpers/theme';
 // M2-08 ① 필수 검증(거부·회귀): 영구 이동 308, 404 화면, 5xx·401은 404가 아님, 내부 API 1회, /internal 비노출, 가로 스크롤, 접근성.
 
 const NOT_FOUND_STATUS = 404;
-const SERVER_ERROR_STATUS = 500;
+const COMMON_ERROR_TEXT = '문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+const LIST_ERROR_TEXT = '글 목록을 불러오지 못했습니다';
 
 /** 화면이 실제로 그려졌는지(상세 h1 또는 404 문구) 확인한다. 빈 화면·기본 404에서 우연히 통과하지 않게 한다. */
 async function expectRendered(page: Page, path: string) {
@@ -145,12 +147,29 @@ test.describe('401·5xx는 404로 바꾸지 않고 오류로 끝난다', () => {
       const status = response?.status() ?? 0;
       expect(status).not.toBe(NOT_FOUND_STATUS);
       await expect(page.getByText(`${NOT_FOUND_TEXT}.`)).toHaveCount(0);
-      if (status >= SERVER_ERROR_STATUS) return;
-      // 스트리밍으로 상태가 200으로 굳었다면 오류 경계(role="alert")가 보여야 한다.
-      await expect(page.getByRole('alert')).toBeVisible();
+      // 상태가 5xx든 스트리밍으로 200이 굳었든, 화면은 사이트 공통 오류 화면이어야 한다(목록 전용 오류 화면이 아니다).
+      // Next의 경로 안내 요소(route announcer)도 role="alert"라 문구로 좁힌다.
+      const alert = page.getByRole('alert').filter({ hasText: COMMON_ERROR_TEXT });
+      await expect(alert).toBeVisible();
+      await expect(alert.getByRole('button', { name: '다시 시도' })).toBeVisible();
+      await expect(alert.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+      await expect(page.getByText(LIST_ERROR_TEXT)).toHaveCount(0);
+      await expect(page.getByTestId('blog-error')).toHaveCount(0);
       await expect(page.locator('article h1')).toHaveCount(0);
     });
   }
+
+  test('목록 서버 오류(/blog?tag=fixture-error)는 목록 전용 오류 화면(blog-error)이다', async ({
+    page,
+  }) => {
+    await page.goto(`/blog?tag=${ERROR_TAG.slug}`);
+    const boundary = page.getByTestId('blog-error');
+    await expect(boundary).toBeVisible();
+    await expect(boundary).toHaveAttribute('role', 'alert');
+    await expect(boundary).toContainText(LIST_ERROR_TEXT);
+    await expect(boundary.getByRole('button', { name: '다시 시도' })).toBeVisible();
+    await expect(page.getByText(COMMON_ERROR_TEXT)).toHaveCount(0);
+  });
 });
 
 test.describe('내부 API는 한 번의 페이지 요청에 1번', () => {
