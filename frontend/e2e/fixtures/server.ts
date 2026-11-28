@@ -613,12 +613,21 @@ function slugAfter(pathname: string, prefix: string): string | undefined {
   return rest !== '' && !rest.includes('/') ? rest : undefined;
 }
 
+// 백엔드 `@MinLength(2)`(class-validator → validator@13.15.35 `isLength`)와 같은 길이 계산이다:
+// str.length - (변형 선택자 U+FE0E·U+FE0F 수) - (서로게이트 쌍 수). 이모지 1자는 length가 2여도 길이 1이다.
+// 프론트 판정(`parseSearchQuery`)이 이 계산과 어긋나면 백엔드가 400을 내는 것을 이 픽스처가 그대로 재현해야 한다.
+function validatorLength(text: string): number {
+  const variationSelectors = text.match(/[\uFE0E\uFE0F]/g)?.length ?? 0;
+  const surrogatePairs = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g)?.length ?? 0;
+  return text.length - variationSelectors - surrogatePairs;
+}
+
 function handleSearch(exchange: Exchange, query: URLSearchParams) {
   const q = query.get('q') ?? '';
   exchange.searchCalls.set(q, (exchange.searchCalls.get(q) ?? 0) + 1);
   if (q === SEARCH_ERROR_QUERY) return sendError(exchange, INTERNAL_ERROR);
   const paging = pagingOf(query);
-  if (q.length < MIN_SEARCH_LENGTH || !paging) {
+  if (validatorLength(q.trim()) < MIN_SEARCH_LENGTH || !paging) {
     return sendError(exchange, { ...INVALID_QUERY, message: 'q must be at least 2 characters' });
   }
   const body = paginate(searchPosts(q), paging);
@@ -736,7 +745,7 @@ function handleSearchCalls({ res, searchCalls }: Exchange, query: URLSearchParam
     q === null
       ? {
           total: sum(allKeys),
-          rejected: sum(allKeys.filter((key) => key.trim().length < MIN_SEARCH_LENGTH)),
+          rejected: sum(allKeys.filter((key) => validatorLength(key.trim()) < MIN_SEARCH_LENGTH)),
         }
       : { q, count: searchCalls.get(q) ?? 0 };
   sendJson(res, { status: 200, body, cacheControl: CACHE_CONTROL.internal });

@@ -63,3 +63,40 @@ describe('parseSearchQuery: 2자 이상 판정', () => {
     });
   }
 });
+
+// 백엔드 `@MinLength(2)`(class-validator → validator@13.15.35 `isLength`)와 같은 판정이어야 한다.
+// 프론트 테스트에서 backend 패키지를 import할 수 없어 기대값을 표로 고정했다. 표의 `backend` 열은
+// `backend/`에서 `node -e "console.log(require('class-validator').minLength(입력, 2))"`로 얻은 값이다(대조 방법).
+// 계산: str.length - (변형 선택자 U+FE0E·U+FE0F 수) - (서로게이트 쌍 수). 앞뒤 공백은 먼저 지운다(백엔드 trimString).
+describe('parseSearchQuery: 백엔드 minLength(2)와 같은 길이 계산 (Codex r1)', () => {
+  const table: [string, string, boolean][] = [
+    ['이모지 1자(서로게이트 쌍)', '😀', false],
+    ['변형 선택자가 붙은 1자', '❤️', false],
+    ['앞뒤 공백 + 이모지 1자', '  😀  ', false],
+    ['앞뒤 공백 + 변형 선택자 1자', ' ❤️ ', false],
+    ['변형 선택자(텍스트형) 붙은 영문 1자', 'a\uFE0E', false],
+    ['BMP 기호 1자', '❤', false],
+    ['한글 1자', '한', false],
+    ['영문 1자', 'a', false],
+    ['이모지 2자', '😀😀', true],
+    ['변형 선택자 붙은 2자', '❤️❤️', true],
+    ['이모지 + 영문', '😀a', true],
+    ['변형 선택자 붙은 1자 + 영문', '❤️a', true],
+    ['한글 2자', '가나', true],
+    ['영문 2자', 'ab', true],
+    ['결합 문자(A + 고리)는 2로 센다', 'A\u030A', true],
+    ['국기(지역 표시 기호 2개)', '🇰🇷', true],
+    ['피부색 이모지(이모지 + 수정자)', '👍🏽', true],
+  ];
+  for (const [name, raw, expected] of table) {
+    it(`${name} ${JSON.stringify(raw)} → 검색 ${expected ? '가능' : '불가'}`, async () => {
+      const { parseSearchQuery } = await load();
+      expect(parseSearchQuery(raw).isSearchable).toBe(expected);
+    });
+  }
+
+  it('이모지 1자는 q를 그대로 돌려주되 검색하지 않는다', async () => {
+    const { parseSearchQuery } = await load();
+    expect(parseSearchQuery(' 😀 ')).toEqual({ q: '😀', isSearchable: false });
+  });
+});

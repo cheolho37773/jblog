@@ -179,6 +179,8 @@ test.describe('2자 미만 안내', () => {
     ['한글 1자', `/search?q=${encodeURIComponent('캐')}`],
     ['공백만', '/search?q=%20%20%20'],
     ['앞뒤 공백을 빼면 1자', '/search?q=%20a%20'],
+    ['이모지 1자(서로게이트 쌍)', `/search?q=${encodeURIComponent('😀')}`],
+    ['변형 선택자가 붙은 1자', `/search?q=${encodeURIComponent('❤️')}`],
   ];
 
   for (const [label, path] of CASES) {
@@ -194,6 +196,15 @@ test.describe('2자 미만 안내', () => {
       expect(await rejectedSearchCalls(request)).toBe(before);
     });
   }
+
+  test('이모지 2자는 검색한다: 오류 화면이 아니라 결과 없음 화면이다', async ({ page }) => {
+    const q = '😀😀';
+    await openBlog(page, searchPath(q));
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Search: ${q}`);
+    await expect(page.getByText(noResultText(q))).toBeVisible();
+    await expect(page.getByText(SHORT_QUERY_GUIDE)).toHaveCount(0);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  });
 
   test('2자(앞뒤 공백 제외)면 검색한다 — 경계', async ({ page }) => {
     await openBlog(page, '/search?q=%20Do%20');

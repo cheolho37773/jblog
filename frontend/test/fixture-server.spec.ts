@@ -546,3 +546,31 @@ describe('검색 시험 사례·seoTitle (M2-09)', () => {
     expect(after.rejected - before.rejected).toBe(3);
   });
 });
+
+describe('검색 400 판정은 백엔드 minLength(2)와 같은 길이 계산이다 (Codex r1)', () => {
+  // 기대값은 `backend/`의 class-validator `minLength(입력, 2)` 결과와 같다.
+  const table: [string, boolean][] = [
+    ['😀', false],
+    ['❤️', false],
+    ['a', false],
+    ['😀😀', true],
+    ['❤️❤️', true],
+    ['가나', true],
+    ['ab', true],
+  ];
+  for (const [q, accepted] of table) {
+    it(`${JSON.stringify(q)} → ${accepted ? '200' : '400 VALIDATION_FAILED'}`, async () => {
+      const res = await get(`/api/search?q=${encodeURIComponent(q)}`);
+      expect(res.status).toBe(accepted ? 200 : 400);
+    });
+  }
+
+  it('호출 수의 rejected도 같은 계산으로 센다(이모지 1자는 rejected, 2자는 아니다)', async () => {
+    const read = async () => (await getJson<{ rejected: number }>(SEARCH_CALLS_PATH)).body.rejected;
+    const before = await read();
+    await get(`/api/search?q=${encodeURIComponent('😀')}`);
+    expect((await read()) - before).toBe(1);
+    await get(`/api/search?q=${encodeURIComponent('😀😀')}`);
+    expect((await read()) - before).toBe(1);
+  });
+});
