@@ -39,3 +39,8 @@
 - 검사: `pnpm --filter @jblog/frontend test` 통과(760건, 종료 0), `pnpm verify` 통과(종료 0)
 - 미실행: `pnpm test:e2e`·`pnpm test:visual`은 포트 4100을 개발자의 픽스처 서버(PID 27330, `next dev`와 함께 기동 중)가 점유해 시작 단계에서 종료 1(`already used`). 개발자 서버라 건드리지 않았다. 해당 서버를 내린 뒤 재실행이 필요하다
 
+
+### Codex r1 대응 ① (test-engineer)
+
+- `frontend/src/lib/dev-allowed-origins.spec.ts`에 14건 추가(10 → 24건): 받음 4(`192.168.0.10`, `my-mac.local`, `localhost`, `*.example.local`), 거부 9(`example.invalid:3000`, `192.168.0.10:3000`, `?x=1`, `#f`, 내부 공백, `*`만, `a.*.b`, `-bad.local`, `bad..local` — 메시지에 `JBLOG_DEV_ALLOWED_ORIGINS`), IPv6 2(`[::1]`, `::1` — 메시지에 변수 이름과 "IPv4나 호스트 이름")
+- 현재 코드에서 실패 확인: 24건 중 11건 실패(거부 9 + IPv6 2, 오류를 던지지 않음), 받음 4건은 통과(회귀 방지). tsc·eslint·prettier 통과
