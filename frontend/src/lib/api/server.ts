@@ -20,9 +20,15 @@ const throwOnServerError: Middleware = {
 // 태그는 호출마다 다르므로(예: posts, post:<slug>) 호출 측이 정해 클라이언트를 만든다.
 // openapi-fetch의 requestInitExt로 Next.js fetch 확장(next.*)을 넘긴다.
 function createApi(cacheTags: string[]) {
+  return createApiWith({ next: { revalidate: REVALIDATE_SECONDS, tags: cacheTags } });
+}
+
+type NextFetchExt = { cache?: 'no-store'; next?: { revalidate: number; tags: string[] } };
+
+function createApiWith(requestInitExt: NextFetchExt) {
   const client = createClient<paths>({
     baseUrl: env.server.API_INTERNAL_URL,
-    requestInitExt: { next: { revalidate: REVALIDATE_SECONDS, tags: cacheTags } },
+    requestInitExt,
   });
   client.use(throwOnServerError);
   return client;
@@ -31,6 +37,11 @@ function createApi(cacheTags: string[]) {
 // 공개 API용.
 export function createServerApi(cacheTags: string[] = []) {
   return createApi(cacheTags);
+}
+
+// 캐시하지 않는 공개 API용(검색처럼 요청마다 새로 조회해야 하는 곳).
+export function createUncachedServerApi() {
+  return createApiWith({ cache: 'no-store' });
 }
 
 // 내부 API용(/internal/*). 키는 서버에서만 붙이며 브라우저 번들에 들어가지 않는다 (server-only).

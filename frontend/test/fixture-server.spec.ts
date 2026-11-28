@@ -19,7 +19,17 @@ import {
   SERVER_ERROR_POST_SLUG,
   UNAUTHORIZED_POST_SLUG,
   SLOW_CATEGORIES,
+  BULK_SEARCH_COUNT,
+  BULK_SEARCH_QUERY,
+  EXCERPT_ONLY_QUERY,
+  EXCERPT_ONLY_SLUG,
+  EXCERPT_ONLY_TITLE,
+  INTERNAL_POSTS,
+  NO_RESULT_QUERY,
+  SEARCH_CALLS_PATH,
+  SEARCH_ERROR_QUERY,
   createFixtureServer,
+  validatorLength,
 } from '../e2e/fixtures/server';
 
 // 픽스처 API 서버 자체 테스트 (M2-E 동작 규약 1). E2E의 데이터 원천이 계약(백엔드 §4.1·§4.2·§4.5·§5.7-①)과 어긋나지 않는지 본다.
@@ -464,4 +474,133 @@ describe('상세 전용 글·호출 수 기록 (M2-08)', () => {
     await get('/api/posts');
     expect(await countOf()).toBe(2);
   });
+});
+
+describe('검색 시험 사례·seoTitle (M2-09)', () => {
+  type SearchList = Schemas['PostListResponseDto'];
+  const search = (q: string, extra = '') =>
+    getJson<SearchList>(`/api/search?q=${encodeURIComponent(q)}${extra}`);
+
+  it('seoTitle에는 사이트 이름(`| jblog`)이 없다 — title 템플릿이 한 번만 붙인다', async () => {
+    const withSeo = INTERNAL_POSTS.filter((post) => post.seoTitle !== null);
+    expect(withSeo.length).toBeGreaterThan(0);
+    for (const post of withSeo) expect(post.seoTitle).not.toContain('jblog');
+  });
+
+  it('제목 일치 글이 앞, 발췌문만 일치하는 글이 뒤다', async () => {
+    const { body } = await search(EXCERPT_ONLY_QUERY);
+    expect(body.items.map((item) => item.slug)).toEqual([FEATURED_SLUG, EXCERPT_ONLY_SLUG]);
+    expect(body.items[1]?.title).toBe(EXCERPT_ONLY_TITLE);
+    expect(body.totalItems).toBe(2);
+  });
+
+  it('검색 전용 글은 목록·카테고리 수에 나오지 않는다', async () => {
+    const list = await getJson<SearchList>('/api/posts?size=50');
+    expect(list.body.totalItems).toBe(INTERNAL_POSTS.length);
+    expect(list.body.items.some((item) => item.slug === EXCERPT_ONLY_SLUG)).toBe(false);
+    expect(list.body.items.every((item) => !item.slug.startsWith('fixture-search-'))).toBe(true);
+  });
+
+  it('50개를 넘는 검색어는 totalItems가 55이고 size=50이면 50개, 2페이지에 5개다', async () => {
+    const first = await search(BULK_SEARCH_QUERY, '&size=50');
+    expect(first.body.totalItems).toBe(BULK_SEARCH_COUNT);
+    expect(first.body.items).toHaveLength(50);
+    const second = await search(BULK_SEARCH_QUERY, '&size=50&page=2');
+    expect(second.body.items).toHaveLength(BULK_SEARCH_COUNT - 50);
+  });
+
+  it('결과 없음 검색어는 빈 목록이다', async () => {
+    const { res, body } = await search(NO_RESULT_QUERY);
+    expect(res.status).toBe(200);
+    expect(body.items).toEqual([]);
+    expect(body.totalItems).toBe(0);
+  });
+
+  it('오류 시험 검색어는 500 INTERNAL_ERROR다', async () => {
+    const { res, body } = await getJson<Schemas['ErrorResponseDto']>(
+      `/api/search?q=${SEARCH_ERROR_QUERY}`,
+    );
+    expect(res.status).toBe(500);
+    expect(body.code).toBe('INTERNAL_ERROR');
+  });
+
+  it('검색 호출 수를 q별로 세고, 앞뒤 공백 뺀 길이 2 미만 호출은 rejected로 센다', async () => {
+    const probe = `fixture-count-probe-${Date.now()}`;
+    const read = async () =>
+      (await getJson<{ total: number; rejected: number }>(SEARCH_CALLS_PATH)).body;
+    const before = await read();
+    expect((await getJson<{ count: number }>(`${SEARCH_CALLS_PATH}?q=${probe}`)).body.count).toBe(
+      0,
+    );
+
+    await search(probe);
+    await search(probe);
+    await get('/api/search');
+    await get('/api/search?q=a');
+    await get(`/api/search?q=${encodeURIComponent('   ')}`);
+
+    expect((await getJson<{ count: number }>(`${SEARCH_CALLS_PATH}?q=${probe}`)).body.count).toBe(
+      2,
+    );
+    const after = await read();
+    expect(after.total - before.total).toBe(5);
+    expect(after.rejected - before.rejected).toBe(3);
+  });
+});
+
+describe('검색 400 판정은 백엔드 minLength(2)와 같은 길이 계산이다 (Codex r1)', () => {
+  // 기대값은 `backend/`의 class-validator `minLength(입력, 2)` 결과와 같다.
+  const table: [string, boolean][] = [
+    ['😀', false],
+    ['❤️', false],
+    ['a', false],
+    ['😀😀', true],
+    ['❤️❤️', true],
+    ['가나', true],
+    ['ab', true],
+  ];
+  for (const [q, accepted] of table) {
+    it(`${JSON.stringify(q)} → ${accepted ? '200' : '400 VALIDATION_FAILED'}`, async () => {
+      const res = await get(`/api/search?q=${encodeURIComponent(q)}`);
+      expect(res.status).toBe(accepted ? 200 : 400);
+    });
+  }
+
+  it('호출 수의 rejected도 같은 계산으로 센다(이모지 1자는 rejected, 2자는 아니다)', async () => {
+    const read = async () => (await getJson<{ rejected: number }>(SEARCH_CALLS_PATH)).body.rejected;
+    const before = await read();
+    await get(`/api/search?q=${encodeURIComponent('😀')}`);
+    expect((await read()) - before).toBe(1);
+    await get(`/api/search?q=${encodeURIComponent('😀😀')}`);
+    expect((await read()) - before).toBe(1);
+  });
+});
+
+// 백엔드 class-validator `minLength(입력, 2)`와 같은 결과를 내는 표(대조: `backend/`에서 `node -e "console.log(require('class-validator').minLength(입력, 2))"`).
+// 변형 선택자는 앞 글자와 붙은 시퀀스만 길이에서 빼므로 연속·단독 변형 선택자는 모두 빼지 않는다(Codex r2).
+const VS = '\uFE0F';
+const VS_TEXT = '\uFE0E';
+export const MIN_LENGTH_TABLE: [string, string, boolean][] = [
+  ['이모지 1자', '😀', false],
+  ['변형 선택자 붙은 1자', '❤️', false],
+  ['변형 선택자 2개 붙은 영문 1자', `a${VS}${VS}`, true],
+  ['단독 변형 선택자', VS, false],
+  ['변형 선택자 2개', `${VS}${VS}`, true],
+  ['변형 선택자 붙은 2자 반복', '❤️❤️', true],
+  ['영문 + 변형 선택자', `a${VS}`, false],
+  ['변형 선택자 2개 + 영문', `${VS}${VS}a`, true],
+  ['영문 2자 + 변형 선택자', `ab${VS}`, true],
+  ['텍스트형 변형 선택자 2개 붙은 영문', `a${VS_TEXT}${VS_TEXT}`, true],
+  ['변형 선택자 + 영문', `${VS}a`, true],
+  ['한글 2자', '가나', true],
+];
+
+describe('픽스처 validatorLength는 백엔드 minLength(2)와 같다 (Codex r2)', () => {
+  for (const [name, text, expected] of MIN_LENGTH_TABLE) {
+    it(`${name} ${JSON.stringify(text)} → ${expected ? '200' : '400'}`, async () => {
+      expect(validatorLength(text) >= 2).toBe(expected);
+      const res = await get(`/api/search?q=${encodeURIComponent(text)}`);
+      expect(res.status).toBe(expected ? 200 : 400);
+    });
+  }
 });

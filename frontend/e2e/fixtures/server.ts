@@ -256,7 +256,8 @@ function toInternalPost(row: PostRow, index: number): InternalPost {
     readingMinutes: 3 + (index % 7),
     viewCount: 100 + index * 13,
     likeCount: index * 2,
-    seoTitle: hasSeo ? `${row.title} | jblog` : null,
+    // 사이트 이름(`| jblog`)은 title 템플릿이 붙인다(M2-08 판정). seoTitle에는 글 제목 부분만 둔다.
+    seoTitle: hasSeo ? row.title : null,
     seoDescription: hasSeo ? `${row.title}의 SEO 설명입니다.` : null,
     contentMd: contentMdOf(row.title, coverImageUrl),
     version: 1 + (index % 3),
@@ -441,11 +442,57 @@ function paginate(posts: InternalPost[], { page, size }: Paging): PostList {
   };
 }
 
+// ───────── 검색 전용 글 (M2-09) ─────────
+// 목록·카테고리 수·Footer·시각 회귀에 영향이 없도록 INTERNAL_POSTS 밖에 둔다. 검색 응답에만 나온다(상세는 열리지 않는다).
+/** 제목은 `캐시`와 무관하고 발췌문에만 `캐시`가 있는 글. `캐시` 검색에서 제목 일치 글(캐시 전략 설계하기) 뒤에 나온다. */
+export const EXCERPT_ONLY_QUERY = '캐시';
+export const EXCERPT_ONLY_SLUG = 'fixture-search-excerpt-only';
+export const EXCERPT_ONLY_TITLE = '응답 시간 줄이기 메모';
+/** 결과가 0개인 검색어. */
+export const NO_RESULT_QUERY = '없는검색어';
+/** 이 검색어는 글 55개(50개 초과)에 제목으로 일치한다. */
+export const BULK_SEARCH_QUERY = '대량결과';
+export const BULK_SEARCH_COUNT = 55;
+/** 이 검색어는 검색 API가 500으로 답한다(결과 없음으로 바뀌지 않고 오류 화면으로 끝나는지 보는 시험용). */
+export const SEARCH_ERROR_QUERY = 'fixture-search-error';
+/** 검색 호출 수 조회 경로. 쿼리 `q`(원문 그대로)면 `{ q, count }`, 없으면 `{ total, rejected }`(rejected = 앞뒤 공백 뺀 길이 2 미만 호출 수). 시험 도구 전용이며 계약에 없다. */
+export const SEARCH_CALLS_PATH = '/__fixture/search-calls';
+
+const SEARCH_ONLY_POSTS: InternalPost[] = [
+  {
+    ...toInternalPost(
+      {
+        slug: EXCERPT_ONLY_SLUG,
+        title: EXCERPT_ONLY_TITLE,
+        category: CATEGORIES.architecture,
+        tags: [],
+        publishedAt: '2026-06-10T09:00:00.000Z',
+      },
+      1,
+    ),
+    excerpt: '캐시를 도입해 응답 시간을 줄인 과정을 정리한 메모입니다.',
+  },
+  ...Array.from({ length: BULK_SEARCH_COUNT }, (_, n) => ({
+    ...toInternalPost(
+      {
+        slug: `fixture-search-bulk-${n + 1}`,
+        title: `${BULK_SEARCH_QUERY} 시험 글 ${n + 1}`,
+        category: CATEGORIES.career,
+        tags: [],
+        publishedAt: '2026-05-01T09:00:00.000Z',
+      },
+      n,
+    ),
+    excerpt: `검색 결과 개수를 확인하는 시험용 글 ${n + 1}번입니다.`,
+  })),
+];
+
 // 제목 일치를 먼저, 그다음 발췌문 일치(백엔드 §4.2 검색 비고). 부분 문자열, 대소문자 무시.
 function searchPosts(query: string): InternalPost[] {
   const needle = query.toLowerCase();
-  const inTitle = INTERNAL_POSTS.filter((post) => post.title.toLowerCase().includes(needle));
-  const inExcerptOnly = INTERNAL_POSTS.filter(
+  const corpus = [...INTERNAL_POSTS, ...SEARCH_ONLY_POSTS];
+  const inTitle = corpus.filter((post) => post.title.toLowerCase().includes(needle));
+  const inExcerptOnly = corpus.filter(
     (post) => !inTitle.includes(post) && post.excerpt.toLowerCase().includes(needle),
   );
   return [...inTitle, ...inExcerptOnly];
@@ -458,6 +505,8 @@ interface Exchange {
   res: http.ServerResponse;
   /** 내부 API slug별 호출 수(서버 인스턴스마다 따로). */
   calls: Map<string, number>;
+  /** 검색 API 원문 `q`별 호출 수(없으면 빈 문자열). */
+  searchCalls: Map<string, number>;
 }
 
 interface JsonReply {
@@ -564,10 +613,22 @@ function slugAfter(pathname: string, prefix: string): string | undefined {
   return rest !== '' && !rest.includes('/') ? rest : undefined;
 }
 
+// 백엔드 `@MinLength(2)`(class-validator → validator@13.15.35 `lib/isLength.js`)와 같은 길이 계산이다.
+// 정규식·계산식은 원본 그대로다. 변형 선택자(U+FE0E·U+FE0F)는 "앞 글자(변형 선택자가 아닌)와 붙은 시퀀스"만 뺀다:
+// 연속·단독 변형 선택자는 모두 빼지 않는다. 이모지 1자는 length가 2여도 길이 1이다.
+// 프론트 판정(`parseSearchQuery`)이 이 계산과 어긋나면 백엔드가 400을 내는 것을 이 픽스처가 그대로 재현해야 한다.
+export function validatorLength(text: string): number {
+  const presentationSequences = text.match(/[^\uFE0F\uFE0E][\uFE0F\uFE0E]/g) || [];
+  const surrogatePairs = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g) || [];
+  return text.length - presentationSequences.length - surrogatePairs.length;
+}
+
 function handleSearch(exchange: Exchange, query: URLSearchParams) {
   const q = query.get('q') ?? '';
+  exchange.searchCalls.set(q, (exchange.searchCalls.get(q) ?? 0) + 1);
+  if (q === SEARCH_ERROR_QUERY) return sendError(exchange, INTERNAL_ERROR);
   const paging = pagingOf(query);
-  if (q.length < MIN_SEARCH_LENGTH || !paging) {
+  if (validatorLength(q.trim()) < MIN_SEARCH_LENGTH || !paging) {
     return sendError(exchange, { ...INVALID_QUERY, message: 'q must be at least 2 characters' });
   }
   const body = paginate(searchPosts(q), paging);
@@ -675,6 +736,22 @@ function handleCalls({ res, calls }: Exchange, query: URLSearchParams) {
   sendJson(res, { status: 200, body, cacheControl: CACHE_CONTROL.internal });
 }
 
+// 검색 호출 수 확인(시험 도구). `?q=x`는 `{ q, count }`, 없으면 `{ total, rejected }`.
+function handleSearchCalls({ res, searchCalls }: Exchange, query: URLSearchParams) {
+  const q = query.get('q');
+  const sum = (keys: string[]) =>
+    keys.reduce((total, key) => total + (searchCalls.get(key) ?? 0), 0);
+  const allKeys = [...searchCalls.keys()];
+  const body =
+    q === null
+      ? {
+          total: sum(allKeys),
+          rejected: sum(allKeys.filter((key) => validatorLength(key.trim()) < MIN_SEARCH_LENGTH)),
+        }
+      : { q, count: searchCalls.get(q) ?? 0 };
+  sendJson(res, { status: 200, body, cacheControl: CACHE_CONTROL.internal });
+}
+
 function handleUpload(exchange: Exchange, pathname: string) {
   const { req, res } = exchange;
   const file = path.basename(pathname);
@@ -712,6 +789,7 @@ function routeOf(exchange: Exchange, internalKey: string) {
     });
   }
   if (pathname === CALLS_PATH) return handleCalls(exchange, searchParams);
+  if (pathname === SEARCH_CALLS_PATH) return handleSearchCalls(exchange, searchParams);
   if (pathname.startsWith('/api/')) return handlePublicApi(exchange, pathname, searchParams);
   if (pathname.startsWith('/internal/')) return handleInternalApi(exchange, pathname, internalKey);
   if (pathname.startsWith('/uploads/')) return handleUpload(exchange, pathname);
@@ -730,8 +808,9 @@ export function createFixtureServer(
   internalKey: string = DEFAULT_FIXTURE_INTERNAL_KEY,
 ): http.Server {
   const calls = new Map<string, number>();
+  const searchCalls = new Map<string, number>();
   return http.createServer((req, res) => {
-    const exchange: Exchange = { req, res, calls };
+    const exchange: Exchange = { req, res, calls, searchCalls };
     try {
       routeOf(exchange, internalKey);
     } catch (error) {

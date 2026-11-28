@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
-import { MENUS, PREFETCH, type Menu } from './menus';
+import { MENUS, type Menu } from './menus';
 
 function isActive(pathname: string, menu: Menu): boolean {
   if (menu.match === 'exact') return pathname === menu.href;
@@ -41,7 +41,7 @@ export function NavLinks({
             <li key={menu.href}>
               <Link
                 href={menu.href}
-                prefetch={PREFETCH}
+                prefetch={menu.prefetch}
                 aria-current={active ? 'page' : undefined}
                 onClick={onNavigate}
                 className={cn(
