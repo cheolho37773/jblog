@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { NextConfig } from 'next';
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
+import { parseDevAllowedOrigins } from './src/lib/dev-allowed-origins';
 import { parseBuildEnv } from './src/lib/env.schema';
 
 // standalone 출력이 pnpm 워크스페이스 의존성(저장소 루트 node_modules)까지 추적하도록
@@ -30,8 +31,13 @@ export default function createNextConfig(phase: string): NextConfig {
   // 운영은 Nginx가 맡는다(/api → Nest, /uploads → 정적 파일).
   if (phase !== PHASE_DEVELOPMENT_SERVER) return baseConfig;
 
+  // 개발 서버는 localhost가 아닌 주소(휴대폰 등)의 /_next/* 요청을 막는다. 허용 호스트는 개발 서버에만 넣고
+  // 빌드·운영 설정에는 넣지 않는다. 값이 없으면 키 자체를 넣지 않아 Next 기본(localhost만)을 따른다.
+  const allowedDevOrigins = parseDevAllowedOrigins(process.env.JBLOG_DEV_ALLOWED_ORIGINS);
+
   return {
     ...baseConfig,
+    ...(allowedDevOrigins.length > 0 && { allowedDevOrigins }),
     async rewrites() {
       return [
         { source: '/api/:path*', destination: `${server.API_INTERNAL_URL}/api/:path*` },
