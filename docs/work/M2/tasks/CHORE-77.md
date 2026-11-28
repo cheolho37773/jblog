@@ -24,3 +24,10 @@
 - [ ] 기존 단위·E2E·`pnpm verify`·시각 회귀 불변
 
 ## 인계 노트
+
+### ① 테스트 선작성 (test-engineer)
+
+- `frontend/src/lib/dev-allowed-origins.spec.ts` (10건): 없음·빈 문자열·공백만·쉼표만 → `[]`(4), `"a, b ,,c"` → `["a","b","c"]`, IP·호스트 이름 유지, `http://a`·`a/b` → 오류(메시지에 `JBLOG_DEV_ALLOWED_ORIGINS`·"호스트만"), 여러 값 중 하나만 잘못돼도 오류
+- `frontend/test/next-config.spec.ts` (4건): 개발 단계 + `192.168.0.10` → `['192.168.0.10']`, 개발 단계 변수 없음 → 없음/빈 값, 운영 빌드 단계는 값이 있어도 없음, 개발 단계 `http://` 값 → 설정 로드 오류. 필수 환경변수는 `vi.stubEnv` 더미 값으로 채움
+- 실패 확인: 모듈 `./dev-allowed-origins` 없음으로 첫 파일 전체 실패(의도한 이유), next-config는 4건 중 2건 실패(허용 목록 반영·오류 던지기 없음). 나머지 2건(변수 없음·운영 단계)은 현재 코드에서도 통과하는 회귀 방지 테스트다
+- tsc: 구현 모듈이 없다는 TS2307 한 건만(구현 후 해소). eslint·prettier 통과
