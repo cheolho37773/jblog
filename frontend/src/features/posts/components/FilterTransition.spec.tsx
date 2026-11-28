@@ -33,12 +33,14 @@ describe('FilterLinks · PendingListSlot', () => {
   beforeEach(() => push.mockReset());
 
   it('평소에는 목록 자리를 그대로 보여 주고 스켈레톤은 없다', () => {
+    // eslint-disable-next-line @next/next/no-html-link-for-pages -- 라우터 없이 FilterLinks의 클릭 가로채기만 보려고 일부러 일반 <a>를 쓴다
     renderChips(<a href="/blog?category=frontend">프론트엔드</a>);
     expect(screen.getByRole('list', { name: '글 목록' })).toBeInTheDocument();
     expect(screen.queryByTestId('blog-loading-grid')).not.toBeInTheDocument();
   });
 
   it('칩 링크를 누르면 기본 이동을 막고 그 href로 router.push한다', () => {
+    // eslint-disable-next-line @next/next/no-html-link-for-pages -- 라우터 없이 FilterLinks의 클릭 가로채기만 보려고 일부러 일반 <a>를 쓴다
     renderChips(<a href="/blog?category=frontend">프론트엔드</a>);
     fireEvent.click(screen.getByRole('link', { name: '프론트엔드' }));
     expect(preventedBeforeOutside).toEqual([true]);
@@ -47,6 +49,7 @@ describe('FilterLinks · PendingListSlot', () => {
 
   it('태그 해제 칩(/blog)도 같은 전환으로 간다', () => {
     renderChips(
+      // eslint-disable-next-line @next/next/no-html-link-for-pages -- 라우터 없이 FilterLinks의 클릭 가로채기만 보려고 일부러 일반 <a>를 쓴다
       <a href="/blog">
         <span aria-hidden="true">✕</span>#Next.js 필터 해제
       </a>,
@@ -60,6 +63,7 @@ describe('FilterLinks · PendingListSlot', () => {
     push.mockImplementation(
       () => new Promise<void>((resolve) => setTimeout(resolve, NAVIGATION_MS)),
     );
+    // eslint-disable-next-line @next/next/no-html-link-for-pages -- 라우터 없이 FilterLinks의 클릭 가로채기만 보려고 일부러 일반 <a>를 쓴다
     renderChips(<a href="/blog?category=frontend">프론트엔드</a>);
 
     // 이동이 끝나지 않은 채로 남아 있어야 하므로 act를 기다리지 않는다.
@@ -81,6 +85,7 @@ describe('FilterLinks · PendingListSlot', () => {
     ['Alt', { altKey: true }],
     ['가운데 버튼', { button: 1 }],
   ])('%s 클릭은 가로채지 않는다(새 탭 등 브라우저 기본 동작)', (_, init) => {
+    // eslint-disable-next-line @next/next/no-html-link-for-pages -- 라우터 없이 FilterLinks의 클릭 가로채기만 보려고 일부러 일반 <a>를 쓴다
     renderChips(<a href="/blog?category=frontend">프론트엔드</a>);
     fireEvent.click(screen.getByRole('link', { name: '프론트엔드' }), init);
     expect(preventedBeforeOutside).toEqual([false]);

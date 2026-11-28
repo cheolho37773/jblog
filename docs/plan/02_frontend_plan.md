@@ -126,7 +126,7 @@ frontend/src/                         # frontend/ 루트에는 public/, e2e/, pa
 |---|---|---|---|
 | `/` | RSC + ISR | tags `posts`, `projects`, `profile`, `tech-stacks` | profile, tech-stacks(home), projects(featured), posts(featured 1 + latest 6) |
 | `/blog` | RSC + ISR | tag `posts` | `searchParams.category / tag / page` → posts. **Load More**는 클라이언트 컴포넌트가 다음 페이지를 추가 fetch |
-| `/blog/[slug]` | RSC, 요청 시 렌더 + 데이터 캐시. `generateStaticParams`는 빈 목록이고 첫 요청 때 생성해 캐시한다 (아래 "빌드와 데이터") | tags `posts`, `post:<slug>` | 내부 API `/internal/posts/:slug` **한 번 호출**로 메타+원문+이전/다음+관련 글을 같은 버전으로 받음. `redirectTo`가 오면 `permanentRedirect()`. **조회수/좋아요는 클라이언트 아일랜드** (`FEATURE_REACTIONS` 켜졌을 때만) |
+| `/blog/[slug]` | RSC, 요청 시 렌더 + 데이터 캐시. `generateStaticParams`를 두지 않는다. 요청마다 렌더하고 반복 계산은 fetch 데이터 캐시(`revalidate: 3600` + 태그)가 막는다 (아래 "빌드와 데이터", 2026-11-28 M2-08 정정: `(site)` 레이아웃이 요청 시 데이터를 쓰므로 빈 `generateStaticParams`의 "첫 요청 때 정적 생성"은 동작하지 않는다) | tags `posts`, `post:<slug>` | 내부 API `/internal/posts/:slug` **한 번 호출**로 메타+원문+이전/다음+관련 글을 같은 버전으로 받음. `redirectTo`가 오면 `permanentRedirect()`. **조회수/좋아요는 클라이언트 아일랜드** (`FEATURE_REACTIONS` 켜졌을 때만) |
 | `/projects`, `/projects/[slug]` | RSC + ISR | tags `projects`, `project:<slug>`, `tech-stacks` | 상세는 `/internal/projects/:slug` 한 번 호출 |
 | `/about` | RSC + ISR | tags `profile`, `experiences`, `tech-stacks` | |
 | `/search` | 동적 SSR (`no-store`) | — | `?q` |

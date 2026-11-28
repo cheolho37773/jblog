@@ -10,6 +10,14 @@ import {
   MISSING_SLUG,
   OLD_SLUG,
   OLD_SLUG_TARGET,
+  CALLS_PATH,
+  CALL_PROBE_PREFIX,
+  DETAIL_ONLY_POSTS,
+  LONG_SLUG,
+  NO_COVER_SLUG,
+  NO_HEADINGS_SLUG,
+  SERVER_ERROR_POST_SLUG,
+  UNAUTHORIZED_POST_SLUG,
   SLOW_CATEGORIES,
   createFixtureServer,
 } from '../e2e/fixtures/server';
@@ -400,5 +408,60 @@ describe('잘못된 URL 인코딩', () => {
 
     expect((await get('/api/posts')).status).toBe(200);
     expect((await get(`/api/posts/${FEATURED_SLUG}`)).status).toBe(200);
+  });
+});
+
+describe('상세 전용 글·호출 수 기록 (M2-08)', () => {
+  const withKey = { 'X-Internal-Key': KEY };
+  const internal = (slug: string) =>
+    getJson<Schemas['InternalPostResponseDto']>(`/internal/posts/${slug}`, withKey);
+
+  it('상세 전용 글은 내부 API로 열리고 목록·공개 API에는 없다', async () => {
+    for (const post of DETAIL_ONLY_POSTS) {
+      const { res, body } = await internal(post.slug);
+      expect(res.status).toBe(200);
+      expect(body.post.slug).toBe(post.slug);
+      expect((await get(`/api/posts/${post.slug}`)).status).toBe(404);
+    }
+    const list = await getJson<Schemas['PostListResponseDto']>('/api/posts?size=50');
+    const listed = list.body.items.map((item) => item.slug);
+    expect(DETAIL_ONLY_POSTS.some((post) => listed.includes(post.slug))).toBe(false);
+  });
+
+  it('커버 없는 글은 커버·이웃이 없고 같은 카테고리 관련 글이 3개다', async () => {
+    const { body } = await internal(NO_COVER_SLUG);
+    expect(body.post.coverImageUrl).toBeNull();
+    expect(body.prev).toBeNull();
+    expect(body.next).toBeNull();
+    expect(body.related).toHaveLength(3);
+  });
+
+  it('헤딩 없는 글은 본문에 헤딩이 없고, 긴 글은 h2 5개·h3 1개다', async () => {
+    const plain = (await internal(NO_HEADINGS_SLUG)).body.post;
+    expect(plain.contentMd).not.toMatch(/^#/m);
+    expect(plain.category).toBeNull();
+    expect(plain.tags).toEqual([]);
+    const long = (await internal(LONG_SLUG)).body.post.contentMd;
+    expect(long.match(/^## /gm)).toHaveLength(5);
+    expect(long.match(/^### /gm)).toHaveLength(1);
+  });
+
+  it('접두사 slug는 어떤 값이든 열리고, 오류 시험용 slug는 500·401이다', async () => {
+    expect((await internal(`${CALL_PROBE_PREFIX}abc`)).body.post.slug).toBe(
+      `${CALL_PROBE_PREFIX}abc`,
+    );
+    expect((await get(`/internal/posts/${SERVER_ERROR_POST_SLUG}`, withKey)).status).toBe(500);
+    expect((await get(`/internal/posts/${UNAUTHORIZED_POST_SLUG}`, withKey)).status).toBe(401);
+  });
+
+  it('내부 API 호출 수를 slug별로 센다(공개 API는 세지 않는다)', async () => {
+    const slug = `${CALL_PROBE_PREFIX}count`;
+    const countOf = async () =>
+      (await getJson<{ count: number }>(`${CALLS_PATH}?slug=${slug}`)).body.count;
+    expect(await countOf()).toBe(0);
+    await internal(slug);
+    await internal(slug);
+    await get('/api/posts');
+    expect(await countOf()).toBe(2);
   });
 });

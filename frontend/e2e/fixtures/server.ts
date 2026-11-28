@@ -266,6 +266,90 @@ function toInternalPost(row: PostRow, index: number): InternalPost {
 /** 발행 글 전체(최신순). 내부 API 원문 포함 형태. */
 export const INTERNAL_POSTS: InternalPost[] = POST_ROWS.map(toInternalPost);
 
+// ───────── 상세 전용 글 (M2-08) ─────────
+// 목록·카테고리 수·검색·Footer·시각 회귀에 영향이 없도록 INTERNAL_POSTS 밖에 둔다. 내부 API(`/internal/posts/{slug}`)로만 열린다.
+export const NO_COVER_SLUG = 'fixture-no-cover'; // 커버 없음, frontend 카테고리(관련 글 3개), prev·next 모두 null
+export const NO_HEADINGS_SLUG = 'fixture-no-headings'; // 헤딩 없음(TOC 없음), 카테고리·태그 없음, 관련 글 0개
+export const LONG_SLUG = 'fixture-long-article'; // 헤딩 h2 5개·h3 1개, 긴 본문(스크롤로 TOC 현재 항목이 바뀐다)
+export const LONG_SEO_TITLE = '긴 글 SEO 제목';
+export const LONG_SEO_DESCRIPTION = '긴 글 SEO 설명입니다.';
+export const SCRIPT_TITLE_SLUG = 'fixture-script-title'; // 제목에 `</script>`가 들어 있다(JSON-LD 탈출 방지)
+export const SCRIPT_TITLE = '</script><script>window.__pwned = 1</script> 위험한 제목';
+/** 이 접두사로 시작하는 slug는 어떤 값이든 같은 글(첫 글 복제)로 열린다. 호출 수를 세는 테스트가 재시도마다 새 slug를 쓰려는 용도다. */
+export const CALL_PROBE_PREFIX = 'fixture-call-probe-';
+/** 내부 API가 이 slug에 500 / 401로 답한다(404로 바뀌지 않고 오류로 끝나는지 보는 시험용). */
+export const SERVER_ERROR_POST_SLUG = 'fixture-internal-error';
+export const UNAUTHORIZED_POST_SLUG = 'fixture-internal-unauthorized';
+/** 호출 수 조회 경로. 쿼리 `slug`(없으면 전체). 시험 도구 전용이며 계약에 없다. */
+export const CALLS_PATH = '/__fixture/internal-calls';
+
+const NO_HEADINGS_MD = `헤딩이 없는 글입니다. 문단만 있습니다.
+
+둘째 문단입니다. 목차(TOC)가 만들어지지 않는 경우를 확인합니다.
+`;
+
+const longSection = (n: number) =>
+  `## 긴 글 섹션 ${n}\n\n` +
+  Array.from({ length: 6 }, (_, i) =>
+    `섹션 ${n}의 ${i + 1}번째 문단입니다. 스크롤에 따라 목차의 현재 항목이 바뀌는지 보려고 충분히 긴 본문을 채웁니다. `.repeat(
+      4,
+    ),
+  ).join('\n\n') +
+  (n === 2
+    ? '\n\n### 섹션 2의 소제목\n\n소제목 아래 문단입니다. '.concat('길이를 채웁니다. '.repeat(40))
+    : '') +
+  '\n\n';
+
+const LONG_MD = [1, 2, 3, 4, 5].map(longSection).join('');
+
+const detailOnlyRows: Array<{ row: PostRow; patch: Partial<InternalPost> }> = [
+  {
+    row: {
+      slug: NO_COVER_SLUG,
+      title: '커버 없는 글',
+      category: CATEGORIES.frontend,
+      tags: [TAGS.nextjs],
+      publishedAt: '2026-07-20T09:00:00.000Z',
+    },
+    patch: { coverImageUrl: null, seoTitle: null, seoDescription: null },
+  },
+  {
+    row: {
+      slug: NO_HEADINGS_SLUG,
+      title: '헤딩 없는 글',
+      category: null,
+      tags: [],
+      publishedAt: '2026-07-10T09:00:00.000Z',
+    },
+    patch: { contentMd: NO_HEADINGS_MD, seoTitle: null, seoDescription: null },
+  },
+  {
+    row: {
+      slug: LONG_SLUG,
+      title: '긴 글 목차 확인',
+      category: CATEGORIES.backend,
+      tags: [TAGS.nestjs],
+      publishedAt: '2026-07-01T09:00:00.000Z',
+    },
+    patch: { contentMd: LONG_MD, seoTitle: LONG_SEO_TITLE, seoDescription: LONG_SEO_DESCRIPTION },
+  },
+  {
+    row: {
+      slug: SCRIPT_TITLE_SLUG,
+      title: SCRIPT_TITLE,
+      category: CATEGORIES.backend,
+      tags: [TAGS.security],
+      publishedAt: '2026-06-20T09:00:00.000Z',
+    },
+    patch: { seoTitle: null, seoDescription: null },
+  },
+];
+
+export const DETAIL_ONLY_POSTS: InternalPost[] = detailOnlyRows.map(({ row, patch }, index) => ({
+  ...toInternalPost(row, index),
+  ...patch,
+}));
+
 function toSummary(post: InternalPost): PostSummary {
   return {
     slug: post.slug,
@@ -319,8 +403,9 @@ const toLink = (post: InternalPost): PostLink => ({ slug: post.slug, title: post
 // prev는 더 오래된 글, next는 더 최근 글이다(M2-01 계약). INTERNAL_POSTS는 최신순이다.
 function neighbours(post: InternalPost) {
   const index = INTERNAL_POSTS.indexOf(post);
-  const next = INTERNAL_POSTS[index - 1];
-  const prev = INTERNAL_POSTS[index + 1];
+  // 목록 밖 글(상세 전용)은 이웃이 없다. 관련 글은 같은 카테고리의 목록 글에서 고른다.
+  const next = index < 0 ? undefined : INTERNAL_POSTS[index - 1];
+  const prev = index < 0 ? undefined : INTERNAL_POSTS[index + 1];
   const related = INTERNAL_POSTS.filter(
     (other) =>
       other !== post && post.category !== null && other.category?.slug === post.category.slug,
@@ -331,6 +416,14 @@ function neighbours(post: InternalPost) {
 }
 
 const findPost = (slug: string) => INTERNAL_POSTS.find((post) => post.slug === slug);
+
+// 내부 API는 목록 밖 상세 전용 글과 호출 확인용 slug도 연다. 공개 API(findPost)는 목록 글만 안다.
+function findInternalPost(slug: string): InternalPost | undefined {
+  const listed = findPost(slug) ?? DETAIL_ONLY_POSTS.find((post) => post.slug === slug);
+  if (listed) return listed;
+  const [template] = INTERNAL_POSTS;
+  return slug.startsWith(CALL_PROBE_PREFIX) && template ? { ...template, slug } : undefined;
+}
 
 interface Paging {
   page: number;
@@ -363,6 +456,8 @@ function searchPosts(query: string): InternalPost[] {
 interface Exchange {
   req: http.IncomingMessage;
   res: http.ServerResponse;
+  /** 내부 API slug별 호출 수(서버 인스턴스마다 따로). */
+  calls: Map<string, number>;
 }
 
 interface JsonReply {
@@ -536,9 +631,10 @@ function handlePublicApi(exchange: Exchange, pathname: string, query: URLSearchP
 }
 
 function handleInternalApi(exchange: Exchange, pathname: string, internalKey: string) {
-  const { req, res } = exchange;
+  const { req, res, calls } = exchange;
   const slug = slugAfter(pathname, '/internal/posts/');
   if (slug === undefined) return sendError(exchange, NOT_FOUND);
+  calls.set(slug, (calls.get(slug) ?? 0) + 1);
   // 키 검사가 먼저다. 틀린 키로는 글이 있는지 없는지도 알 수 없어야 한다.
   if (req.headers[INTERNAL_KEY_HEADER] !== internalKey) {
     return sendError(exchange, {
@@ -548,14 +644,35 @@ function handleInternalApi(exchange: Exchange, pathname: string, internalKey: st
     });
   }
   const cacheControl = CACHE_CONTROL.internal;
+  if (slug === SERVER_ERROR_POST_SLUG) return sendError(exchange, INTERNAL_ERROR);
+  if (slug === UNAUTHORIZED_POST_SLUG) {
+    return sendError(exchange, {
+      status: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Invalid internal key',
+    });
+  }
   if (slug === OLD_SLUG) {
     const body: Schemas['InternalPostRedirectDto'] = { redirectTo: OLD_SLUG_TARGET };
     return sendJson(res, { status: 200, body, cacheControl });
   }
-  const post = findPost(slug);
+  const post = findInternalPost(slug);
   if (!post) return sendError(exchange, POST_NOT_FOUND);
   const body: Schemas['InternalPostResponseDto'] = { post, ...neighbours(post) };
   return sendJson(res, { status: 200, body, cacheControl });
+}
+
+// 내부 API 호출 수 확인(시험 도구). `?slug=x`는 `{ slug, count }`, 없으면 `{ total, bySlug }`.
+function handleCalls({ res, calls }: Exchange, query: URLSearchParams) {
+  const slug = query.get('slug');
+  const body =
+    slug === null
+      ? {
+          total: [...calls.values()].reduce((sum, n) => sum + n, 0),
+          bySlug: Object.fromEntries(calls),
+        }
+      : { slug, count: calls.get(slug) ?? 0 };
+  sendJson(res, { status: 200, body, cacheControl: CACHE_CONTROL.internal });
 }
 
 function handleUpload(exchange: Exchange, pathname: string) {
@@ -594,6 +711,7 @@ function routeOf(exchange: Exchange, internalKey: string) {
       cacheControl: CACHE_CONTROL.internal,
     });
   }
+  if (pathname === CALLS_PATH) return handleCalls(exchange, searchParams);
   if (pathname.startsWith('/api/')) return handlePublicApi(exchange, pathname, searchParams);
   if (pathname.startsWith('/internal/')) return handleInternalApi(exchange, pathname, internalKey);
   if (pathname.startsWith('/uploads/')) return handleUpload(exchange, pathname);
@@ -611,8 +729,9 @@ function respondToFailure(exchange: Exchange, error: unknown) {
 export function createFixtureServer(
   internalKey: string = DEFAULT_FIXTURE_INTERNAL_KEY,
 ): http.Server {
+  const calls = new Map<string, number>();
   return http.createServer((req, res) => {
-    const exchange: Exchange = { req, res };
+    const exchange: Exchange = { req, res, calls };
     try {
       routeOf(exchange, internalKey);
     } catch (error) {

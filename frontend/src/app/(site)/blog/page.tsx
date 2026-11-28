@@ -20,7 +20,11 @@ import {
   loadFeaturedPost,
   loadTags,
 } from '@/features/posts/lib/blog-list-api';
-import { parseBlogQuery, type BlogQuery } from '@/features/posts/lib/blog-list-query';
+import {
+  blogCanonicalPath,
+  parseBlogQuery,
+  type BlogQuery,
+} from '@/features/posts/lib/blog-list-query';
 
 type BlogPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -34,16 +38,23 @@ const TAG_CHIP_SPACING = 'mt-6 mb-12';
 const OVERLAY_SPACING = 'mb-12';
 
 export async function generateMetadata({ searchParams }: BlogPageProps): Promise<Metadata> {
-  const { category, tag } = parseBlogQuery(await searchParams);
+  const query = parseBlogQuery(await searchParams);
+  return {
+    title: await listTitleOf(query),
+    alternates: { canonical: blogCanonicalPath(query) },
+  };
+}
+
+async function listTitleOf({ category, tag }: BlogQuery): Promise<string> {
   if (tag) {
     const found = (await loadTags()).find((item) => item.slug === tag);
-    return { title: found ? `#${found.name} · Blog` : 'Blog' };
+    return found ? `#${found.name} · Blog` : 'Blog';
   }
   if (category) {
     const found = (await loadCategories()).find((item) => item.slug === category);
-    return { title: found ? `${found.name} · Blog` : 'Blog' };
+    return found ? `${found.name} · Blog` : 'Blog';
   }
-  return { title: 'Blog' };
+  return 'Blog';
 }
 
 function EmptyState() {
