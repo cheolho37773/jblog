@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import { Container } from '@/components/layout/Container';
 import { Badge } from '@/components/ui/Badge';
 import type { components } from '@/generated/api-types';
+import { CopyLinkButton } from '@/features/posts/components/CopyLinkButton';
 import { AuthorMeta } from '@/features/posts/components/AuthorMeta';
 import { DesktopTableOfContents } from '@/features/posts/components/DesktopTableOfContents';
 import { PostJsonLd } from '@/features/posts/components/PostJsonLd';
@@ -10,6 +11,7 @@ import { PostNav } from '@/features/posts/components/PostNav';
 import { PostTags } from '@/features/posts/components/PostTags';
 import { RelatedPosts } from '@/features/posts/components/RelatedPosts';
 import { loadPostDetail } from '@/features/posts/lib/post-detail-api';
+import { postAbsoluteUrl, siteOrigin } from '@/features/posts/lib/post-url';
 import { buildPostMetadata } from '@/features/posts/lib/post-metadata';
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
@@ -36,7 +38,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   return buildPostMetadata(post);
 }
 
-function PostHeader({ post }: { post: InternalPostDto }) {
+function PostHeader({ post, canonicalUrl }: { post: InternalPostDto; canonicalUrl: string }) {
   return (
     <header className={cn(COLUMN, 'flex flex-col items-start')}>
       {post.category && (
@@ -50,8 +52,16 @@ function PostHeader({ post }: { post: InternalPostDto }) {
         </Badge>
       )}
       <h1 className="text-h1 text-strong wrap-anywhere">{post.title}</h1>
-      <div data-testid="post-meta" className="mt-5">
+      {/* 메타 줄: 모바일은 링크 복사가 아래 줄로 내려가고, tablet 이상은 오른쪽에 붙는다 */}
+      <div
+        data-testid="post-meta"
+        className="mt-5 flex w-full flex-col items-start gap-3 tablet:flex-row tablet:items-center tablet:justify-between"
+      >
         <AuthorMeta publishedAt={post.publishedAt} readingMinutes={post.readingMinutes} size="sm" />
+        {/* 한 줄일 때 버튼(32)이 메타 줄 높이(20)를 키우지 않게 위아래로 상쇄한다 */}
+        <div className="tablet:-my-1.5">
+          <CopyLinkButton url={canonicalUrl} />
+        </div>
       </div>
     </header>
   );
@@ -66,6 +76,7 @@ function PostCover({ src }: { src: string }) {
       data-testid="post-cover"
       src={src}
       alt=""
+      draggable={false}
       fetchPriority="high"
       className={cn(COLUMN, 'aspect-[800/462] rounded-lg object-cover')}
     />
@@ -83,13 +94,13 @@ export default async function PostPage({ params }: PostPageProps) {
   const { post, prev, next, related } = await loadPostDetail(slug);
   const siteUrl = env.public.NEXT_PUBLIC_SITE_URL;
   const headings = extractHeadings(post.contentMd);
-  const content = await renderMarkdown(post.contentMd, { siteOrigin: siteUrl });
+  const content = await renderMarkdown(post.contentMd, { siteOrigin: siteOrigin(siteUrl) });
 
   return (
     <Container className="pt-8 pb-16">
       <PostJsonLd post={post} siteUrl={siteUrl} />
       <article className="flex flex-col gap-8">
-        <PostHeader post={post} />
+        <PostHeader post={post} canonicalUrl={postAbsoluteUrl(post.slug, siteUrl)} />
         {post.coverImageUrl && <PostCover src={post.coverImageUrl} />}
         <div className={BODY_ROW}>
           <Prose

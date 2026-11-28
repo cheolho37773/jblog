@@ -328,3 +328,37 @@ body {
   line-height: var(--text-quote--line-height);
   font-weight: var(--text-quote--font-weight);
 }
+
+/*
+ * 공개 사이트 복사 방지 (M2-10, 04 §2.2 ①). ProtectedShell의 루트에 붙는다.
+ * 입력 요소·contenteditable·.allow-select(연락처)는 선택을 허용한다.
+ */
+.content-protected {
+  -webkit-user-select: none;
+  user-select: none;
+  /* iOS 길게 눌러 복사/저장 메뉴 */
+  -webkit-touch-callout: none;
+}
+.content-protected input,
+.content-protected textarea,
+.content-protected [contenteditable='true'],
+.content-protected .allow-select {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.content-protected img {
+  -webkit-user-drag: none;
+}
+
+/* 인쇄·PDF 저장 차단 */
+@media print {
+  .content-protected main {
+    display: none !important;
+  }
+  .content-protected::after {
+    content: '이 콘텐츠는 인쇄할 수 없습니다.';
+    display: block;
+    padding: 48px;
+    text-align: center;
+  }
+}

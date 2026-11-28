@@ -38,8 +38,12 @@ export function assertPublicKeysSafe(keys: readonly string[]): void {
 assertPublicKeysSafe(PUBLIC_ENV_KEYS);
 
 // 오류 메시지에는 변수 이름만 담는다. 입력 값(주소 등)을 로그에 남기지 않기 위해서다.
+// 우리가 직접 쓴 규칙(custom) 위반은 입력 값이 없는 이유 문구를 이름 뒤에 붙여 원인을 알 수 있게 한다.
 function invalidNames(error: z.ZodError): string[] {
-  const names = error.issues.map((issue) => String(issue.path[0]));
+  const names = error.issues.map((issue) => {
+    const name = String(issue.path[0]);
+    return issue.code === 'custom' ? `${name} (${issue.message})` : name;
+  });
   return [...new Set(names)];
 }
 
