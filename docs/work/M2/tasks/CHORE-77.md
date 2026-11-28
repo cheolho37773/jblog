@@ -44,3 +44,8 @@
 
 - `frontend/src/lib/dev-allowed-origins.spec.ts`에 14건 추가(10 → 24건): 받음 4(`192.168.0.10`, `my-mac.local`, `localhost`, `*.example.local`), 거부 9(`example.invalid:3000`, `192.168.0.10:3000`, `?x=1`, `#f`, 내부 공백, `*`만, `a.*.b`, `-bad.local`, `bad..local` — 메시지에 `JBLOG_DEV_ALLOWED_ORIGINS`), IPv6 2(`[::1]`, `::1` — 메시지에 변수 이름과 "IPv4나 호스트 이름")
 - 현재 코드에서 실패 확인: 24건 중 11건 실패(거부 9 + IPv6 2, 오류를 던지지 않음), 받음 4건은 통과(회귀 방지). tsc·eslint·prettier 통과
+
+### Codex r1 대응 ② (frontend-dev)
+
+- `frontend/src/lib/dev-allowed-origins.ts`: 호스트 형식만 받도록 검증을 바꿨다. IPv4, 호스트 이름(라벨은 글자·숫자·`-`, 하이픈 시작·끝 금지, 빈 라벨 금지), 앞쪽 `*.` 1개를 허용한다. 포트·쿼리·해시·공백·스킴·경로는 거부하고, IPv6(`[..]`·콜론 둘 이상)는 "IPv4나 호스트 이름만" 오류로 거부한다. 정규식은 이름 있는 상수이고, 왜 이 형식인지 주석을 달았다
+- 검사: `pnpm --filter @jblog/frontend test` 통과(775건), `pnpm verify` 통과(종료 0). E2E·시각 회귀는 실행하지 않음(개발자 서버가 3000·4100 사용, 오케스트레이터가 별도 실행)
