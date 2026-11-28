@@ -145,7 +145,7 @@
 
 **프론트엔드**
 - [x] FE-04 `frontend/src/lib/markdown` 파이프라인 + `.prose-jblog` + 한글 본문 폰트(Noto Serif KR) — 토큰 #55, 구현 #66 (2026-11-26)
-- [ ] FE-05 Blog 목록/상세/검색, 태그 필터, PostCard 3종, LoadMore, TOC, slug 301 처리, SEO(메타/OG/JSON-LD)
+- [x] FE-05 Blog 목록/상세/검색, 태그 필터, PostCard 3종, LoadMore, TOC, slug 301 처리, SEO(메타/OG/JSON-LD) — 카드 #69, 목록 #71, 상세 #73, 검색·Home #74 (OG 이미지 생성은 M5, JSON-LD 작성자는 M4 프로필 API 뒤)
 - [ ] FE-05a / SEC-06 복사 방지(CopyGuard, 입력 요소·연락처 예외, 코드 복사 버튼, 인쇄 차단, 링크 복사)
 - [ ] Home의 블로그 섹션 (Featured 조건부, Latest Post)
 
