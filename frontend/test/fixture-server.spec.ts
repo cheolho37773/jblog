@@ -29,6 +29,7 @@ import {
   SEARCH_CALLS_PATH,
   SEARCH_ERROR_QUERY,
   createFixtureServer,
+  validatorLength,
 } from '../e2e/fixtures/server';
 
 // 픽스처 API 서버 자체 테스트 (M2-E 동작 규약 1). E2E의 데이터 원천이 계약(백엔드 §4.1·§4.2·§4.5·§5.7-①)과 어긋나지 않는지 본다.
@@ -573,4 +574,33 @@ describe('검색 400 판정은 백엔드 minLength(2)와 같은 길이 계산이
     await get(`/api/search?q=${encodeURIComponent('😀😀')}`);
     expect((await read()) - before).toBe(1);
   });
+});
+
+// 백엔드 class-validator `minLength(입력, 2)`와 같은 결과를 내는 표(대조: `backend/`에서 `node -e "console.log(require('class-validator').minLength(입력, 2))"`).
+// 변형 선택자는 앞 글자와 붙은 시퀀스만 길이에서 빼므로 연속·단독 변형 선택자는 모두 빼지 않는다(Codex r2).
+const VS = '\uFE0F';
+const VS_TEXT = '\uFE0E';
+export const MIN_LENGTH_TABLE: [string, string, boolean][] = [
+  ['이모지 1자', '😀', false],
+  ['변형 선택자 붙은 1자', '❤️', false],
+  ['변형 선택자 2개 붙은 영문 1자', `a${VS}${VS}`, true],
+  ['단독 변형 선택자', VS, false],
+  ['변형 선택자 2개', `${VS}${VS}`, true],
+  ['변형 선택자 붙은 2자 반복', '❤️❤️', true],
+  ['영문 + 변형 선택자', `a${VS}`, false],
+  ['변형 선택자 2개 + 영문', `${VS}${VS}a`, true],
+  ['영문 2자 + 변형 선택자', `ab${VS}`, true],
+  ['텍스트형 변형 선택자 2개 붙은 영문', `a${VS_TEXT}${VS_TEXT}`, true],
+  ['변형 선택자 + 영문', `${VS}a`, true],
+  ['한글 2자', '가나', true],
+];
+
+describe('픽스처 validatorLength는 백엔드 minLength(2)와 같다 (Codex r2)', () => {
+  for (const [name, text, expected] of MIN_LENGTH_TABLE) {
+    it(`${name} ${JSON.stringify(text)} → ${expected ? '200' : '400'}`, async () => {
+      expect(validatorLength(text) >= 2).toBe(expected);
+      const res = await get(`/api/search?q=${encodeURIComponent(text)}`);
+      expect(res.status).toBe(expected ? 200 : 400);
+    });
+  }
 });

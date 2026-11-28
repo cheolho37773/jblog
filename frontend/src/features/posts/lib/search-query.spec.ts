@@ -100,3 +100,30 @@ describe('parseSearchQuery: 백엔드 minLength(2)와 같은 길이 계산 (Code
     expect(parseSearchQuery(' 😀 ')).toEqual({ q: '😀', isSearchable: false });
   });
 });
+
+// Codex r2: 연속·단독 변형 선택자. 프론트 판정과 픽스처 판정(`validatorLength`)이 같은 결과여야 하고,
+// 둘 다 백엔드 class-validator `minLength(입력, 2)`와 같다(대조 방법은 위와 같다). 이전 계산(모든 변형 선택자를 뺌)은
+// `a` + FE0F 2개를 길이 1로 봐서 백엔드(길이 2)와 달랐다.
+describe('parseSearchQuery: 연속·단독 변형 선택자와 픽스처 판정 일치 (Codex r2)', () => {
+  const VS = '\uFE0F';
+  const VS_TEXT = '\uFE0E';
+  const table: [string, string, boolean][] = [
+    ['변형 선택자 2개 붙은 영문 1자', `a${VS}${VS}`, true],
+    ['단독 변형 선택자', VS, false],
+    ['변형 선택자 2개', `${VS}${VS}`, true],
+    ['변형 선택자 붙은 2자 반복', '❤️❤️', true],
+    ['영문 + 변형 선택자', `a${VS}`, false],
+    ['변형 선택자 2개 + 영문', `${VS}${VS}a`, true],
+    ['영문 2자 + 변형 선택자', `ab${VS}`, true],
+    ['텍스트형 변형 선택자 2개 붙은 영문', `a${VS_TEXT}${VS_TEXT}`, true],
+    ['변형 선택자 + 영문', `${VS}a`, true],
+  ];
+  for (const [name, raw, expected] of table) {
+    it(`${name} ${JSON.stringify(raw)} → 검색 ${expected ? '가능' : '불가'}, 픽스처와 같다`, async () => {
+      const { parseSearchQuery } = await load();
+      const { validatorLength } = await import('../../../../e2e/fixtures/server');
+      expect(parseSearchQuery(raw).isSearchable).toBe(expected);
+      expect(validatorLength(raw.trim()) >= 2).toBe(expected);
+    });
+  }
+});

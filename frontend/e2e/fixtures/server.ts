@@ -613,13 +613,14 @@ function slugAfter(pathname: string, prefix: string): string | undefined {
   return rest !== '' && !rest.includes('/') ? rest : undefined;
 }
 
-// 백엔드 `@MinLength(2)`(class-validator → validator@13.15.35 `isLength`)와 같은 길이 계산이다:
-// str.length - (변형 선택자 U+FE0E·U+FE0F 수) - (서로게이트 쌍 수). 이모지 1자는 length가 2여도 길이 1이다.
+// 백엔드 `@MinLength(2)`(class-validator → validator@13.15.35 `lib/isLength.js`)와 같은 길이 계산이다.
+// 정규식·계산식은 원본 그대로다. 변형 선택자(U+FE0E·U+FE0F)는 "앞 글자(변형 선택자가 아닌)와 붙은 시퀀스"만 뺀다:
+// 연속·단독 변형 선택자는 모두 빼지 않는다. 이모지 1자는 length가 2여도 길이 1이다.
 // 프론트 판정(`parseSearchQuery`)이 이 계산과 어긋나면 백엔드가 400을 내는 것을 이 픽스처가 그대로 재현해야 한다.
-function validatorLength(text: string): number {
-  const variationSelectors = text.match(/[\uFE0E\uFE0F]/g)?.length ?? 0;
-  const surrogatePairs = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g)?.length ?? 0;
-  return text.length - variationSelectors - surrogatePairs;
+export function validatorLength(text: string): number {
+  const presentationSequences = text.match(/[^\uFE0F\uFE0E][\uFE0F\uFE0E]/g) || [];
+  const surrogatePairs = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g) || [];
+  return text.length - presentationSequences.length - surrogatePairs.length;
 }
 
 function handleSearch(exchange: Exchange, query: URLSearchParams) {
