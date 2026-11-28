@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Footer } from './Footer';
 
 // M2-10 주소 복사: Contact Me 카드의 이메일 옆 "주소 복사" 버튼. 이메일 값이 없으면 버튼도 없다.
-// 성공 안내 문구는 지시서가 "링크 복사와 같다"고 해서 "복사했습니다"/"복사됨" 계열이면 통과하게 둔다(정확한 문구는 ② 구현 시 확정).
+// 성공 안내는 `주소를 복사했습니다`, 실패 안내는 `복사하지 못했습니다`(오케스트레이터 판정).
 
 const EMAIL = 'hello@example.com';
 const GITHUB_URL = 'https://github.com/example';
@@ -25,7 +25,7 @@ describe('Footer 주소 복사', () => {
     await act(async () => void fireEvent.click(button!));
     expect(writeText).toHaveBeenCalledWith(EMAIL);
     expect(button).toHaveAttribute('data-copy-state', 'copied');
-    expect(screen.getByText(/복사(했습니다|됨)/).closest('[role="status"]')).not.toBeNull();
+    expect(screen.getByText('주소를 복사했습니다').closest('[role="status"]')).not.toBeNull();
   });
 
   it('권한 거부면 "복사하지 못했습니다"를 보인다', async () => {

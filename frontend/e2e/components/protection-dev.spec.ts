@@ -104,7 +104,9 @@ test.describe('연락처(.allow-select) 예외', () => {
     const button = page.getByRole('contentinfo').getByRole('button', { name: '주소 복사' });
     await button.click();
     expect(await readClipboard(page)).toBe(EMAIL);
-    await expect(page.getByRole('status').filter({ hasText: /복사(했습니다|됨)/ })).toHaveCount(1);
+    await expect(page.getByRole('status').filter({ hasText: '주소를 복사했습니다' })).toHaveCount(
+      1,
+    );
     await expect(button).toHaveAttribute('data-copy-state', 'copied');
     await expect(toast(page)).toHaveCount(0);
   });
