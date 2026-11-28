@@ -137,7 +137,13 @@ test.describe('Home 구성', () => {
   test('title은 기본값 jblog이고 canonical은 /다', async ({ page, baseURL }) => {
     await openBlog(page, '/');
     expect(await page.title()).toBe('jblog');
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${baseURL}/`);
+    // Next metadata는 루트 canonical의 끝 `/`를 지워 origin만 낸다(같은 URL). origin·경로 `/`·쿼리 없음을 URL로 비교한다.
+    const href = await page.locator('link[rel="canonical"]').getAttribute('href');
+    const canonical = new URL(href ?? 'invalid:');
+    expect(canonical.origin).toBe(new URL(baseURL ?? '').origin);
+    expect(canonical.pathname).toBe('/');
+    expect(canonical.search).toBe('');
+    expect(canonical.hash).toBe('');
   });
 });
 
