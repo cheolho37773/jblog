@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { siteOrigin } from '@/features/posts/lib/post-url';
 import { env } from '@/lib/env';
 import { renderMarkdown } from '@/lib/markdown';
 import { Prose } from '@/lib/markdown/Prose';
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 // 글 상세 본문 폭(UI §7.3: 800px 중앙)
 export default async function MarkdownPreviewPage() {
   const content = await renderMarkdown(SAMPLE_MARKDOWN, {
-    siteOrigin: new URL(env.public.NEXT_PUBLIC_SITE_URL).origin,
+    siteOrigin: siteOrigin(env.public.NEXT_PUBLIC_SITE_URL),
   });
   return (
     <main className="text-body py-8">

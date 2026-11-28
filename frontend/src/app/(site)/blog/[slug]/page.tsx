@@ -11,6 +11,7 @@ import { PostNav } from '@/features/posts/components/PostNav';
 import { PostTags } from '@/features/posts/components/PostTags';
 import { RelatedPosts } from '@/features/posts/components/RelatedPosts';
 import { loadPostDetail } from '@/features/posts/lib/post-detail-api';
+import { postAbsoluteUrl, siteOrigin } from '@/features/posts/lib/post-url';
 import { buildPostMetadata } from '@/features/posts/lib/post-metadata';
 import { cn } from '@/lib/cn';
 import { env } from '@/lib/env';
@@ -93,13 +94,13 @@ export default async function PostPage({ params }: PostPageProps) {
   const { post, prev, next, related } = await loadPostDetail(slug);
   const siteUrl = env.public.NEXT_PUBLIC_SITE_URL;
   const headings = extractHeadings(post.contentMd);
-  const content = await renderMarkdown(post.contentMd, { siteOrigin: siteUrl });
+  const content = await renderMarkdown(post.contentMd, { siteOrigin: siteOrigin(siteUrl) });
 
   return (
     <Container className="pt-8 pb-16">
       <PostJsonLd post={post} siteUrl={siteUrl} />
       <article className="flex flex-col gap-8">
-        <PostHeader post={post} canonicalUrl={`${siteUrl}/blog/${post.slug}`} />
+        <PostHeader post={post} canonicalUrl={postAbsoluteUrl(post.slug, siteUrl)} />
         {post.coverImageUrl && <PostCover src={post.coverImageUrl} />}
         <div className={BODY_ROW}>
           <Prose

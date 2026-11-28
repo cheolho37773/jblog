@@ -1,4 +1,5 @@
 import type { components } from '@/generated/api-types';
+import { postAbsoluteUrl } from './post-url';
 
 type InternalPostDto = components['schemas']['InternalPostDto'];
 type JsonLdOptions = { siteUrl: string };
@@ -7,8 +8,7 @@ type JsonLd = Record<string, unknown>;
 const SCHEMA_CONTEXT = 'https://schema.org';
 
 const absoluteUrl = (path: string, siteUrl: string) => new URL(path, siteUrl).toString();
-const postUrl = (post: InternalPostDto, siteUrl: string) =>
-  absoluteUrl(`/blog/${post.slug}`, siteUrl);
+const postUrl = (post: InternalPostDto, siteUrl: string) => postAbsoluteUrl(post.slug, siteUrl);
 
 /**
  * 글 상세의 `BlogPosting` 구조화 데이터 (프론트엔드 §9).
