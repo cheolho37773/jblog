@@ -1,6 +1,6 @@
 # jblog 개발 기획 – 개요 & 공통 결정사항
 
-> 버전 v0.12 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
+> 버전 v0.13 · 작성일 2026-11-20 · 개정 2026-11-21 ([1차](./feedback/2026-11-20_plan_review.md)·[2차](./feedback/2026-11-20_plan_review_02.md) 기획 검토 피드백 반영)
 > 관련 문서: [UI 디자인 기획서](../ui_design/ui_design_spec.md) · [백엔드 기획서](./01_backend_plan.md) · [프론트엔드 기획서](./02_frontend_plan.md) · [AI 자동 작성](./03_ai_authoring_mcp_plan.md) · [접근 통제 & 복사 방지](./04_access_control_and_content_protection.md) · [협업 아키텍처](./05_collaboration_architecture.md)
 
 ---
@@ -239,6 +239,7 @@ INTERNAL_API_KEY=
 
 # web 빌드 전용 (런타임 설정 아님, 비밀값 아님)
 # JBLOG_DEV_PAGES=1              # 개발·검수 빌드에서만 /dev/* 페이지 포함. 운영 빌드에서는 넣지 않음 (M1-03)
+# JBLOG_DEV_ALLOWED_ORIGINS=     # 개발 서버(pnpm dev)만. 같은 네트워크의 휴대폰 등에서 접속할 호스트(쉼표 구분, 예: 192.168.0.10). 비우면 localhost만 (#77)
 ```
 
 ### 6-a. 배포 보류 범위
@@ -357,3 +358,4 @@ INTERNAL_API_KEY=
 | v0.10 | 2026-11-21 | 프론트엔드를 기능별 구조(`features/`)로 전환하고 계층 import 규칙 추가(D26, 프론트엔드 §3). 백엔드 구조는 그대로 |
 | v0.11 | 2026-11-22 | §6-b 검사 장치에 접속 URL 예시 표기 규칙 추가 (M0 report §8 제안 10) |
 | v0.12 | 2026-11-22 | §6 환경변수 목록에 web 빌드 전용 `JBLOG_DEV_PAGES` 추가 (M1-03, `/dev/components` 운영 404 — M1 G1 승인) |
+| v0.13 | 2026-11-28 | §6 환경변수 목록에 web 개발 서버 전용 `JBLOG_DEV_ALLOWED_ORIGINS` 추가 (#77, 휴대폰 접속 확인용 — 개발자 요청) |
