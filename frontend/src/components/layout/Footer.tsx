@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/cn';
 import { Container } from './Container';
 import { Logo } from './Logo';
-import { MENUS, PREFETCH, RSS_HREF } from './menus';
+import { MENUS, RSS_HREF } from './menus';
 
 const MAX_CATEGORIES = 6;
 
@@ -63,11 +63,7 @@ function CategoryColumn({ categories }: { categories: FooterProps['categories'] 
     <LinkColumn title="Category">
       {visible.map((category) => (
         <li key={category.slug}>
-          <Link
-            href={`/blog?category=${encodeURIComponent(category.slug)}`}
-            prefetch={PREFETCH}
-            className={LINK_CLASS}
-          >
+          <Link href={`/blog?category=${encodeURIComponent(category.slug)}`} className={LINK_CLASS}>
             {category.name}
           </Link>
         </li>
@@ -81,7 +77,7 @@ function QuickLinkColumn() {
     <LinkColumn title="Quick Link">
       {MENUS.map((menu) => (
         <li key={menu.href}>
-          <Link href={menu.href} prefetch={PREFETCH} className={LINK_CLASS}>
+          <Link href={menu.href} prefetch={menu.prefetch} className={LINK_CLASS}>
             {menu.label}
           </Link>
         </li>

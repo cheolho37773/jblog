@@ -5,8 +5,8 @@ type CategoryWithCountDto = components['schemas']['CategoryWithCountDto'];
 
 type CategoryChipsProps = {
   categories: CategoryWithCountDto[];
-  /** 선택된 카테고리 slug. 없으면 All이 선택된다 */
-  activeSlug?: string;
+  /** 선택된 카테고리 slug. 생략하면 All이 선택되고, null이면 아무것도 선택하지 않는다(검색 결과 없음 안내) */
+  activeSlug?: string | null;
 };
 
 /**
