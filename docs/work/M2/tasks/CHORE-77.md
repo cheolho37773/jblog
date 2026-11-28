@@ -31,3 +31,11 @@
 - `frontend/test/next-config.spec.ts` (4건): 개발 단계 + `192.168.0.10` → `['192.168.0.10']`, 개발 단계 변수 없음 → 없음/빈 값, 운영 빌드 단계는 값이 있어도 없음, 개발 단계 `http://` 값 → 설정 로드 오류. 필수 환경변수는 `vi.stubEnv` 더미 값으로 채움
 - 실패 확인: 모듈 `./dev-allowed-origins` 없음으로 첫 파일 전체 실패(의도한 이유), next-config는 4건 중 2건 실패(허용 목록 반영·오류 던지기 없음). 나머지 2건(변수 없음·운영 단계)은 현재 코드에서도 통과하는 회귀 방지 테스트다
 - tsc: 구현 모듈이 없다는 TS2307 한 건만(구현 후 해소). eslint·prettier 통과
+
+### ② 구현 (frontend-dev)
+
+- `frontend/src/lib/dev-allowed-origins.ts`: `parseDevAllowedOrigins` 추가. 쉼표 분리, 공백·빈 항목 제거, `://`나 `/`가 있으면 변수 이름과 "호스트만" 안내가 담긴 오류
+- `frontend/next.config.ts`: 개발 서버 단계에서만 `allowedDevOrigins`를 넣고, 값이 없으면 키를 넣지 않음. `env.schema`는 변경 없음
+- 검사: `pnpm --filter @jblog/frontend test` 통과(760건, 종료 0), `pnpm verify` 통과(종료 0)
+- 미실행: `pnpm test:e2e`·`pnpm test:visual`은 포트 4100을 개발자의 픽스처 서버(PID 27330, `next dev`와 함께 기동 중)가 점유해 시작 단계에서 종료 1(`already used`). 개발자 서버라 건드리지 않았다. 해당 서버를 내린 뒤 재실행이 필요하다
+
