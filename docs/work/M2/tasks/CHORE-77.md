@@ -19,9 +19,9 @@
 
 ## 필수 검증
 
-- [ ] 단위: 없음·빈 문자열·공백만 → `[]`, `"a, b ,,c"` → `["a","b","c"]`, `http://a`·`a/b` → 오류
-- [ ] 개발 단계 설정에만 `allowedDevOrigins`가 들어가고, 운영 단계 설정에는 없다(설정 함수 단위 — `createNextConfig(phase)`를 phase별로 불러 확인)
-- [ ] 기존 단위·E2E·`pnpm verify`·시각 회귀 불변
+- [x] 단위: 없음·빈 문자열·공백만 → `[]`, `"a, b ,,c"` → `["a","b","c"]`, `http://a`·`a/b` → 오류
+- [x] 개발 단계 설정에만 `allowedDevOrigins`가 들어가고, 운영 단계 설정에는 없다(설정 함수 단위 — `createNextConfig(phase)`를 phase별로 불러 확인)
+- [x] 기존 단위·E2E·`pnpm verify`·시각 회귀 불변 — 오케스트레이터가 깨끗한 클론 `3e2287e`(Node 24, 개발자 서버를 내린 뒤)에서 `pnpm verify` 0 · `pnpm test:e2e` 0(681건 통과) · `pnpm test:visual` 2회 0(각 34건) · 백엔드 없는 `docker build -f frontend/Dockerfile .` 0 확인(2026-11-28, Codex r1 #2 대응)
 
 ## 인계 노트
 
