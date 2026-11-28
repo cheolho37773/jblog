@@ -530,6 +530,18 @@ test.describe('메타데이터·구조화 데이터', () => {
     expect(meta).toBe('긴 글 SEO 제목 | jblog');
   });
 
+  test('seoTitle이 있는 목록 글도 title에 `| jblog`가 한 번만 붙는다(M2-09 픽스처 정리)', async ({
+    page,
+  }) => {
+    const post = INTERNAL_POSTS.find((candidate) => candidate.seoTitle !== null);
+    expect(post?.seoTitle, '픽스처에 seoTitle 있는 목록 글').toBeTruthy();
+    expect(post?.seoTitle).not.toContain('| jblog');
+    await openPost(page, post?.slug ?? '');
+    const title = await page.title();
+    expect(title).toBe(`${post?.seoTitle} | jblog`);
+    expect(title.split('| jblog')).toHaveLength(2);
+  });
+
   test('seoTitle·seoDescription이 없으면 title·excerpt를 쓴다', async ({ page }) => {
     await openPost(page, NO_COVER_SLUG);
     const post = postBySlug(NO_COVER_SLUG);
