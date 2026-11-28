@@ -2,6 +2,7 @@
 
 - 마일스톤: M2(부수 작업, 개발자 요청) · 이슈: #77 · 브랜치: `chore/dev-allowed-origins` (`dev` `978f6ac`에서 생성)
 - 실행 방식: 서브에이전트 조합 — test-engineer(단위 선작성) → frontend-dev → test-engineer(검증)
+- 참여 역할: test-engineer, frontend-dev
 - 난도·모델: 낮음 → Sonnet
 - 배경: Next 16 개발 서버는 `localhost`가 아닌 주소의 개발 자원 요청(`/_next/*`, HMR)을 막는다. 휴대폰에서 같은 와이파이 IP로 접속하면 자바스크립트가 연결되지 않아 메뉴·테마 토글·복사 버튼이 동작하지 않는다(개발 서버 로그 `Blocked cross-origin request ... from "<IP>"`)
 - 참조: 개요 §6(환경변수 목록, v0.13에 `JBLOG_DEV_ALLOWED_ORIGINS` 추가 — 오케스트레이터가 이 PR에 포함), Next.js `allowedDevOrigins` 설정
