@@ -13,6 +13,7 @@ import {
   OVERFLOW_NOTICE,
   SEARCH_GRID_SELECTOR,
   SEARCH_LIMIT,
+  SERVER_ERROR_TEXT,
   SHORT_QUERY_GUIDE,
   gridLayoutOf,
   noResultText,
@@ -203,7 +204,8 @@ test.describe('2자 미만 안내', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Search: ${q}`);
     await expect(page.getByText(noResultText(q))).toBeVisible();
     await expect(page.getByText(SHORT_QUERY_GUIDE)).toHaveCount(0);
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    // Next 경로 안내자(빈 role=alert)가 늘 있으므로 오류 경계의 공통 문구로 좁힌다.
+    await expect(page.getByRole('alert').filter({ hasText: SERVER_ERROR_TEXT })).toHaveCount(0);
   });
 
   test('2자(앞뒤 공백 제외)면 검색한다 — 경계', async ({ page }) => {
