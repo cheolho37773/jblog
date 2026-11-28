@@ -31,6 +31,7 @@ export function PostCardGrid({ post, headingLevel = 3 }: PostCardGridProps) {
             <img
               src={post.coverImageUrl}
               alt=""
+              draggable={false}
               loading="lazy"
               decoding="async"
               className="size-full rounded-md object-cover motion-safe:group-hover:[transform:scale(1.03)]"

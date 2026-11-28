@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { CopyTextButton } from '@/components/protection/CopyTextButton';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/cn';
 import { Container } from './Container';
@@ -32,23 +33,30 @@ function ContactCard({ email, githubUrl }: { email?: string; githubUrl?: string 
   return (
     <div className="bg-footer-card border-border flex flex-col gap-7.5 rounded-lg border p-8">
       <h2 className="text-h4 text-strong">Contact Me</h2>
-      {/* 연락처는 복사 방지 예외다 (프론트엔드 §7) */}
-      <div className="allow-select flex flex-col items-start gap-2">
+      {/* 연락처 글자는 복사 방지 예외(.allow-select)다 (프론트엔드 §7). 주소 복사 버튼은 글자가 아니라서 밖에 두고 이메일 줄 옆에 붙인다 */}
+      <div className="flex flex-wrap items-start gap-x-4">
+        <div className="allow-select flex flex-col items-start gap-2">
+          {email && (
+            <a href={`mailto:${email}`} className={cn(LINK_CLASS, 'min-h-11 break-all')}>
+              {email}
+            </a>
+          )}
+          {githubUrl && (
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+              className={cn(LINK_CLASS, 'min-h-11 min-w-11 justify-center')}
+            >
+              <Icon name="github" size={24} />
+            </a>
+          )}
+        </div>
         {email && (
-          <a href={`mailto:${email}`} className={cn(LINK_CLASS, 'min-h-11 break-all')}>
-            {email}
-          </a>
-        )}
-        {githubUrl && (
-          <a
-            href={githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="GitHub"
-            className={cn(LINK_CLASS, 'min-h-11 min-w-11 justify-center')}
-          >
-            <Icon name="github" size={24} />
-          </a>
+          <div className="flex min-h-11 items-center">
+            <CopyTextButton text={email} label="주소 복사" successMessage="주소를 복사했습니다" />
+          </div>
         )}
       </div>
     </div>

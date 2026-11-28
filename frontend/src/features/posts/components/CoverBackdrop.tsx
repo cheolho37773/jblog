@@ -15,6 +15,7 @@ export function CoverBackdrop({ src }: CoverBackdropProps) {
         <img
           src={src}
           alt=""
+          draggable={false}
           decoding="async"
           className="absolute inset-0 size-full rounded-lg object-cover"
         />
